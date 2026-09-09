@@ -8,7 +8,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import type { Category } from "@/gen/null/v1/category_pb";
+import type { Category } from "@/gen/nagomi/v1/category_pb";
 
 export interface CategoryRow {
 	category: Category;

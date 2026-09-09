@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ReceiptStatus } from "@/gen/null/v1/receipt_pb";
+import { ReceiptStatus } from "@/gen/nagomi/v1/receipt_pb";
 import { receiptsApi } from "@/lib/api/receipts";
 import { useUserId } from "./useSession";
 

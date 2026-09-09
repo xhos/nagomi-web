@@ -91,7 +91,7 @@
 
           (writeShellScriptBin "regen" ''
             rm -rf src/gen
-            exec ${bun}/bin/bun x buf generate
+            exec ${bun}/bin/bun buf generate
           '')
 
           (writeShellScriptBin "bump-protos" ''

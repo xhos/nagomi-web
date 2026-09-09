@@ -9,7 +9,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { PeriodType } from "@/gen/null/v1/enums_pb";
+import { PeriodType } from "@/gen/nagomi/v1/enums_pb";
 import { cn } from "@/lib/utils";
 
 interface PeriodSelectorProps {

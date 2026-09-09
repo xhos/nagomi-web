@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { Caption, Card, HStack, VStack } from "@/components/lib";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { Account } from "@/gen/null/v1/account_pb";
-import { AccountType } from "@/gen/null/v1/enums_pb";
+import type { Account } from "@/gen/nagomi/v1/account_pb";
+import { AccountType } from "@/gen/nagomi/v1/enums_pb";
 
 interface AccountFormProps {
 	account?: Account | null;

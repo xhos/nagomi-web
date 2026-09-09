@@ -1,12 +1,12 @@
 import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { AccountService } from "@/gen/null/v1/account_services_pb";
-import { CategoryService } from "@/gen/null/v1/category_services_pb";
-import { ConnectionsService } from "@/gen/null/v1/connection_services_pb";
-import { DashboardService } from "@/gen/null/v1/dashboard_services_pb";
-import { ReceiptService } from "@/gen/null/v1/receipt_services_pb";
-import { RuleService } from "@/gen/null/v1/rule_services_pb";
-import { TransactionService } from "@/gen/null/v1/transaction_services_pb";
+import { AccountService } from "@/gen/nagomi/v1/account_services_pb";
+import { CategoryService } from "@/gen/nagomi/v1/category_services_pb";
+import { ConnectionsService } from "@/gen/nagomi/v1/connection_services_pb";
+import { DashboardService } from "@/gen/nagomi/v1/dashboard_services_pb";
+import { ReceiptService } from "@/gen/nagomi/v1/receipt_services_pb";
+import { RuleService } from "@/gen/nagomi/v1/rule_services_pb";
+import { TransactionService } from "@/gen/nagomi/v1/transaction_services_pb";
 
 const gatewayUrl =
 	process.env.NEXT_PUBLIC_GATEWAY_URL || "http://localhost:55550";

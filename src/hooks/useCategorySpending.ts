@@ -2,8 +2,8 @@ import { create } from "@bufbuild/protobuf";
 import { useEffect, useState } from "react";
 import type { Date as ProtoDate } from "@/gen/google/type/date_pb";
 import { DateSchema } from "@/gen/google/type/date_pb";
-import type { GetCategorySpendingComparisonResponse } from "@/gen/null/v1/dashboard_services_pb";
-import { PeriodType } from "@/gen/null/v1/enums_pb";
+import type { GetCategorySpendingComparisonResponse } from "@/gen/nagomi/v1/dashboard_services_pb";
+import { PeriodType } from "@/gen/nagomi/v1/enums_pb";
 import { dashboardApi } from "@/lib/api/dashboard";
 
 export function useCategorySpending(

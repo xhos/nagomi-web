@@ -11,8 +11,8 @@ import {
 	PageHeaderWithTitle,
 } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AccountType } from "@/gen/null/v1/enums_pb";
-import type { FriendBalance } from "@/gen/null/v1/transaction_services_pb";
+import { AccountType } from "@/gen/nagomi/v1/enums_pb";
+import type { FriendBalance } from "@/gen/nagomi/v1/transaction_services_pb";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useFriendBalances } from "@/hooks/useSplits";
 import { formatCurrency } from "@/lib/utils/transaction";

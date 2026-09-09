@@ -21,8 +21,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { TransactionDirection } from "@/gen/null/v1/enums_pb";
-import type { Transaction } from "@/gen/null/v1/transaction_pb";
+import { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
+import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories, useCreateCategory } from "@/hooks/useCategories";
 import { useCurrencies } from "@/hooks/useCurrencies";

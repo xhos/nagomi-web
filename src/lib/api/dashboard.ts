@@ -10,8 +10,8 @@ import {
 	type GetFinancialSummaryResponse,
 	GetNetWorthHistoryRequestSchema,
 	type GetNetWorthHistoryResponse,
-} from "@/gen/null/v1/dashboard_services_pb";
-import type { Granularity, PeriodType } from "@/gen/null/v1/enums_pb";
+} from "@/gen/nagomi/v1/dashboard_services_pb";
+import type { Granularity, PeriodType } from "@/gen/nagomi/v1/enums_pb";
 import { dashboardClient } from "@/lib/grpc-client";
 
 export interface CategorySpendingComparisonParams {

@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { Card, HStack, Muted, Text, VStack } from "@/components/lib";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { Account } from "@/gen/null/v1/account_pb";
-import { AccountType } from "@/gen/null/v1/enums_pb";
+import type { Account } from "@/gen/nagomi/v1/account_pb";
+import { AccountType } from "@/gen/nagomi/v1/enums_pb";
 
 interface AccountListProps {
 	accounts: Account[];
@@ -51,7 +51,7 @@ export default function AccountList({
 			for (const account of accounts) {
 				try {
 					const response = await fetch(
-						"/api/null.v1.AccountService/GetAccountBalance",
+						"/api/nagomi.v1.AccountService/GetAccountBalance",
 						{
 							method: "POST",
 							headers: { "Content-Type": "application/json" },

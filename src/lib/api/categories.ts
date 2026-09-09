@@ -4,7 +4,7 @@ import {
 	DeleteCategoryRequestSchema,
 	ListCategoriesRequestSchema,
 	UpdateCategoryRequestSchema,
-} from "@/gen/null/v1/category_services_pb";
+} from "@/gen/nagomi/v1/category_services_pb";
 import { categoryClient } from "@/lib/grpc-client";
 
 export interface CreateCategoryInput {

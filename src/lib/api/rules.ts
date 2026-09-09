@@ -4,7 +4,7 @@ import {
 	DeleteRuleRequestSchema,
 	ListRulesRequestSchema,
 	UpdateRuleRequestSchema,
-} from "@/gen/null/v1/rule_services_pb";
+} from "@/gen/nagomi/v1/rule_services_pb";
 import { ruleClient } from "@/lib/grpc-client";
 import type { TransactionRule } from "@/lib/rules";
 

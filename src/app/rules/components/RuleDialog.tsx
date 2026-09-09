@@ -12,8 +12,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import type { Category } from "@/gen/null/v1/category_pb";
-import type { Rule } from "@/gen/null/v1/rule_pb";
+import type { Category } from "@/gen/nagomi/v1/category_pb";
+import type { Rule } from "@/gen/nagomi/v1/rule_pb";
 import { useCreateCategory } from "@/hooks/useCategories";
 import {
 	createRuleBuilder,

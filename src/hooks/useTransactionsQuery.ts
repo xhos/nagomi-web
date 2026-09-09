@@ -5,8 +5,8 @@ import {
 } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { TransactionFilters } from "@/app/transactions/components/TransactionFiltersDialog";
-import type { Cursor } from "@/gen/null/v1/common_pb";
-import type { Transaction } from "@/gen/null/v1/transaction_pb";
+import type { Cursor } from "@/gen/nagomi/v1/common_pb";
+import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import {
 	type CreateTransactionInput,
 	transactionsApi,

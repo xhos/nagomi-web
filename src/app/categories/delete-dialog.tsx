@@ -11,7 +11,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import type { Category } from "@/gen/null/v1/category_pb";
+import type { Category } from "@/gen/nagomi/v1/category_pb";
 
 interface DeleteDialogProps {
 	open: boolean;

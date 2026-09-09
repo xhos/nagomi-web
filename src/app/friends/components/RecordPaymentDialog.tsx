@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { FormField } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
-import { TransactionDirection } from "@/gen/null/v1/enums_pb";
+import { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
 import { useTransactionsQuery } from "@/hooks/useTransactionsQuery";
 
 interface RecordPaymentDialogProps {

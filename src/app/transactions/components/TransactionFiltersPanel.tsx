@@ -12,7 +12,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { TransactionDirection } from "@/gen/null/v1/enums_pb";
+import { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
 import { useCategories } from "@/hooks/useCategories";
 import { cn } from "@/lib/utils";
 

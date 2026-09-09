@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import { VStack } from "@/components/lib";
-import type { Account } from "@/gen/null/v1/account_pb";
-import type { AccountType } from "@/gen/null/v1/enums_pb";
+import type { Account } from "@/gen/nagomi/v1/account_pb";
+import type { AccountType } from "@/gen/nagomi/v1/enums_pb";
 import AccountCard from "./AccountCard";
 
 interface AccountGridProps {

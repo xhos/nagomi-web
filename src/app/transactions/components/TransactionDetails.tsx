@@ -1,5 +1,5 @@
 import { Caption, Card, HStack, Muted, Text, VStack } from "@/components/lib";
-import type { Transaction } from "@/gen/null/v1/transaction_pb";
+import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { formatAmount, formatCurrency } from "@/lib/utils/transaction";
 
 interface TransactionDetailsProps {

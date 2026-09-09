@@ -7,7 +7,7 @@ import {
 	ChartTooltip,
 	ChartTooltipContent,
 } from "@/components/ui/chart";
-import type { GetCategorySpendingComparisonResponse } from "@/gen/null/v1/dashboard_services_pb";
+import type { GetCategorySpendingComparisonResponse } from "@/gen/nagomi/v1/dashboard_services_pb";
 import { getCategoryDisplayName } from "@/lib/utils/category";
 import { formatAmount } from "@/lib/utils/transaction";
 

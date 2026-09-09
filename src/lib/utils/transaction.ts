@@ -1,5 +1,5 @@
-import { TransactionDirection } from "@/gen/null/v1/enums_pb";
-import type { Transaction } from "@/gen/null/v1/transaction_pb";
+import { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
+import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 
 export interface AmountType {
 	currencyCode?: string;

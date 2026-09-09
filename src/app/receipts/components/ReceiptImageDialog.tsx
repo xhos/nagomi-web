@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Muted } from "@/components/lib";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import type { Receipt } from "@/gen/null/v1/receipt_pb";
+import type { Receipt } from "@/gen/nagomi/v1/receipt_pb";
 import { useReceipt } from "@/hooks/useReceipts";
 
 interface ReceiptImageDialogProps {

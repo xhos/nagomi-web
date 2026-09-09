@@ -1,12 +1,12 @@
 import { create } from "@bufbuild/protobuf";
-import type { Transaction } from "@/gen/null/v1/transaction_pb";
-import type { FriendBalance } from "@/gen/null/v1/transaction_services_pb";
+import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
+import type { FriendBalance } from "@/gen/nagomi/v1/transaction_services_pb";
 import {
 	ForgiveTransactionRequestSchema,
 	GetFriendBalancesRequestSchema,
 	SplitEntrySchema,
 	SplitTransactionRequestSchema,
-} from "@/gen/null/v1/transaction_services_pb";
+} from "@/gen/nagomi/v1/transaction_services_pb";
 import { transactionClient } from "@/lib/grpc-client";
 
 export type { FriendBalance };

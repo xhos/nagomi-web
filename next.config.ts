@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
 	eslint: {
 		ignoreDuringBuilds: true,
 	},
-	allowedDevOrigins: ["null.lab.xhos.dev"],
+	allowedDevOrigins: ["nagomi.lab.xhos.dev"],
 	webpack: (config) => {
 		config.resolve.alias = {
 			...config.resolve.alias,

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Caption, HStack, Muted, VStack } from "@/components/lib";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { Transaction } from "@/gen/null/v1/transaction_pb";
+import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useForgiveTransaction } from "@/hooks/useSplits";
 import { getCategoryTextColor } from "@/lib/color-utils";

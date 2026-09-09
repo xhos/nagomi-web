@@ -8,7 +8,7 @@ import {
 	PageContent,
 	PageHeaderWithTitle,
 } from "@/components/ui/layout";
-import type { Category } from "@/gen/null/v1/category_pb";
+import type { Category } from "@/gen/nagomi/v1/category_pb";
 import {
 	useCategories,
 	useCreateCategory,

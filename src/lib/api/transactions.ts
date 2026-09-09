@@ -1,12 +1,12 @@
 import { create } from "@bufbuild/protobuf";
-import type { Cursor } from "@/gen/null/v1/common_pb";
-import type { TransactionDirection } from "@/gen/null/v1/enums_pb";
+import type { Cursor } from "@/gen/nagomi/v1/common_pb";
+import type { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
 import {
 	CreateTransactionRequestSchema,
 	DeleteTransactionRequestSchema,
 	ListTransactionsRequestSchema,
 	UpdateTransactionRequestSchema,
-} from "@/gen/null/v1/transaction_services_pb";
+} from "@/gen/nagomi/v1/transaction_services_pb";
 import { transactionClient } from "@/lib/grpc-client";
 
 export interface ListTransactionsInput {

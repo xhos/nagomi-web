@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { Account } from "@/gen/null/v1/account_pb";
+import type { Account } from "@/gen/nagomi/v1/account_pb";
 
 interface AnchorBalanceDialogProps {
 	open: boolean;

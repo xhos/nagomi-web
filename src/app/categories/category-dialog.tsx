@@ -12,7 +12,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { Category } from "@/gen/null/v1/category_pb";
+import type { Category } from "@/gen/nagomi/v1/category_pb";
 import { useCategories } from "@/hooks/useCategories";
 import { generateRandomCategoryColor } from "@/lib/color-utils";
 import { cn } from "@/lib/utils";

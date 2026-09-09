@@ -22,8 +22,8 @@ import {
 	ContextMenuItem,
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import type { Receipt } from "@/gen/null/v1/receipt_pb";
-import { ReceiptStatus } from "@/gen/null/v1/receipt_pb";
+import type { Receipt } from "@/gen/nagomi/v1/receipt_pb";
+import { ReceiptStatus } from "@/gen/nagomi/v1/receipt_pb";
 import { useReceipt, useReceipts } from "@/hooks/useReceipts";
 import { formatAmount, formatCurrency } from "@/lib/utils/transaction";
 import { ReceiptDetailDialog } from "./ReceiptDetailDialog";

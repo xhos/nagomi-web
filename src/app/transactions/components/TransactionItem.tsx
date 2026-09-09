@@ -25,7 +25,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { Transaction } from "@/gen/null/v1/transaction_pb";
+import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useReceipt } from "@/hooks/useReceipts";
 import { getCategoryTextColor } from "@/lib/color-utils";
 import { cn } from "@/lib/utils";

@@ -19,7 +19,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { Category } from "@/gen/null/v1/category_pb";
+import type { Category } from "@/gen/nagomi/v1/category_pb";
 import { ConditionBuilder, type UICondition } from "./ConditionBuilder";
 import { FIELD_OPTIONS, TX_DIRECTION_OPTIONS } from "./rule-dialog-constants";
 

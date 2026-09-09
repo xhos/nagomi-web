@@ -11,8 +11,8 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { AccountType } from "@/gen/null/v1/enums_pb";
-import type { Transaction } from "@/gen/null/v1/transaction_pb";
+import { AccountType } from "@/gen/nagomi/v1/enums_pb";
+import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useSplitTransaction } from "@/hooks/useSplits";
 import { formatAmount, formatCurrency } from "@/lib/utils/transaction";

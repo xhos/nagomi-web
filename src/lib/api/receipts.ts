@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import type { ReceiptStatus } from "@/gen/null/v1/receipt_pb";
+import type { ReceiptStatus } from "@/gen/nagomi/v1/receipt_pb";
 import {
 	DeleteReceiptRequestSchema,
 	GetReceiptRequestSchema,
@@ -7,7 +7,7 @@ import {
 	RetryParseReceiptRequestSchema,
 	UpdateReceiptRequestSchema,
 	UploadReceiptRequestSchema,
-} from "@/gen/null/v1/receipt_services_pb";
+} from "@/gen/nagomi/v1/receipt_services_pb";
 import { receiptClient } from "@/lib/grpc-client";
 
 export interface ListReceiptsInput {

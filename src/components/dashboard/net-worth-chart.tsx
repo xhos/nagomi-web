@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateSchema } from "@/gen/google/type/date_pb";
-import { Granularity, PeriodType } from "@/gen/null/v1/enums_pb";
+import { Granularity, PeriodType } from "@/gen/nagomi/v1/enums_pb";
 import { dashboardApi } from "@/lib/api/dashboard";
 import { formatAmount } from "@/lib/utils/transaction";
 import { PeriodSelector } from "./period-selector";

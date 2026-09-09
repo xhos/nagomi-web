@@ -5,7 +5,7 @@ import { Card, VStack } from "@/components/lib";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ReceiptStatus } from "@/gen/null/v1/receipt_pb";
+import { ReceiptStatus } from "@/gen/nagomi/v1/receipt_pb";
 import type { ReceiptFilters } from "@/hooks/useReceipts";
 
 interface ReceiptFiltersPanelProps {

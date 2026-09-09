@@ -19,7 +19,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import type { Account } from "@/gen/null/v1/account_pb";
+import type { Account } from "@/gen/nagomi/v1/account_pb";
 
 interface MergeAccountDialogProps {
 	open: boolean;

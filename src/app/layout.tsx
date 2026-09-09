@@ -9,7 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/lib/query-client";
 
 export const metadata: Metadata = {
-	title: "null // financial tracker",
+	title: "nagomi // financial tracker",
 	description: "minimal financial transaction tracking",
 };
 

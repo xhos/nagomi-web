@@ -9,8 +9,8 @@ import {
 	ContextMenuItem,
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import type { Account } from "@/gen/null/v1/account_pb";
-import type { AccountType } from "@/gen/null/v1/enums_pb";
+import type { Account } from "@/gen/nagomi/v1/account_pb";
+import type { AccountType } from "@/gen/nagomi/v1/enums_pb";
 
 interface AccountCardProps {
 	account: Account;

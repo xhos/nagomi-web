@@ -11,8 +11,8 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { Account } from "@/gen/null/v1/account_pb";
-import { AccountType } from "@/gen/null/v1/enums_pb";
+import type { Account } from "@/gen/nagomi/v1/account_pb";
+import { AccountType } from "@/gen/nagomi/v1/enums_pb";
 import {
 	useAccountHasTransactions,
 	useAddAccountAlias,

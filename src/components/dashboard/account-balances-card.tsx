@@ -3,8 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Caption, Card, HStack, VStack } from "@/components/lib";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Account } from "@/gen/null/v1/account_pb";
-import { AccountType } from "@/gen/null/v1/enums_pb";
+import type { Account } from "@/gen/nagomi/v1/account_pb";
+import { AccountType } from "@/gen/nagomi/v1/enums_pb";
 import { accountsApi } from "@/lib/api/accounts";
 import { formatAmount } from "@/lib/utils/transaction";
 

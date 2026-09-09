@@ -3,8 +3,8 @@
 import { Link as LinkIcon } from "lucide-react";
 import { Caption, HStack, Muted, VStack } from "@/components/lib";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import type { Receipt, ReceiptLinkCandidate } from "@/gen/null/v1/receipt_pb";
-import { ReceiptStatus } from "@/gen/null/v1/receipt_pb";
+import type { Receipt, ReceiptLinkCandidate } from "@/gen/nagomi/v1/receipt_pb";
+import { ReceiptStatus } from "@/gen/nagomi/v1/receipt_pb";
 import { useLinkReceipt } from "@/hooks/useReceipts";
 import { formatAmount, formatCurrency } from "@/lib/utils/transaction";
 

@@ -12,7 +12,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import type { Rule } from "@/gen/null/v1/rule_pb";
+import type { Rule } from "@/gen/nagomi/v1/rule_pb";
 import type { TransactionRule } from "@/lib/rules";
 
 interface DeleteRuleDialogProps {

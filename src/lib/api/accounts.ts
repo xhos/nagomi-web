@@ -9,8 +9,8 @@ import {
 	RemoveAccountAliasRequestSchema,
 	SetAccountAliasesRequestSchema,
 	UpdateAccountRequestSchema,
-} from "@/gen/null/v1/account_services_pb";
-import type { AccountType } from "@/gen/null/v1/enums_pb";
+} from "@/gen/nagomi/v1/account_services_pb";
+import type { AccountType } from "@/gen/nagomi/v1/enums_pb";
 import { accountClient } from "@/lib/grpc-client";
 
 export interface CreateAccountInput {

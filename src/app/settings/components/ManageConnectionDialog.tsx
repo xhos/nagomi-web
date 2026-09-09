@@ -35,7 +35,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import type { Connection } from "@/gen/null/v1/connection_services_pb";
+import type { Connection } from "@/gen/nagomi/v1/connection_services_pb";
 import {
 	useDeleteConnection,
 	useSetSyncInterval,

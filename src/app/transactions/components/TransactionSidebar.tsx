@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Stat } from "@/components/ui/layout";
-import type { Transaction } from "@/gen/null/v1/transaction_pb";
+import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useTransactionAnalytics } from "@/hooks/useTransactionAnalytics";
 import { formatCurrency } from "@/lib/utils/transaction";
 

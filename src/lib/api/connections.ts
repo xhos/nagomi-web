@@ -5,7 +5,7 @@ import {
 	ListConnectionsRequestSchema,
 	SetSyncIntervalRequestSchema,
 	TriggerSyncRequestSchema,
-} from "@/gen/null/v1/connection_services_pb";
+} from "@/gen/nagomi/v1/connection_services_pb";
 import { connectionsClient } from "@/lib/grpc-client";
 
 export interface CreateConnectionInput {
