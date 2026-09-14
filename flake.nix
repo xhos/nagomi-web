@@ -41,8 +41,8 @@
             enable = true;
             entry = pkgs.lib.getExe (pkgs.writeShellApplication {
               name = "tsc-check";
-              runtimeInputs = [pkgs.typescript];
-              text = "tsc --noEmit";
+              runtimeInputs = [pkgs.bun];
+              text = "bun tsc --noEmit";
             });
             stages = ["pre-push"];
             pass_filenames = false;
