@@ -1,25 +1,18 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import AppSidebar from "./AppSidebar";
-import { SidebarInset, SidebarProvider } from "./ui/sidebar";
+import { TopNav } from "./TopNav";
 
 export default function ConditionalLayout({
 	children,
 }: {
 	children: React.ReactNode;
 }) {
-	const pathname = usePathname();
-	const isLoginPage = pathname === "/login";
-
-	if (isLoginPage) {
-		return children;
-	}
-
+	if (usePathname() === "/login") return children;
 	return (
-		<SidebarProvider>
-			<AppSidebar />
-			<SidebarInset>{children}</SidebarInset>
-		</SidebarProvider>
+		<>
+			<TopNav />
+			<main>{children}</main>
+		</>
 	);
 }

@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { geistMono } from "@/fonts/geist-mono";
-import { lora } from "@/fonts/lora";
 import { satoshi } from "@/fonts/satoshi";
 import "./globals.css";
 import ConditionalLayout from "@/components/ConditionalLayout";
@@ -20,30 +18,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en" suppressHydrationWarning>
-			<head>
-				<script
-					dangerouslySetInnerHTML={{
-						__html: `
-              (function() {
-                try {
-                  const cookie = document.cookie
-                    .split("; ")
-                    .find((row) => row.startsWith("sidebar_state="));
-                  if (cookie) {
-                    const isExpanded = cookie.substring("sidebar_state=".length) === "true";
-                    if (!isExpanded) {
-                      document.documentElement.setAttribute("data-sidebar-collapsed", "true");
-                    }
-                  }
-                } catch (e) {}
-              })();
-            `,
-					}}
-				/>
-			</head>
-			<body
-				className={`${satoshi.variable} ${geistMono.variable} ${lora.variable} antialiased`}
-			>
+			<body className={`${satoshi.variable} antialiased`}>
 				<QueryProvider>
 					<ThemeProvider
 						attribute="class"
