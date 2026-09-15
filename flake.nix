@@ -89,6 +89,11 @@
             exec ${bun}/bin/bun run dev
           '')
 
+          (writeShellScriptBin "demo" ''
+            ${bun}/bin/bun install
+            exec ${bun}/bin/bun run demo
+          '')
+
           (writeShellScriptBin "regen" ''
             rm -rf src/gen
             exec ${bun}/bin/bun buf generate

@@ -5,6 +5,8 @@
 	"scripts": {
 		"postinstall": "bun2nix -o bun.nix",
 		"dev": "next dev --turbopack",
+		"demo": "NEXT_PUBLIC_DEMO=1 next dev --turbopack",
+		"build:demo": "NEXT_PUBLIC_DEMO=1 next build",
 		"build": "next build",
 		"start": "next start",
 		"check": "biome check .",

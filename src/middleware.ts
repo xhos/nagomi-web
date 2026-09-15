@@ -11,8 +11,10 @@ export async function middleware(request: NextRequest) {
 	}
 
 	const sessionToken =
-		request.cookies.get("better-auth.session_token") ||
-		request.cookies.get("__Secure-better-auth.session_token");
+		process.env.NEXT_PUBLIC_DEMO === "1"
+			? request.cookies.get("demo-session")?.value === "1" || undefined
+			: request.cookies.get("better-auth.session_token") ||
+				request.cookies.get("__Secure-better-auth.session_token");
 
 	if (!sessionToken) {
 		return NextResponse.redirect(new URL("/login", request.url));

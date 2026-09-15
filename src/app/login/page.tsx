@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { DEMO } from "@/lib/demo";
+import { DEMO_USER } from "@/lib/demo/data";
+
+// demo builds show the form with the demo account filled in and locked
+const prefill = {
+	email: DEMO_USER.email,
+	password: "nagomi-demo",
+	name: DEMO_USER.name,
+};
+const initial = (k: keyof typeof prefill) => (DEMO ? prefill[k] : "");
 
 function LoadingOverlay({ isExiting = false }: { isExiting?: boolean }) {
 	const particleRef = useRef<HTMLDivElement>(null);
@@ -112,9 +122,9 @@ function ArtworkPanel() {
 export default function LoginPage() {
 	const router = useRouter();
 	const [mode, setMode] = useState<"login" | "register">("login");
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
-	const [name, setName] = useState("");
+	const [email, setEmail] = useState(initial("email"));
+	const [password, setPassword] = useState(initial("password"));
+	const [name, setName] = useState(initial("name"));
 	const [isLoading, setIsLoading] = useState(false);
 	const [isExiting, setIsExiting] = useState(false);
 	const [error, setError] = useState("");
@@ -177,9 +187,9 @@ export default function LoginPage() {
 			const newMode = key === "l" ? "login" : "register";
 			setMode(newMode);
 			setError("");
-			setEmail("");
-			setPassword("");
-			setName("");
+			setEmail(initial("email"));
+			setPassword(initial("password"));
+			setName(initial("name"));
 		};
 		window.addEventListener("keydown", handler);
 		return () => window.removeEventListener("keydown", handler);
@@ -220,9 +230,9 @@ export default function LoginPage() {
 	const switchMode = (newMode: "login" | "register") => {
 		setMode(newMode);
 		setError("");
-		setEmail("");
-		setPassword("");
-		setName("");
+		setEmail(initial("email"));
+		setPassword(initial("password"));
+		setName(initial("name"));
 	};
 
 	if (isLoggedIn === null) {
@@ -311,7 +321,7 @@ export default function LoginPage() {
 									value={name}
 									onChange={(e) => setName(e.target.value)}
 									placeholder="your display name"
-									disabled={isLoading}
+									disabled={isLoading || DEMO}
 									required
 								/>
 							</div>
@@ -331,7 +341,7 @@ export default function LoginPage() {
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								placeholder="your@email.com"
-								disabled={isLoading}
+								disabled={isLoading || DEMO}
 								required
 							/>
 						</div>
@@ -352,7 +362,7 @@ export default function LoginPage() {
 									placeholder={
 										mode === "login" ? "your password" : "create a password"
 									}
-									disabled={isLoading}
+									disabled={isLoading || DEMO}
 									required
 									className="flex-1"
 								/>
