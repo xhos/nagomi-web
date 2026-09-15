@@ -1,24 +1,16 @@
 "use client";
 
-import { Merge } from "lucide-react";
 import { useState } from "react";
-import { Card, HStack, Mono, Muted, Text, VStack } from "@/components/lib";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Field, FormError, NativeSelect } from "@/components/ui/forms";
 import type { Account } from "@/gen/nagomi/v1/account_pb";
 
 interface MergeAccountDialogProps {
@@ -38,150 +30,84 @@ export function MergeAccountDialog({
 	allAccounts,
 	onConfirm,
 }: MergeAccountDialogProps) {
-	const [selectedPrimaryId, setSelectedPrimaryId] = useState<string>("");
-	const [isLoading, setIsLoading] = useState(false);
-	const [transactionsMoved, setTransactionsMoved] = useState<bigint | null>(
-		null,
-	);
+	const [targetId, setTargetId] = useState("");
+	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [moved, setMoved] = useState<bigint | null>(null);
+	const targets = allAccounts.filter((a) => a.id !== account?.id);
+	const target = targets.find((a) => a.id.toString() === targetId);
 
-	const mergeableAccounts = allAccounts.filter((a) => a.id !== account?.id);
-
-	const handleOpenChange = (open: boolean) => {
-		if (!open) {
-			setSelectedPrimaryId("");
-			setTransactionsMoved(null);
+	const close = (o: boolean) => {
+		if (!o) {
+			setTargetId("");
+			setMoved(null);
+			setError(null);
 		}
-		onOpenChange(open);
+		onOpenChange(o);
 	};
 
-	const handleConfirm = async () => {
-		if (!selectedPrimaryId) return;
-		setIsLoading(true);
+	const confirm = async () => {
+		if (!targetId) return;
+		setBusy(true);
+		setError(null);
 		try {
-			const result = await onConfirm(BigInt(selectedPrimaryId));
-			setTransactionsMoved(result.transactionsMoved);
-		} catch (error) {
-			console.error("Failed to merge accounts:", error);
+			const r = await onConfirm(BigInt(targetId));
+			setMoved(r.transactionsMoved);
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Couldn't merge accounts");
 		} finally {
-			setIsLoading(false);
+			setBusy(false);
 		}
 	};
 
 	if (!account) return null;
-
-	const selectedPrimary = mergeableAccounts.find(
-		(a) => a.id.toString() === selectedPrimaryId,
-	);
-
-	if (transactionsMoved !== null) {
-		return (
-			<Dialog open={open} onOpenChange={handleOpenChange}>
-				<DialogContent className="sm:max-w-[500px]">
-					<DialogHeader>
-						<DialogTitle className="flex items-center gap-2">
-							<Merge className="h-5 w-5" />
-							merge complete
-						</DialogTitle>
-					</DialogHeader>
-					<VStack spacing="md" className="py-4">
-						<Muted size="sm">The account has been merged successfully.</Muted>
-						<Card variant="subtle" padding="md">
-							<VStack spacing="xs">
-								<HStack spacing="md" justify="between">
-									<Text size="sm" weight="medium">
-										transactions moved:
-									</Text>
-									<Mono size="sm">{transactionsMoved.toString()}</Mono>
-								</HStack>
-								{selectedPrimary && (
-									<HStack spacing="md" justify="between">
-										<Text size="sm" weight="medium">
-											surviving account:
-										</Text>
-										<Mono size="sm">
-											{selectedPrimary.friendlyName || selectedPrimary.name}
-										</Mono>
-									</HStack>
-								)}
-							</VStack>
-						</Card>
-					</VStack>
-					<DialogFooter>
-						<Button type="button" onClick={() => handleOpenChange(false)}>
-							done
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
-		);
-	}
+	const name = account.friendlyName || account.name;
 
 	return (
-		<Dialog open={open} onOpenChange={handleOpenChange}>
-			<DialogContent className="sm:max-w-[500px]">
+		<Dialog open={open} onOpenChange={close}>
+			<DialogContent className="sm:max-w-[460px]">
 				<DialogHeader>
-					<DialogTitle className="flex items-center gap-2">
-						<Merge className="h-5 w-5" />
-						merge account
-					</DialogTitle>
+					<DialogTitle>merge {name}</DialogTitle>
+					<DialogDescription>
+						{moved === null
+							? `${name} will be deleted and its transactions moved to the account you pick.`
+							: `${moved.toString()} transaction${moved === BigInt(1) ? "" : "s"} moved to ${target?.friendlyName || target?.name}.`}
+					</DialogDescription>
 				</DialogHeader>
-				<VStack spacing="md" className="py-4">
-					<Muted size="sm">
-						This account will be deleted and its transactions moved to the
-						selected account.
-					</Muted>
-					<Card variant="subtle" padding="md">
-						<VStack spacing="xs">
-							<HStack spacing="md" justify="between">
-								<Text size="sm" weight="medium">
-									merging from:
-								</Text>
-								<Mono size="sm">{account.friendlyName || account.name}</Mono>
-							</HStack>
-							<HStack spacing="md" justify="between">
-								<Text size="sm" weight="medium">
-									bank:
-								</Text>
-								<Text size="sm">{account.bank}</Text>
-							</HStack>
-						</VStack>
-					</Card>
-					<VStack spacing="xs">
-						<Label>merge into</Label>
-						<Select
-							value={selectedPrimaryId}
-							onValueChange={setSelectedPrimaryId}
+				{moved === null && (
+					<Field label="Merge into" htmlFor="merge-target">
+						<NativeSelect
+							id="merge-target"
+							value={targetId}
+							onChange={(e) => setTargetId(e.target.value)}
 						>
-							<SelectTrigger>
-								<SelectValue placeholder="select target account" />
-							</SelectTrigger>
-							<SelectContent>
-								{mergeableAccounts.map((a) => (
-									<SelectItem key={a.id.toString()} value={a.id.toString()}>
-										{a.friendlyName ? `${a.name} (${a.friendlyName})` : a.name}{" "}
-										— {a.bank}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</VStack>
-				</VStack>
+							<option value="">Choose an account</option>
+							{targets.map((a) => (
+								<option key={a.id.toString()} value={a.id.toString()}>
+									{a.friendlyName || a.name} · {a.bank}
+								</option>
+							))}
+						</NativeSelect>
+					</Field>
+				)}
+				<FormError>{error}</FormError>
 				<DialogFooter>
-					<Button
-						type="button"
-						variant="outline"
-						onClick={() => handleOpenChange(false)}
-						disabled={isLoading}
-					>
-						cancel
-					</Button>
-					<Button
-						type="button"
-						onClick={handleConfirm}
-						disabled={isLoading || !selectedPrimaryId}
-					>
-						{isLoading ? "merging..." : "merge"}
-					</Button>
+					{moved === null ? (
+						<>
+							<Button
+								variant="outline"
+								onClick={() => close(false)}
+								disabled={busy}
+							>
+								Cancel
+							</Button>
+							<Button onClick={confirm} disabled={busy || !targetId}>
+								{busy ? "Merging…" : "Merge"}
+							</Button>
+						</>
+					) : (
+						<Button onClick={() => close(false)}>Done</Button>
+					)}
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

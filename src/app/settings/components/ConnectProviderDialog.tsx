@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ErrorMessage, FormField, Input, VStack } from "@/components/lib";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -11,13 +10,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Field, FormError, NativeSelect } from "@/components/ui/forms";
+import { Input } from "@/components/ui/input";
 import { useCreateConnection } from "@/hooks/useConnections";
 import {
 	INTERVAL_OPTIONS,
@@ -71,49 +65,48 @@ export function ConnectProviderDialog({
 					<DialogTitle>connect {provider.label}</DialogTitle>
 					<DialogDescription>{provider.description}</DialogDescription>
 				</DialogHeader>
-				<form onSubmit={onSubmit}>
-					<VStack spacing="md" className="py-2">
-						{provider.fields.map((field) => (
-							<FormField key={field.key} label={field.label} required>
-								<Input
-									type={field.type ?? "text"}
-									autoComplete="off"
-									value={values[field.key] ?? ""}
-									onChange={(e) => {
-										setValues((prev) => ({
-											...prev,
-											[field.key]: e.target.value,
-										}));
-										if (error) reset();
-									}}
-									placeholder={field.placeholder}
-									disabled={isPending}
-									error={!!errorMessage}
-								/>
-							</FormField>
-						))}
-
-						<FormField label="sync frequency">
-							<Select
-								value={intervalValue}
-								onValueChange={setIntervalValue}
+				<form onSubmit={onSubmit} className="space-y-4">
+					{provider.fields.map((field) => (
+						<Field
+							key={field.key}
+							label={field.label}
+							htmlFor={`conn-${field.key}`}
+						>
+							<Input
+								id={`conn-${field.key}`}
+								type={field.type ?? "text"}
+								autoComplete="off"
+								value={values[field.key] ?? ""}
+								onChange={(e) => {
+									setValues((prev) => ({
+										...prev,
+										[field.key]: e.target.value,
+									}));
+									if (error) reset();
+								}}
+								placeholder={field.placeholder}
 								disabled={isPending}
-							>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{INTERVAL_OPTIONS.map((o) => (
-										<SelectItem key={o.value} value={o.value}>
-											{o.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</FormField>
+								aria-invalid={!!errorMessage}
+							/>
+						</Field>
+					))}
 
-						{errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
-					</VStack>
+					<Field label="Sync every" htmlFor="conn-interval">
+						<NativeSelect
+							id="conn-interval"
+							value={intervalValue}
+							onChange={(e) => setIntervalValue(e.target.value)}
+							disabled={isPending}
+						>
+							{INTERVAL_OPTIONS.map((o) => (
+								<option key={o.value} value={o.value}>
+									{o.label}
+								</option>
+							))}
+						</NativeSelect>
+					</Field>
+
+					<FormError>{errorMessage}</FormError>
 
 					<DialogFooter>
 						<Button
@@ -122,10 +115,10 @@ export function ConnectProviderDialog({
 							onClick={() => onOpenChange(false)}
 							disabled={isPending}
 						>
-							cancel
+							Cancel
 						</Button>
 						<Button type="submit" disabled={isPending || !allFilled}>
-							{isPending ? "connecting..." : "connect"}
+							{isPending ? "Connecting…" : "Connect"}
 						</Button>
 					</DialogFooter>
 				</form>

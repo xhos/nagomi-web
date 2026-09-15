@@ -1,193 +1,118 @@
 "use client";
 
-import { X } from "lucide-react";
-import { Card, VStack } from "@/components/lib";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ReceiptStatus } from "@/gen/nagomi/v1/receipt_pb";
 import type { ReceiptFilters } from "@/hooks/useReceipts";
+import { cn } from "@/lib/utils";
 
-interface ReceiptFiltersPanelProps {
-	filters: ReceiptFilters;
-	onFiltersChange: (filters: ReceiptFilters) => void;
-	isOpen: boolean;
+export function countActiveReceiptFilters(f: ReceiptFilters) {
+	return [
+		f.minTotalCents !== undefined ||
+			f.maxTotalCents !== undefined ||
+			f.currency,
+		f.status !== undefined || f.unlinkedOnly,
+	].filter(Boolean).length;
 }
 
-const statusOptions: { label: string; value: ReceiptStatus }[] = [
-	{ label: "processing", value: ReceiptStatus.PENDING },
-	{ label: "parsed", value: ReceiptStatus.PARSED },
-	{ label: "linked", value: ReceiptStatus.LINKED },
-	{ label: "failed", value: ReceiptStatus.FAILED },
+const STATUSES: [string, ReceiptStatus][] = [
+	["Processing", ReceiptStatus.PENDING],
+	["Parsed", ReceiptStatus.PARSED],
+	["Linked", ReceiptStatus.LINKED],
+	["Failed", ReceiptStatus.FAILED],
 ];
 
-function centsToAmount(cents: bigint | undefined): string {
-	if (cents === undefined) return "";
-	return (Number(cents) / 100).toString();
-}
-
-function amountToCents(value: string): bigint | undefined {
-	const parsed = parseFloat(value);
-	if (Number.isNaN(parsed) || parsed < 0) return undefined;
-	return BigInt(Math.round(parsed * 100));
-}
+const chip = (on: boolean) =>
+	cn(
+		"h-7 rounded-md border px-2.5 text-sm transition-colors",
+		on ? "border-foreground bg-foreground text-background" : "hover:bg-muted",
+	);
+const toCents = (v: string) => {
+	const n = Number(v);
+	return v === "" || !Number.isFinite(n) || n < 0
+		? undefined
+		: BigInt(Math.round(n * 100));
+};
+const fromCents = (c?: bigint) =>
+	c === undefined ? "" : (Number(c) / 100).toString();
 
 export function ReceiptFiltersPanel({
 	filters,
 	onFiltersChange,
-	isOpen,
-}: ReceiptFiltersPanelProps) {
-	if (!isOpen) return null;
-
-	const updateFilter = <K extends keyof ReceiptFilters>(
-		key: K,
-		value: ReceiptFilters[K],
-	) => {
-		onFiltersChange({ ...filters, [key]: value });
-	};
-
-	const removeFilter = (key: keyof ReceiptFilters) => {
-		const updated = { ...filters };
-		delete updated[key];
-		onFiltersChange(updated);
-	};
-
-	const hasAnyFilters =
-		filters.minTotalCents !== undefined ||
-		filters.maxTotalCents !== undefined ||
-		filters.status !== undefined ||
-		filters.unlinkedOnly;
-
+}: {
+	filters: ReceiptFilters;
+	onFiltersChange: (f: ReceiptFilters) => void;
+}) {
+	const set = (patch: Partial<ReceiptFilters>) =>
+		onFiltersChange({ ...filters, ...patch });
 	return (
-		<Card className="p-4 mt-2">
-			<VStack spacing="md">
-				{/* Amount range + currency */}
-				<div>
-					<Label className="text-xs font-medium mb-2 block">amount range</Label>
-					<VStack spacing="xs">
-						<Input
-							placeholder="currency (e.g. CAD)"
-							value={filters.currency ?? ""}
-							onChange={(e) =>
-								updateFilter(
-									"currency",
-									e.target.value.toUpperCase() || undefined,
-								)
-							}
-							className="h-8 text-xs font-mono"
-							maxLength={3}
-						/>
-						<Input
-							type="number"
-							placeholder="min"
-							min="0"
-							value={centsToAmount(filters.minTotalCents)}
-							onChange={(e) =>
-								updateFilter("minTotalCents", amountToCents(e.target.value))
-							}
-							className="h-8 text-xs"
-						/>
-						<Input
-							type="number"
-							placeholder="max"
-							min="0"
-							value={centsToAmount(filters.maxTotalCents)}
-							onChange={(e) =>
-								updateFilter("maxTotalCents", amountToCents(e.target.value))
-							}
-							className="h-8 text-xs"
-						/>
-					</VStack>
-					{(filters.minTotalCents !== undefined ||
-						filters.maxTotalCents !== undefined ||
-						filters.currency) && (
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => {
-								removeFilter("minTotalCents");
-								removeFilter("maxTotalCents");
-								removeFilter("currency");
-							}}
-							className="mt-1 h-6 px-2 text-xs"
-						>
-							<X className="h-3 w-3 mr-1" />
-							clear
-						</Button>
-					)}
-				</div>
-
-				{/* Status */}
-				<div>
-					<Label className="text-xs font-medium mb-2 block">status</Label>
-					<div className="flex flex-wrap gap-1.5">
-						{statusOptions.map(({ label, value }) => (
-							<Button
-								key={value}
-								variant={filters.status === value ? "default" : "outline"}
-								size="sm"
-								onClick={() => {
-									if (filters.status === value) {
-										removeFilter("status");
-									} else {
-										onFiltersChange({
-											...filters,
-											status: value,
-											unlinkedOnly: undefined,
-										});
-									}
-								}}
-								className="h-6 px-2 text-xs"
-							>
-								{label}
-							</Button>
-						))}
-						<Button
-							variant={filters.unlinkedOnly ? "default" : "outline"}
-							size="sm"
-							onClick={() => {
-								if (filters.unlinkedOnly) {
-									removeFilter("unlinkedOnly");
-								} else {
-									onFiltersChange({
-										...filters,
-										unlinkedOnly: true,
-										status: undefined,
-									});
-								}
-							}}
-							className="h-6 px-2 text-xs"
-						>
-							unlinked
-						</Button>
-					</div>
-					{(filters.status !== undefined || filters.unlinkedOnly) && (
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => {
-								removeFilter("status");
-								removeFilter("unlinkedOnly");
-							}}
-							className="mt-1 h-6 px-2 text-xs"
-						>
-							<X className="h-3 w-3 mr-1" />
-							clear
-						</Button>
-					)}
-				</div>
-
-				{hasAnyFilters && (
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => onFiltersChange({})}
-						className="w-full h-8 text-xs"
+		<div className="mb-6 grid gap-x-8 gap-y-3 border-b pb-6 sm:grid-cols-[auto_1fr] sm:items-center">
+			<span className="text-sm text-muted-foreground">Status</span>
+			<div className="flex flex-wrap gap-2">
+				{STATUSES.map(([label, value]) => (
+					<button
+						key={value}
+						type="button"
+						className={chip(filters.status === value)}
+						onClick={() =>
+							set({
+								status: filters.status === value ? undefined : value,
+								unlinkedOnly: undefined,
+							})
+						}
 					>
-						clear all filters
+						{label}
+					</button>
+				))}
+				<button
+					type="button"
+					className={chip(!!filters.unlinkedOnly)}
+					onClick={() =>
+						set({
+							unlinkedOnly: filters.unlinkedOnly ? undefined : true,
+							status: undefined,
+						})
+					}
+				>
+					Not linked
+				</button>
+			</div>
+
+			<span className="text-sm text-muted-foreground">Total</span>
+			<div className="flex flex-wrap items-center gap-2">
+				<Input
+					type="number"
+					placeholder="Min"
+					className="h-8 w-32"
+					value={fromCents(filters.minTotalCents)}
+					onChange={(e) => set({ minTotalCents: toCents(e.target.value) })}
+				/>
+				<span className="text-muted-foreground">–</span>
+				<Input
+					type="number"
+					placeholder="Max"
+					className="h-8 w-32"
+					value={fromCents(filters.maxTotalCents)}
+					onChange={(e) => set({ maxTotalCents: toCents(e.target.value) })}
+				/>
+				<Input
+					placeholder="Currency"
+					className="h-8 w-24"
+					maxLength={3}
+					value={filters.currency ?? ""}
+					onChange={(e) =>
+						set({ currency: e.target.value.toUpperCase() || undefined })
+					}
+				/>
+			</div>
+
+			{countActiveReceiptFilters(filters) > 0 && (
+				<div className="sm:col-start-2">
+					<Button variant="ghost" size="sm" onClick={() => onFiltersChange({})}>
+						Clear filters
 					</Button>
-				)}
-			</VStack>
-		</Card>
+				</div>
+			)}
+		</div>
 	);
 }

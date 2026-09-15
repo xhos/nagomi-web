@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CategoryDialog } from "@/app/categories/category-dialog";
-import { ErrorMessage, HStack } from "@/components/lib";
 import { Button } from "@/components/ui/button";
+import { CategoryPicker } from "@/components/ui/category-picker";
 import {
 	Dialog,
 	DialogContent,
@@ -12,6 +12,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FormError } from "@/components/ui/forms";
+import { Input } from "@/components/ui/input";
 import type { Category } from "@/gen/nagomi/v1/category_pb";
 import type { Rule } from "@/gen/nagomi/v1/rule_pb";
 import { useCreateCategory } from "@/hooks/useCategories";
@@ -25,10 +27,8 @@ import {
 	type TransactionRule,
 	validateRule,
 } from "@/lib/rules";
-import type { UICondition } from "./ConditionBuilder";
-import { Step1, Step2, Step3, Step4 } from "./RuleSteps";
-import { STEP_LABELS } from "./rule-dialog-constants";
-import { StepIndicator } from "./StepIndicator";
+import { cn } from "@/lib/utils";
+import { ConditionBuilder, type UICondition } from "./ConditionBuilder";
 
 interface RuleDialogPrefill {
 	ruleName: string;
@@ -76,7 +76,6 @@ export function RuleDialog({
 	error: externalError,
 }: RuleDialogProps) {
 	const { createCategoryAsync } = useCreateCategory();
-	const [step, setStep] = useState(1);
 	const [ruleName, setRuleName] = useState("");
 	const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 	const [merchantValue, setMerchantValue] = useState("");
@@ -167,7 +166,13 @@ export function RuleDialog({
 			setSelectedCategoryId("");
 			setMerchantValue("");
 			setLogic("AND");
-			setUIConditions([prefill.condition]);
+			setUIConditions([
+				{
+					...prefill.condition,
+					value: prefill.condition.value ?? prefill.condition.currentInput,
+					currentInput: "",
+				},
+			]);
 			setPriorityOrder(1);
 			setApplyToExisting(true);
 		} else {
@@ -179,7 +184,6 @@ export function RuleDialog({
 			setPriorityOrder(1);
 			setApplyToExisting(false);
 		}
-		setStep(1);
 	}, [isOpen, rule, prefill]);
 
 	const addCondition = () =>
@@ -213,11 +217,10 @@ export function RuleDialog({
 		return condition.value !== undefined && condition.value !== "";
 	};
 
-	const canProceedStep1 = ruleName.trim() !== "";
-	const canProceedStep2 = uiConditions.some(isValidCondition);
-	const canProceedStep3 =
-		selectedCategoryId !== "" || merchantValue.trim() !== "";
-	const canSubmit = canProceedStep1 && canProceedStep2 && canProceedStep3;
+	const canSubmit =
+		ruleName.trim() !== "" &&
+		uiConditions.some(isValidCondition) &&
+		(selectedCategoryId !== "" || merchantValue.trim() !== "");
 
 	const handleSubmit = () => {
 		const builder = createRuleBuilder(logic);
@@ -305,134 +308,172 @@ export function RuleDialog({
 		}
 	};
 
-	const stepValidation = {
-		1: canProceedStep1,
-		2: canProceedStep2,
-		3: canProceedStep3,
-	};
-	const canProceed =
-		stepValidation[step as keyof typeof stepValidation] ?? true;
+	const selectedCategory = categories.find(
+		(c) => c.id.toString() === selectedCategoryId,
+	);
+	const chip = (on: boolean) =>
+		cn(
+			"h-7 rounded-md border px-2.5 text-sm transition-colors",
+			on ? "border-foreground bg-foreground text-background" : "hover:bg-muted",
+		);
 
 	return (
 		<>
 			<CategoryDialog
 				open={createCategoryOpen}
 				onOpenChange={setCreateCategoryOpen}
-				title="new category"
 				onSave={async (slug, color) => {
 					await createCategoryAsync({ slug, color });
 					setPendingCategorySlug(slug);
 				}}
 			/>
-			<Dialog open={isOpen} onOpenChange={onClose}>
-				<DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
-					<div className="px-6 pt-6">
-						<DialogHeader>
-							<DialogTitle>{title}</DialogTitle>
-						</DialogHeader>
-					</div>
+			<Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+				<DialogContent className="flex max-h-[90vh] flex-col sm:max-w-2xl">
+					<DialogHeader>
+						<DialogTitle>{title}</DialogTitle>
+					</DialogHeader>
 
-					<div className="px-6">
-						<StepIndicator steps={STEP_LABELS} currentStep={step} />
-					</div>
+					<div className="-mx-1 flex-1 space-y-5 overflow-y-auto px-1">
+						<Field label="Name" htmlFor="rule-name">
+							<Input
+								id="rule-name"
+								value={ruleName}
+								onChange={(e) => setRuleName(e.target.value)}
+								placeholder="Groceries"
+								autoFocus
+							/>
+						</Field>
 
-					<div className="flex-1 overflow-y-auto px-6">
-						{step === 1 && (
-							<Step1
-								ruleName={ruleName}
-								onRuleNameChange={setRuleName}
-								onNext={() => canProceedStep1 && setStep(2)}
-							/>
-						)}
-						{step === 2 && (
-							<Step2
-								logic={logic}
-								conditions={uiConditions}
-								onLogicChange={setLogic}
-								onUpdateCondition={updateCondition}
-								onRemoveCondition={removeCondition}
-								onAddCondition={addCondition}
-								onNext={() => canProceedStep2 && setStep(3)}
-								canProceed={canProceedStep2}
-							/>
-						)}
-						{step === 3 && (
-							<Step3
-								selectedCategoryId={selectedCategoryId}
-								merchantValue={merchantValue}
-								categories={categories}
-								onCategoryChange={setSelectedCategoryId}
-								onMerchantChange={setMerchantValue}
-								onOpenCreateCategory={() => setCreateCategoryOpen(true)}
-							/>
-						)}
-						{step === 4 && (
-							<Step4
-								ruleName={ruleName}
-								selectedCategoryId={selectedCategoryId}
-								merchantValue={merchantValue}
-								categories={categories}
-								conditions={uiConditions}
-								logic={logic}
-								priorityOrder={priorityOrder}
-								applyToExisting={applyToExisting}
-								onPriorityChange={setPriorityOrder}
-								onApplyToExistingChange={setApplyToExisting}
-							/>
-						)}
-					</div>
-
-					{(validationError || externalError) && (
-						<div className="px-6">
-							<ErrorMessage>{validationError || externalError}</ErrorMessage>
+						<div className="space-y-3 border-t pt-4">
+							<div className="flex flex-wrap items-center justify-between gap-2">
+								<span className="text-sm font-medium">When</span>
+								<span className="flex gap-2">
+									<button
+										type="button"
+										className={chip(logic === "AND")}
+										onClick={() => setLogic("AND")}
+									>
+										All conditions match
+									</button>
+									<button
+										type="button"
+										className={chip(logic === "OR")}
+										onClick={() => setLogic("OR")}
+									>
+										Any condition matches
+									</button>
+								</span>
+							</div>
+							{uiConditions.map((condition, index) => (
+								<ConditionBuilder
+									key={index}
+									condition={condition}
+									showRemove={uiConditions.length > 1}
+									onUpdate={(u) => updateCondition(index, u)}
+									onRemove={() => removeCondition(index)}
+								/>
+							))}
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								onClick={addCondition}
+							>
+								<Plus /> Add condition
+							</Button>
 						</div>
-					)}
 
-					<div className="px-6 pb-6">
-						<DialogFooter>
-							<HStack spacing="sm" justify="between" className="w-full">
-								{step > 1 && (
-									<Button
-										variant="outline"
-										onClick={() => setStep(step - 1)}
-										disabled={isLoading}
+						<div className="space-y-3 border-t pt-4">
+							<span className="text-sm font-medium">Then</span>
+							<div className="grid gap-4 sm:grid-cols-2">
+								<Field label="Set category">
+									<CategoryPicker
+										value={selectedCategory?.id}
+										onChange={(c) =>
+											setSelectedCategoryId(c?.id.toString() ?? "")
+										}
 									>
-										<ArrowLeft className="h-4 w-4 mr-1" />
-										back
-									</Button>
-								)}
-								<HStack
-									spacing="sm"
-									justify="end"
-									className={step === 1 ? "ml-auto" : ""}
-								>
+										<Button
+											variant="outline"
+											className="w-full justify-start font-normal"
+										>
+											{selectedCategory ? (
+												<>
+													<span
+														className="size-2 rounded-full"
+														style={{ backgroundColor: selectedCategory.color }}
+													/>
+													{selectedCategory.slug}
+												</>
+											) : (
+												<span className="text-muted-foreground">
+													Choose a category
+												</span>
+											)}
+										</Button>
+									</CategoryPicker>
 									<Button
-										variant="outline"
-										onClick={onClose}
-										disabled={isLoading}
+										type="button"
+										variant="link"
+										size="sm"
+										className="h-auto p-0"
+										onClick={() => setCreateCategoryOpen(true)}
 									>
-										cancel
+										New category
 									</Button>
-									{step < 4 ? (
-										<Button
-											onClick={() => setStep(step + 1)}
-											disabled={isLoading || !canProceed}
-										>
-											next
-											<ArrowRight className="h-4 w-4 ml-1" />
-										</Button>
-									) : (
-										<Button
-											onClick={handleSubmit}
-											disabled={isLoading || !canSubmit}
-										>
-											{isLoading ? "saving..." : submitText}
-										</Button>
-									)}
-								</HStack>
-							</HStack>
-						</DialogFooter>
+								</Field>
+								<Field label="Set merchant" htmlFor="rule-merchant">
+									<Input
+										id="rule-merchant"
+										value={merchantValue}
+										onChange={(e) => setMerchantValue(e.target.value)}
+										placeholder="Optional"
+									/>
+								</Field>
+							</div>
+						</div>
+
+						<div className="flex flex-wrap items-end gap-6 border-t pt-4">
+							<Field
+								label="Priority"
+								htmlFor="rule-priority"
+								hint="Lower runs first."
+							>
+								<Input
+									id="rule-priority"
+									type="number"
+									min={1}
+									value={priorityOrder}
+									onChange={(e) =>
+										setPriorityOrder(Number(e.target.value) || 1)
+									}
+									className="w-24"
+								/>
+							</Field>
+							{!rule && (
+								<label className="flex items-center gap-2 pb-6 text-sm">
+									<input
+										type="checkbox"
+										checked={applyToExisting}
+										onChange={(e) => setApplyToExisting(e.target.checked)}
+										className="size-3.5 accent-[var(--accent)]"
+									/>
+									Apply to existing transactions
+								</label>
+							)}
+						</div>
+
+						<FormError>{validationError || externalError}</FormError>
 					</div>
+
+					<DialogFooter>
+						<Button variant="outline" onClick={onClose} disabled={isLoading}>
+							Cancel
+						</Button>
+						<Button onClick={handleSubmit} disabled={isLoading || !canSubmit}>
+							{isLoading ? "Saving…" : submitText}
+						</Button>
+					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 		</>

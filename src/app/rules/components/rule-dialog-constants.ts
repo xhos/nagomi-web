@@ -3,8 +3,8 @@ export const FIELD_OPTIONS = [
 	{ value: "tx_desc", label: "Description" },
 	{ value: "amount", label: "Amount" },
 	{ value: "tx_direction", label: "Direction" },
-	{ value: "account_type", label: "Account Type" },
-	{ value: "account_name", label: "Account Name" },
+	{ value: "account_type", label: "Account type" },
+	{ value: "account_name", label: "Account name" },
 	{ value: "bank", label: "Bank" },
 	{ value: "currency", label: "Currency" },
 ] as const;
@@ -30,13 +30,6 @@ export const NUMERIC_OPERATOR_OPTIONS = [
 
 export const TX_DIRECTION_OPTIONS = [
 	{ value: 0, label: "Unknown" },
-	{ value: 1, label: "Credit (Incoming)" },
-	{ value: 2, label: "Debit (Outgoing)" },
+	{ value: 1, label: "Incoming" },
+	{ value: 2, label: "Outgoing" },
 ] as const;
-
-export const STEP_LABELS = [
-	{ number: 1, title: "Name" },
-	{ number: 2, title: "Conditions" },
-	{ number: 3, title: "Action" },
-	{ number: 4, title: "Review" },
-];

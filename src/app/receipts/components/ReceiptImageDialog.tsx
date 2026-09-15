@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Muted } from "@/components/lib";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { Receipt } from "@/gen/nagomi/v1/receipt_pb";
 import { useReceipt } from "@/hooks/useReceipts";
@@ -61,16 +60,16 @@ export function ReceiptImageDialog({
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent className="sm:max-w-2xl p-0 overflow-hidden">
-				<DialogTitle className="sr-only">receipt image</DialogTitle>
+				<DialogTitle className="sr-only">Receipt image</DialogTitle>
 
 				{hasError ? (
-					<div className="p-12 text-center">
-						<Muted size="sm">image not available</Muted>
-					</div>
+					<p className="p-12 text-center text-sm text-muted-foreground">
+						Image not available.
+					</p>
 				) : isLoading || !blobUrl ? (
-					<div className="p-12 text-center text-sm text-muted-foreground animate-pulse">
-						loading...
-					</div>
+					<p className="p-12 text-center text-sm text-muted-foreground">
+						Loading…
+					</p>
 				) : (
 					<img
 						src={blobUrl}

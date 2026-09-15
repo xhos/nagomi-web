@@ -3,13 +3,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import {
-	ErrorMessage,
-	FormField,
-	HStack,
-	Muted,
-	VStack,
-} from "@/components/lib";
-import {
 	AlertDialog,
 	AlertDialogAction,
 	AlertDialogCancel,
@@ -19,22 +12,16 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Field, FormError, NativeSelect } from "@/components/ui/forms";
 import type { Connection } from "@/gen/nagomi/v1/connection_services_pb";
 import {
 	useDeleteConnection,
@@ -47,15 +34,6 @@ import {
 	type Provider,
 	parseIntervalValue,
 } from "../providers";
-
-const STATUS_VARIANT: Record<
-	string,
-	"default" | "secondary" | "destructive" | "outline"
-> = {
-	active: "default",
-	disabled: "secondary",
-	broken: "destructive",
-};
 
 function timestampToDate(ts?: { seconds?: bigint; nanos?: number }) {
 	if (!ts?.seconds) return null;
@@ -96,14 +74,14 @@ export function ManageConnectionDialog({
 		deleteError instanceof Error ? deleteError.message : null;
 
 	const syncedLabel = lastSyncedDate
-		? `synced ${formatDistanceToNow(lastSyncedDate, { addSuffix: true })}`
+		? `Synced ${formatDistanceToNow(lastSyncedDate, { addSuffix: true })}`
 		: createdDate
-			? `connected ${formatDistanceToNow(createdDate, { addSuffix: true })}`
-			: "never synced";
+			? `Connected ${formatDistanceToNow(createdDate, { addSuffix: true })}`
+			: "Never synced";
 
 	const nextRunLabel =
 		nextRunDate && nextRunDate > new Date()
-			? `next run ${formatDistanceToNow(nextRunDate, { addSuffix: true })}`
+			? `Next run ${formatDistanceToNow(nextRunDate, { addSuffix: true })}`
 			: null;
 
 	const onIntervalChange = async (value: string) => {
@@ -124,67 +102,63 @@ export function ManageConnectionDialog({
 			<Dialog open={open} onOpenChange={onOpenChange}>
 				<DialogContent className="sm:max-w-md">
 					<DialogHeader>
-						<DialogTitle className="flex items-center gap-2">
+						<DialogTitle>
 							{provider.label}
-							<Badge variant={STATUS_VARIANT[connection.status] ?? "outline"}>
-								{connection.status}
-							</Badge>
+							{connection.status !== "active" && (
+								<span className="ml-2 text-sm font-normal text-destructive">
+									{connection.status}
+								</span>
+							)}
 						</DialogTitle>
+						<DialogDescription>
+							{syncedLabel}
+							{nextRunLabel && ` · ${nextRunLabel}`}
+						</DialogDescription>
 					</DialogHeader>
 
-					<VStack spacing="md" className="py-2">
-						<VStack spacing="xs">
-							<Muted size="xs">{syncedLabel}</Muted>
-							{nextRunLabel && <Muted size="xs">{nextRunLabel}</Muted>}
-						</VStack>
+					<Field label="Sync every" htmlFor="sync-interval">
+						<NativeSelect
+							id="sync-interval"
+							value={intervalToValue(connection.syncIntervalMinutes)}
+							onChange={(e) => onIntervalChange(e.target.value)}
+							disabled={isSavingInterval}
+						>
+							{INTERVAL_OPTIONS.map((o) => (
+								<option key={o.value} value={o.value}>
+									{o.label}
+								</option>
+							))}
+						</NativeSelect>
+					</Field>
 
-						<FormField label="sync frequency">
-							<Select
-								value={intervalToValue(connection.syncIntervalMinutes)}
-								onValueChange={onIntervalChange}
-								disabled={isSavingInterval}
-							>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{INTERVAL_OPTIONS.map((o) => (
-										<SelectItem key={o.value} value={o.value}>
-											{o.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</FormField>
-
-						{errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
-					</VStack>
+					<FormError>{errorMessage}</FormError>
 
 					<DialogFooter className="sm:justify-between">
 						<Button
 							type="button"
-							variant="outline"
+							variant="ghost"
+							className="text-destructive hover:text-destructive"
 							onClick={() => setConfirmOpen(true)}
 							disabled={isDeleting}
 						>
-							disconnect
+							Disconnect
 						</Button>
-						<HStack spacing="sm">
+						<div className="flex gap-2">
 							<Button
 								type="button"
 								variant="outline"
 								onClick={() => onOpenChange(false)}
 							>
-								close
+								Close
 							</Button>
 							<Button
 								type="button"
 								onClick={() => triggerSyncAsync(connection.id)}
 								disabled={isSyncing}
 							>
-								{isSyncing ? "syncing..." : "sync now"}
+								{isSyncing ? "Syncing…" : "Sync now"}
 							</Button>
-						</HStack>
+						</div>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
@@ -192,16 +166,16 @@ export function ManageConnectionDialog({
 			<AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>disconnect {provider.label}?</AlertDialogTitle>
+						<AlertDialogTitle>Disconnect {provider.label}?</AlertDialogTitle>
 						<AlertDialogDescription>
-							sync will stop and the stored credentials will be removed.
-							existing transactions are kept.
+							Syncing stops and the stored credentials are removed. Existing
+							transactions are kept.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isDeleting}>cancel</AlertDialogCancel>
+						<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
 						<AlertDialogAction onClick={onDisconnect} disabled={isDeleting}>
-							{isDeleting ? "disconnecting..." : "disconnect"}
+							{isDeleting ? "Disconnecting…" : "Disconnect"}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>

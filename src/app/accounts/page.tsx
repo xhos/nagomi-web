@@ -1,16 +1,26 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useMemo, useState } from "react";
-import { EmptyState, ErrorMessage, HStack } from "@/components/lib";
+import { useState } from "react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	PageContainer,
 	PageContent,
 	PageHeaderWithTitle,
 } from "@/components/ui/layout";
+import { EmptyState, ListGroup } from "@/components/ui/list";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Account } from "@/gen/nagomi/v1/account_pb";
-import { AccountType } from "@/gen/nagomi/v1/enums_pb";
 import {
 	useAccounts,
 	useCreateAccount,
@@ -20,131 +30,41 @@ import {
 	useUpdateAccount,
 } from "@/hooks/useAccounts";
 import { useUserId } from "@/hooks/useSession";
-import { AccountDialog } from "./components/AccountDialog";
-import AccountGrid from "./components/AccountGrid";
-import { DeleteAccountDialog } from "./components/DeleteAccountDialog";
-import FilterChips from "./components/FilterChips";
+import { ACCOUNT_TYPES } from "@/lib/utils/account";
+import {
+	AccountDialog,
+	type AccountFormData,
+} from "./components/AccountDialog";
+import { AccountRow } from "./components/AccountRow";
 import { MergeAccountDialog } from "./components/MergeAccountDialog";
 
-const getAccountTypeName = (accountType: AccountType): string => {
-	// Handle both string and numeric enum values
-	const normalizedType =
-		typeof accountType === "string"
-			? AccountType[accountType as keyof typeof AccountType]
-			: accountType;
-
-	switch (normalizedType) {
-		case AccountType.ACCOUNT_UNSPECIFIED:
-			return "unspecified";
-		case AccountType.ACCOUNT_CHEQUING:
-			return "chequing";
-		case AccountType.ACCOUNT_SAVINGS:
-			return "savings";
-		case AccountType.ACCOUNT_CREDIT_CARD:
-			return "credit card";
-		case AccountType.ACCOUNT_INVESTMENT:
-			return "investment";
-		case AccountType.ACCOUNT_OTHER:
-			return "other";
-		case AccountType.ACCOUNT_FRIEND:
-			return "friend";
-		default:
-			return "unknown";
-	}
+const friendly = (e: unknown, fallback: string) => {
+	const m = e instanceof Error ? e.message : fallback;
+	return m.includes("duplicate key")
+		? "An account with this name already exists."
+		: m;
 };
-//TODO: decimal support for balance on create account
+
 export default function AccountsPage() {
 	const userId = useUserId();
-	const { accounts } = useAccounts();
-
-	const [error, setError] = useState("");
-	const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
-	const [editingAccount, setEditingAccount] = useState<Account | null>(null);
-	const [deletingAccount, setDeletingAccount] = useState<Account | null>(null);
-	const [mergingAccount, setMergingAccount] = useState<Account | null>(null);
-	const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-
-	const { createAccountAsync, isPending: isCreating } = useCreateAccount();
-	const { updateAccountAsync, isPending: isUpdating } = useUpdateAccount();
-	const { deleteAccountAsync, isPending: isDeleting } = useDeleteAccount();
-	const { setAnchorBalanceAsync, isPending: isSettingAnchor } =
-		useSetAnchorBalance();
+	const { accounts, isLoading } = useAccounts();
+	const { createAccountAsync, isPending: creating } = useCreateAccount();
+	const { updateAccountAsync } = useUpdateAccount();
+	const { deleteAccountAsync, isPending: deleting } = useDeleteAccount();
+	const { setAnchorBalanceAsync } = useSetAnchorBalance();
 	const { mergeAccountsAsync } = useMergeAccounts();
 
-	const handleDeleteAccount = async () => {
-		if (!deletingAccount) return;
-		try {
-			await deleteAccountAsync(deletingAccount.id);
-			setError("");
-			setDeletingAccount(null);
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to delete account");
-		}
-	};
+	const [expandedId, setExpandedId] = useState<string | null>(null);
+	const [creatingOpen, setCreatingOpen] = useState(false);
+	const [editing, setEditing] = useState<Account | null>(null);
+	const [merging, setMerging] = useState<Account | null>(null);
+	const [deletingAccount, setDeletingAccount] = useState<Account | null>(null);
+	const [error, setError] = useState<string | null>(null);
 
-	const handleMergeAccount = async (primaryAccountId: bigint) => {
-		if (!mergingAccount) throw new Error("No account selected for merge");
-		const result = await mergeAccountsAsync({
-			primaryAccountId,
-			secondaryAccountId: mergingAccount.id,
-		});
-		return { transactionsMoved: result.transactionsMoved };
-	};
-
-	const handleSaveAnchor = async (
-		account: Account,
-		balance: { units: string; nanos: number },
-	) => {
-		if (!userId) return;
-		try {
-			await setAnchorBalanceAsync({ userId, id: account.id, balance });
-			setError("");
-		} catch (err) {
-			setError(
-				err instanceof Error ? err.message : "Failed to set anchor balance",
-			);
-			throw err;
-		}
-	};
-
-	const handleCreateAccount = async (data: {
-		name: string;
-		bank: string;
-		type: AccountType;
-		friendlyName?: string;
-		anchorBalance?: { currencyCode: string; units: string; nanos: number };
-		mainCurrency?: string;
-		colors?: string[];
-	}) => {
-		try {
-			await createAccountAsync(data);
-			setError("");
-		} catch (err) {
-			const errorMessage =
-				err instanceof Error ? err.message : "Failed to create account";
-			if (errorMessage.includes("duplicate key")) {
-				setError(
-					"An account with this name already exists. Please choose a different name.",
-				);
-			} else {
-				setError(errorMessage);
-			}
-			throw err;
-		}
-	};
-
-	const handleUpdateAccount = async (data: {
-		name: string;
-		bank: string;
-		type: AccountType;
-		friendlyName?: string;
-		mainCurrency?: string;
-		colors?: string[];
-	}) => {
-		if (!editingAccount) return;
-		try {
+	const save = async (data: AccountFormData) => {
+		if (editing) {
 			await updateAccountAsync({
-				id: editingAccount.id,
+				id: editing.id,
 				name: data.name,
 				bank: data.bank,
 				accountType: data.type,
@@ -152,131 +72,153 @@ export default function AccountsPage() {
 				mainCurrency: data.mainCurrency,
 				colors: data.colors,
 			});
-			setError("");
-		} catch (err) {
-			const errorMessage =
-				err instanceof Error ? err.message : "Failed to update account";
-			if (errorMessage.includes("duplicate key")) {
-				setError(
-					"An account with this name already exists. Please choose a different name.",
-				);
-			} else {
-				setError(errorMessage);
-			}
-			throw err;
+		} else {
+			await createAccountAsync(data);
 		}
 	};
 
-	const isOperationLoading =
-		isCreating || isUpdating || isDeleting || isSettingAnchor;
+	const confirmDelete = async () => {
+		if (!deletingAccount) return;
+		try {
+			await deleteAccountAsync(deletingAccount.id);
+			setDeletingAccount(null);
+			setError(null);
+		} catch (e) {
+			setError(friendly(e, "Couldn't delete account"));
+			setDeletingAccount(null);
+		}
+	};
 
-	const availableTypes = useMemo(() => {
-		const types = new Set(
-			accounts.map((account) => getAccountTypeName(account.type)),
-		);
-		return Array.from(types).sort();
-	}, [accounts]);
-
-	const availableBanks = useMemo(() => {
-		const banks = new Set(accounts.map((account) => account.bank));
-		return Array.from(banks).sort();
-	}, [accounts]);
-
-	if (!userId) {
-		return (
-			<PageContainer>
-				<PageContent>
-					<div className="text-sm text-muted-foreground">
-						loading session...
-					</div>
-				</PageContent>
-			</PageContainer>
-		);
-	}
+	const groups = ACCOUNT_TYPES.map(([type, , plural]) => ({
+		type,
+		title: plural,
+		accounts: accounts.filter((a) => a.type === type),
+	})).filter((g) => g.accounts.length);
 
 	return (
 		<PageContainer>
 			<PageContent>
-				<PageHeaderWithTitle title="accounts" />
-
-				{error && <ErrorMessage className="mb-6">{error}</ErrorMessage>}
-
-				{accounts.length > 0 && (
-					<HStack spacing="md" justify="between" className="mb-6">
-						<FilterChips
-							selectedFilter={selectedFilter}
-							onFilterChange={setSelectedFilter}
-							availableTypes={availableTypes}
-							availableBanks={availableBanks}
-						/>
-						<Button
-							onClick={() => setIsCreateDialogOpen(true)}
-							size="default"
-							disabled={isOperationLoading}
-						>
-							<Plus className="h-4 w-4" />
-							new
+				<PageHeaderWithTitle
+					title="accounts"
+					actions={
+						<Button onClick={() => setCreatingOpen(true)} disabled={creating}>
+							<Plus />
+							New
 						</Button>
-					</HStack>
-				)}
+					}
+				/>
 
-				{accounts.length === 0 ? (
+				{error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+
+				{isLoading || !userId ? (
+					<div className="space-y-3">
+						{[0, 1, 2, 3].map((i) => (
+							<div key={i} className="flex justify-between py-2">
+								<div className="space-y-2">
+									<Skeleton className="h-4 w-40" />
+									<Skeleton className="h-3 w-28" />
+								</div>
+								<Skeleton className="h-4 w-24" />
+							</div>
+						))}
+					</div>
+				) : accounts.length === 0 ? (
 					<EmptyState
-						title="no accounts yet"
-						description="create your first account to get started"
-						action={
-							<Button
-								onClick={() => setIsCreateDialogOpen(true)}
-								disabled={isOperationLoading}
-							>
-								<Plus className="h-4 w-4" />
-								create your first account
-							</Button>
-						}
+						text="No accounts yet."
+						action="Add account"
+						onAction={() => setCreatingOpen(true)}
 					/>
 				) : (
-					<AccountGrid
-						accounts={accounts}
-						selectedFilter={selectedFilter}
-						getAccountTypeName={getAccountTypeName}
-						onAccountClick={setEditingAccount}
-						onEdit={setEditingAccount}
-						onDelete={setDeletingAccount}
-						onSaveAnchor={handleSaveAnchor}
-						onMerge={accounts.length > 1 ? setMergingAccount : undefined}
-					/>
+					<div className="space-y-8">
+						{groups.map((g) => (
+							<ListGroup key={g.type} title={g.title}>
+								{g.accounts.map((account) => (
+									<AccountRow
+										key={account.id.toString()}
+										account={account}
+										expanded={expandedId === account.id.toString()}
+										onToggle={() =>
+											setExpandedId((cur) =>
+												cur === account.id.toString()
+													? null
+													: account.id.toString(),
+											)
+										}
+										onEdit={() => setEditing(account)}
+										onMerge={
+											accounts.length > 1
+												? () => setMerging(account)
+												: undefined
+										}
+										onDelete={() => setDeletingAccount(account)}
+										onSetAnchor={async (amount) => {
+											if (!userId) return;
+											await setAnchorBalanceAsync({
+												userId,
+												id: account.id,
+												balance: {
+													units: Math.trunc(amount).toString(),
+													nanos: Math.round(
+														(amount - Math.trunc(amount)) * 1e9,
+													),
+												},
+											});
+										}}
+									/>
+								))}
+							</ListGroup>
+						))}
+					</div>
 				)}
 
 				<AccountDialog
-					open={isCreateDialogOpen}
-					onOpenChange={setIsCreateDialogOpen}
-					title="create account"
-					onSave={handleCreateAccount}
-				/>
-
-				<AccountDialog
-					open={!!editingAccount}
-					onOpenChange={(open) => !open && setEditingAccount(null)}
-					account={editingAccount}
-					title="edit account"
-					onSave={handleUpdateAccount}
-				/>
-
-				<DeleteAccountDialog
-					open={!!deletingAccount}
-					onOpenChange={(open) => !open && setDeletingAccount(null)}
-					account={deletingAccount}
-					getAccountTypeName={getAccountTypeName}
-					onConfirm={handleDeleteAccount}
+					open={creatingOpen || !!editing}
+					onOpenChange={(o) => {
+						if (!o) {
+							setCreatingOpen(false);
+							setEditing(null);
+						}
+					}}
+					account={editing}
+					onSave={save}
 				/>
 
 				<MergeAccountDialog
-					open={!!mergingAccount}
-					onOpenChange={(open) => !open && setMergingAccount(null)}
-					account={mergingAccount}
+					open={!!merging}
+					onOpenChange={(o) => !o && setMerging(null)}
+					account={merging}
 					allAccounts={accounts}
-					onConfirm={handleMergeAccount}
+					onConfirm={async (primaryAccountId) => {
+						if (!merging) throw new Error("No account selected");
+						const r = await mergeAccountsAsync({
+							primaryAccountId,
+							secondaryAccountId: merging.id,
+						});
+						return { transactionsMoved: r.transactionsMoved };
+					}}
 				/>
+
+				<AlertDialog
+					open={!!deletingAccount}
+					onOpenChange={(o) => !o && setDeletingAccount(null)}
+				>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>
+								Delete {deletingAccount?.friendlyName || deletingAccount?.name}?
+							</AlertDialogTitle>
+							<AlertDialogDescription>
+								Its transactions will be deleted too. This can't be undone.
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+							<AlertDialogAction onClick={confirmDelete} disabled={deleting}>
+								{deleting ? "Deleting…" : "Delete"}
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 			</PageContent>
 		</PageContainer>
 	);

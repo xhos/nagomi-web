@@ -1,18 +1,10 @@
+"use client";
+
 import { X } from "lucide-react";
-import { Card, HStack, VStack } from "@/components/lib";
 import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { type FieldName, NUMERIC_FIELDS, STRING_FIELDS } from "@/lib/rules";
-import { ChipList } from "./ChipList";
 import {
 	FIELD_OPTIONS,
 	NUMERIC_OPERATOR_OPTIONS,
@@ -34,235 +26,199 @@ export interface UICondition {
 
 interface ConditionBuilderProps {
 	condition: UICondition;
-	index: number;
-	logic: "AND" | "OR";
 	showRemove: boolean;
 	onUpdate: (updates: Partial<UICondition>) => void;
 	onRemove: () => void;
 }
 
-const isStringField = (field: FieldName) => STRING_FIELDS.includes(field);
-const isNumericField = (field: FieldName) => NUMERIC_FIELDS.includes(field);
-
-const getOperatorOptions = (field: FieldName) => {
-	return isStringField(field)
-		? STRING_OPERATOR_OPTIONS
-		: NUMERIC_OPERATOR_OPTIONS;
-};
+const isString = (f: FieldName) => STRING_FIELDS.includes(f);
+const isNumeric = (f: FieldName) => NUMERIC_FIELDS.includes(f);
+const operatorsFor = (f: FieldName) =>
+	isString(f) ? STRING_OPERATOR_OPTIONS : NUMERIC_OPERATOR_OPTIONS;
 
 export function ConditionBuilder({
 	condition,
-	index,
-	logic,
 	showRemove,
 	onUpdate,
 	onRemove,
 }: ConditionBuilderProps) {
-	const handleAddChip = () => {
-		if (!condition.currentInput?.trim()) return;
-
-		const newChips = [
-			...(condition.chips || []),
-			condition.currentInput.trim(),
-		];
-		onUpdate({
-			chips: newChips,
-			values: newChips,
-			currentInput: "",
-		});
+	const reset = {
+		value: "",
+		values: undefined,
+		min_value: undefined,
+		max_value: undefined,
+		chips: [],
+		currentInput: "",
 	};
-
-	const handleRemoveChip = (chipIndex: number) => {
-		const newChips = condition.chips?.filter((_, i) => i !== chipIndex);
-		onUpdate({
-			chips: newChips,
-			values: newChips,
-		});
-	};
-
-	const handleFieldChange = (value: FieldName) => {
-		const operators = getOperatorOptions(value);
-		onUpdate({
-			field: value,
-			operator: operators[0].value,
-			value: "",
-			values: undefined,
-			min_value: undefined,
-			max_value: undefined,
-			case_sensitive: false,
-			chips: [],
-			currentInput: "",
-		});
-	};
-
-	const handleOperatorChange = (value: string) => {
-		onUpdate({
-			operator: value,
-			value: "",
-			values: undefined,
-			min_value: undefined,
-			max_value: undefined,
-			chips: [],
-			currentInput: "",
-		});
+	const addChip = () => {
+		const v = condition.currentInput?.trim();
+		if (!v) return;
+		const chips = [...(condition.chips ?? []), v];
+		onUpdate({ chips, values: chips, currentInput: "" });
 	};
 
 	return (
-		<Card padding="md">
-			<VStack spacing="md">
-				<HStack justify="between" align="center">
-					<span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-medium">
-						{index === 0 ? "IF" : logic}
-					</span>
-					{showRemove && (
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							onClick={onRemove}
-							className="h-8 w-8 p-0"
-						>
-							<X className="h-4 w-4" />
-						</Button>
-					)}
-				</HStack>
+		<div className="space-y-2">
+			<div className="flex flex-wrap items-center gap-2">
+				<NativeSelect
+					aria-label="Field"
+					className="w-36"
+					value={condition.field}
+					onChange={(e) => {
+						const field = e.target.value as FieldName;
+						onUpdate({
+							field,
+							operator: operatorsFor(field)[0].value,
+							case_sensitive: false,
+							...reset,
+						});
+					}}
+				>
+					{FIELD_OPTIONS.map((o) => (
+						<option key={o.value} value={o.value}>
+							{o.label}
+						</option>
+					))}
+				</NativeSelect>
+				<NativeSelect
+					aria-label="Operator"
+					className="w-40"
+					value={condition.operator}
+					onChange={(e) => onUpdate({ operator: e.target.value, ...reset })}
+				>
+					{operatorsFor(condition.field).map((o) => (
+						<option key={o.value} value={o.value}>
+							{o.label}
+						</option>
+					))}
+				</NativeSelect>
 
-				<HStack spacing="sm" className="flex-wrap">
-					<Select value={condition.field} onValueChange={handleFieldChange}>
-						<SelectTrigger className="w-32">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{FIELD_OPTIONS.map((option) => (
-								<SelectItem key={option.value} value={option.value}>
-									{option.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-
-					<Select
-						value={condition.operator}
-						onValueChange={handleOperatorChange}
-					>
-						<SelectTrigger className="w-36">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{getOperatorOptions(condition.field).map((option) => (
-								<SelectItem key={option.value} value={option.value}>
-									{option.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-
-					{condition.operator === "between" ? (
-						<>
-							<Input
-								type="number"
-								value={condition.min_value || ""}
-								onChange={(e) =>
-									onUpdate({
-										min_value: parseFloat(e.target.value) || undefined,
-									})
-								}
-								placeholder="min"
-								className="w-16"
-							/>
-							<span className="text-sm text-muted-foreground">and</span>
-							<Input
-								type="number"
-								value={condition.max_value || ""}
-								onChange={(e) =>
-									onUpdate({
-										max_value: parseFloat(e.target.value) || undefined,
-									})
-								}
-								placeholder="max"
-								className="w-16"
-							/>
-						</>
-					) : condition.field === "tx_direction" ? (
-						<Select
-							value={condition.value?.toString() || ""}
-							onValueChange={(value) =>
-								onUpdate({ value: parseInt(value, 10) })
-							}
-						>
-							<SelectTrigger className="w-36">
-								<SelectValue placeholder="direction" />
-							</SelectTrigger>
-							<SelectContent>
-								{TX_DIRECTION_OPTIONS.map((option) => (
-									<SelectItem
-										key={option.value}
-										value={option.value.toString()}
-									>
-										{option.label}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					) : isNumericField(condition.field) ? (
+				{condition.operator === "between" ? (
+					<>
 						<Input
 							type="number"
-							value={condition.value || ""}
+							value={condition.min_value ?? ""}
 							onChange={(e) =>
-								onUpdate({ value: parseFloat(e.target.value) || undefined })
+								onUpdate({
+									min_value:
+										e.target.value === "" ? undefined : Number(e.target.value),
+								})
 							}
-							placeholder="Enter amount"
-							className="w-48"
+							placeholder="Min"
+							className="w-24"
 						/>
-					) : (
-						<>
-							<Input
-								type="text"
-								value={condition.currentInput || ""}
-								onChange={(e) => onUpdate({ currentInput: e.target.value })}
-								onKeyDown={(e) => {
-									if (e.key === "Enter" && condition.currentInput?.trim()) {
-										e.preventDefault();
-										handleAddChip();
-									}
-								}}
-								placeholder="Enter value"
-								className="w-48"
-							/>
-							<Button
-								type="button"
-								size="sm"
-								disabled={!condition.currentInput?.trim()}
-								onClick={handleAddChip}
-							>
-								add
-							</Button>
-						</>
-					)}
-				</HStack>
-
-				{condition.chips && condition.chips.length > 0 && (
-					<ChipList chips={condition.chips} onRemoveChip={handleRemoveChip} />
+						<span className="text-sm text-muted-foreground">and</span>
+						<Input
+							type="number"
+							value={condition.max_value ?? ""}
+							onChange={(e) =>
+								onUpdate({
+									max_value:
+										e.target.value === "" ? undefined : Number(e.target.value),
+								})
+							}
+							placeholder="Max"
+							className="w-24"
+						/>
+					</>
+				) : condition.field === "tx_direction" ? (
+					<NativeSelect
+						aria-label="Direction"
+						className="w-36"
+						value={condition.value?.toString() ?? ""}
+						onChange={(e) => onUpdate({ value: Number(e.target.value) })}
+					>
+						<option value="">Choose</option>
+						{TX_DIRECTION_OPTIONS.map((o) => (
+							<option key={o.value} value={o.value}>
+								{o.label}
+							</option>
+						))}
+					</NativeSelect>
+				) : isNumeric(condition.field) ? (
+					<Input
+						type="number"
+						value={condition.value ?? ""}
+						onChange={(e) =>
+							onUpdate({
+								value: e.target.value === "" ? "" : Number(e.target.value),
+							})
+						}
+						placeholder="Amount"
+						className="w-32"
+					/>
+				) : condition.operator === "contains_any" ? (
+					<Input
+						value={condition.currentInput ?? ""}
+						onChange={(e) => onUpdate({ currentInput: e.target.value })}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") {
+								e.preventDefault();
+								addChip();
+							}
+						}}
+						onBlur={addChip}
+						placeholder="Type a value, press Enter"
+						className="w-56"
+					/>
+				) : (
+					<Input
+						value={(condition.value as string) ?? ""}
+						onChange={(e) => onUpdate({ value: e.target.value })}
+						placeholder="Value"
+						className="w-56"
+					/>
 				)}
 
-				{isStringField(condition.field) && condition.operator !== "regex" && (
-					<HStack spacing="sm" align="center">
-						<Switch
-							id={`case-sensitive-${index}`}
-							checked={condition.case_sensitive || false}
-							onCheckedChange={(checked) =>
-								onUpdate({ case_sensitive: checked })
-							}
+				{isString(condition.field) && condition.operator !== "regex" && (
+					<label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+						<input
+							type="checkbox"
+							checked={!!condition.case_sensitive}
+							onChange={(e) => onUpdate({ case_sensitive: e.target.checked })}
+							className="size-3.5 accent-[var(--accent)]"
 						/>
-						<Label
-							htmlFor={`case-sensitive-${index}`}
-							className="text-sm text-muted-foreground"
+						Match case
+					</label>
+				)}
+
+				{showRemove && (
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon-sm"
+						aria-label="Remove condition"
+						onClick={onRemove}
+						className="ml-auto text-muted-foreground"
+					>
+						<X />
+					</Button>
+				)}
+			</div>
+
+			{!!condition.chips?.length && (
+				<div className="flex flex-wrap gap-1.5">
+					{condition.chips.map((chip, i) => (
+						<span
+							key={`${chip}-${i}`}
+							className="flex h-7 items-center gap-1 rounded-md border pr-1 pl-2 text-sm"
 						>
-							Case sensitive
-						</Label>
-					</HStack>
-				)}
-			</VStack>
-		</Card>
+							{chip}
+							<button
+								type="button"
+								aria-label={`Remove ${chip}`}
+								onClick={() => {
+									const chips = condition.chips?.filter((_, j) => j !== i);
+									onUpdate({ chips, values: chips });
+								}}
+								className="rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
+							>
+								<X className="size-3" />
+							</button>
+						</span>
+					))}
+				</div>
+			)}
+		</div>
 	);
 }

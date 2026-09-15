@@ -1,10 +1,17 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Search, Upload } from "lucide-react";
-import { useMemo, useState } from "react";
-import { HStack, VStack } from "@/components/lib";
-import { Badge } from "@/components/ui/badge";
+import { Search, SlidersHorizontal, Upload } from "lucide-react";
+import { useState } from "react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,182 +19,173 @@ import {
 	PageContent,
 	PageHeaderWithTitle,
 } from "@/components/ui/layout";
+import { EmptyState } from "@/components/ui/list";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { Receipt } from "@/gen/nagomi/v1/receipt_pb";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import type { ReceiptFilters } from "@/hooks/useReceipts";
-import { useReceipt } from "@/hooks/useReceipts";
+import {
+	type ReceiptFilters,
+	useReceipt,
+	useReceipts,
+} from "@/hooks/useReceipts";
+import { cn } from "@/lib/utils";
 import { ReceiptDetailDialog } from "./components/ReceiptDetailDialog";
-import { ReceiptFiltersPanel } from "./components/ReceiptFilters";
-import { ReceiptList } from "./components/ReceiptList";
+import {
+	countActiveReceiptFilters,
+	ReceiptFiltersPanel,
+} from "./components/ReceiptFilters";
+import { ReceiptRow } from "./components/ReceiptRow";
 import { UploadReceiptDialog } from "./components/UploadReceiptDialog";
 
 export default function ReceiptsPage() {
-	const queryClient = useQueryClient();
-	const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-	const [duplicateReceiptId, setDuplicateReceiptId] = useState<bigint | null>(
-		null,
-	);
+	const [uploadOpen, setUploadOpen] = useState(false);
+	const [duplicateId, setDuplicateId] = useState<bigint | null>(null);
 	const [searchInput, setSearchInput] = useState("");
-	const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+	const [filtersOpen, setFiltersOpen] = useState(false);
 	const [filters, setFilters] = useState<ReceiptFilters>({});
-	const debouncedSearch = useDebouncedValue(searchInput, 300);
-	const { data: duplicateReceiptData, isLoading: isDuplicateLoading } =
-		useReceipt(duplicateReceiptId);
+	const [expandedId, setExpandedId] = useState<string | null>(null);
+	const [deleting, setDeleting] = useState<Receipt | null>(null);
+	const query = useDebouncedValue(searchInput, 300);
+	const active = countActiveReceiptFilters(filters);
 
-	const activeFilterCount = useMemo(() => {
-		let count = 0;
-		if (
-			filters.minTotalCents !== undefined ||
-			filters.maxTotalCents !== undefined ||
-			filters.currency
-		)
-			count++;
-		if (filters.status !== undefined) count++;
-		if (filters.unlinkedOnly) count++;
-		return count;
-	}, [filters]);
-
-	const handleRefresh = () => {
-		queryClient.invalidateQueries({ queryKey: ["receipts"] });
-	};
-
-	const handleUploadComplete = () => {
-		setIsUploadDialogOpen(false);
-		handleRefresh();
-	};
-
-	const activeFilters: ReceiptFilters = {
-		...filters,
-		query: debouncedSearch || undefined,
-	};
+	const { receipts, isLoading, error, deleteReceipt, isDeleting, retryParse } =
+		useReceipts({
+			...filters,
+			query: query || undefined,
+		});
+	const duplicate = useReceipt(duplicateId);
 
 	return (
 		<PageContainer>
 			<PageContent>
-				<PageHeaderWithTitle title="receipts" />
-
-				<div className="flex flex-col xl:flex-row xl:gap-8 gap-4">
-					{/* Mobile toolbar */}
-					<div className="xl:hidden">
-						<VStack spacing="sm">
-							<HStack spacing="sm" justify="between">
-								<div className="relative flex-1">
-									<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-									<Input
-										placeholder="search"
-										className="pl-9 border border-border rounded-sm"
-										value={searchInput}
-										onChange={(e) => setSearchInput(e.target.value)}
-									/>
-								</div>
-								<HStack spacing="xs">
-									<Button onClick={handleRefresh} size="icon" variant="ghost">
-										<RefreshCw className="h-4 w-4" />
-									</Button>
-									<Button
-										onClick={() => setIsUploadDialogOpen(true)}
-										size="icon"
-									>
-										<Upload className="h-4 w-4" />
-									</Button>
-								</HStack>
-							</HStack>
-							<Button
-								variant="outline"
-								size="sm"
-								className="w-full rounded-sm"
-								onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-							>
-								filters
-								{activeFilterCount > 0 && (
-									<Badge
-										variant="default"
-										className="ml-2 h-5 min-w-5 px-1.5 text-[10px]"
-									>
-										{activeFilterCount}
-									</Badge>
-								)}
-							</Button>
-						</VStack>
-						<ReceiptFiltersPanel
-							filters={filters}
-							onFiltersChange={setFilters}
-							isOpen={isFiltersOpen}
-						/>
-					</div>
-
-					{/* Main content */}
-					<div className="flex-1 min-w-0 xl:order-2">
-						<ReceiptList filters={activeFilters} />
-					</div>
-
-					{/* Desktop sidebar */}
-					<aside className="hidden xl:block xl:flex-shrink-0 xl:sticky xl:top-8 xl:h-fit xl:w-80 xl:order-1">
-						<VStack spacing="md">
-							<HStack spacing="sm" justify="end">
-								<Button onClick={handleRefresh} size="icon" variant="ghost">
-									<RefreshCw className="h-4 w-4" />
-								</Button>
-								<Button
-									onClick={() => setIsUploadDialogOpen(true)}
-									size="default"
-								>
-									<Upload className="h-4 w-4" />
-									upload
-								</Button>
-							</HStack>
-
+				<PageHeaderWithTitle
+					title="receipts"
+					actions={
+						<>
 							<div className="relative">
-								<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+								<Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
-									placeholder="search"
-									className="pl-9 border border-border rounded-sm"
+									placeholder="Search"
+									aria-label="Search receipts"
+									className="w-40 pl-8 sm:w-56"
 									value={searchInput}
 									onChange={(e) => setSearchInput(e.target.value)}
 								/>
 							</div>
-
 							<Button
 								variant="outline"
-								size="sm"
-								className="w-full rounded-sm"
-								onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+								onClick={() => setFiltersOpen((o) => !o)}
+								aria-expanded={filtersOpen}
+								className={cn(filtersOpen && "bg-muted")}
 							>
-								filters
-								{activeFilterCount > 0 && (
-									<Badge
-										variant="default"
-										className="ml-2 h-5 min-w-5 px-1.5 text-[10px]"
-									>
-										{activeFilterCount}
-									</Badge>
+								<SlidersHorizontal />
+								Filters
+								{active > 0 && (
+									<span className="rounded-md bg-foreground px-1.5 text-xs text-background tabular-nums">
+										{active}
+									</span>
 								)}
 							</Button>
+							<Button onClick={() => setUploadOpen(true)}>
+								<Upload />
+								Upload
+							</Button>
+						</>
+					}
+				/>
 
-							<ReceiptFiltersPanel
-								filters={filters}
-								onFiltersChange={setFilters}
-								isOpen={isFiltersOpen}
+				{filtersOpen && (
+					<ReceiptFiltersPanel filters={filters} onFiltersChange={setFilters} />
+				)}
+
+				{error && (
+					<p className="mb-4 text-sm text-destructive">
+						Couldn't load receipts: {error.message}
+					</p>
+				)}
+
+				{isLoading ? (
+					<div className="divide-y">
+						{[0, 1, 2, 3].map((i) => (
+							<div key={i} className="flex justify-between py-2">
+								<div className="space-y-2">
+									<Skeleton className="h-4 w-40" />
+									<Skeleton className="h-3 w-56" />
+								</div>
+								<Skeleton className="h-4 w-20" />
+							</div>
+						))}
+					</div>
+				) : receipts.length === 0 ? (
+					<EmptyState
+						text={query || active ? "No receipts match." : "No receipts yet."}
+						action={query || active ? undefined : "Upload a receipt"}
+						onAction={() => setUploadOpen(true)}
+					/>
+				) : (
+					<div className="divide-y border-t">
+						{receipts.map((r) => (
+							<ReceiptRow
+								key={r.id.toString()}
+								receipt={r}
+								expanded={expandedId === r.id.toString()}
+								onToggle={() =>
+									setExpandedId((cur) =>
+										cur === r.id.toString() ? null : r.id.toString(),
+									)
+								}
+								onRetry={() => retryParse(r.id)}
+								onDelete={() => setDeleting(r)}
 							/>
-						</VStack>
-					</aside>
-				</div>
+						))}
+					</div>
+				)}
 
 				<UploadReceiptDialog
-					open={isUploadDialogOpen}
-					onOpenChange={setIsUploadDialogOpen}
-					onUploadComplete={handleUploadComplete}
-					onDuplicate={setDuplicateReceiptId}
+					open={uploadOpen}
+					onOpenChange={setUploadOpen}
+					onUploadComplete={() => setUploadOpen(false)}
+					onDuplicate={setDuplicateId}
 				/>
 
 				<ReceiptDetailDialog
-					receipt={duplicateReceiptData?.receipt ?? null}
-					linkCandidates={duplicateReceiptData?.linkCandidates}
-					open={duplicateReceiptId !== null}
-					onOpenChange={(open) => {
-						if (!open) setDuplicateReceiptId(null);
-					}}
-					isLoading={isDuplicateLoading}
+					receipt={duplicate.data?.receipt ?? null}
+					linkCandidates={duplicate.data?.linkCandidates}
+					open={duplicateId !== null}
+					onOpenChange={(o) => !o && setDuplicateId(null)}
+					isLoading={duplicate.isLoading}
 				/>
+
+				<AlertDialog
+					open={!!deleting}
+					onOpenChange={(o) => !o && setDeleting(null)}
+				>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Delete this receipt?</AlertDialogTitle>
+							<AlertDialogDescription>
+								{deleting?.merchant
+									? `The receipt from ${deleting.merchant} `
+									: "It "}
+								will be removed. Linked transactions stay.
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel disabled={isDeleting}>
+								Cancel
+							</AlertDialogCancel>
+							<AlertDialogAction
+								disabled={isDeleting}
+								onClick={() => {
+									if (deleting) deleteReceipt(deleting.id);
+									setDeleting(null);
+								}}
+							>
+								Delete
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 			</PageContent>
 		</PageContainer>
 	);

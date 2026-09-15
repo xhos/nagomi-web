@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Caption, ErrorMessage, Text, VStack } from "@/components/lib";
 import { Button } from "@/components/ui/button";
 import { ColorSwatch } from "@/components/ui/color-swatch";
 import {
@@ -11,6 +10,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FormError } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
 import type { Category } from "@/gen/nagomi/v1/category_pb";
 import { useCategories } from "@/hooks/useCategories";
@@ -21,8 +21,8 @@ interface CategoryDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	category?: Category | null;
+	initialSlug?: string;
 	onSave: (slug: string, color: string) => Promise<void>;
-	title: string;
 }
 
 function longestCommonPrefix(strings: string[]): string {
@@ -37,8 +37,8 @@ export function CategoryDialog({
 	open,
 	onOpenChange,
 	category,
+	initialSlug,
 	onSave,
-	title,
 }: CategoryDialogProps) {
 	const { categories } = useCategories();
 	const existingSlugs = categories.map((c) => c.slug);
@@ -61,16 +61,16 @@ export function CategoryDialog({
 				setSlug(category.slug);
 				setColor(category.color);
 			} else {
-				setSlug("");
+				setSlug(initialSlug ?? "");
 				setColor(generateRandomCategoryColor());
 			}
-			setTypedSlug("");
+			setTypedSlug(initialSlug ?? "");
 			setSuggestions([]);
 			setSuggestionIndex(-1);
 			setShowSuggestions(false);
 			setError(null);
 		}
-	}, [category, open]);
+	}, [category, initialSlug, open]);
 
 	const computeSuggestions = (value: string) =>
 		existingSlugs.filter((s) => s.startsWith(value) && s !== value).slice(0, 8);
@@ -152,18 +152,18 @@ export function CategoryDialog({
 
 		const slugPattern = /^[^.]+(\.[^.]+)*$/;
 		if (!slugPattern.test(slug)) {
-			setError("Invalid slug format. Use dot notation (e.g., food.groceries)");
+			setError("Use dot notation, like food.groceries.");
 			return;
 		}
 
 		if (slug.length < 1 || slug.length > 100) {
-			setError("Slug must be between 1 and 100 characters");
+			setError("Keep the slug between 1 and 100 characters.");
 			return;
 		}
 
 		const colorPattern = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 		if (!colorPattern.test(color)) {
-			setError("Invalid color format. Use hex format (#RGB or #RRGGBB)");
+			setError("Color must be a hex value like #3b82f6.");
 			return;
 		}
 
@@ -172,7 +172,12 @@ export function CategoryDialog({
 			await onSave(slug, color);
 			onOpenChange(false);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to save category");
+			const m = err instanceof Error ? err.message : "Couldn't save category";
+			setError(
+				m.includes("duplicate key") || m.includes("unique constraint")
+					? "A category with this slug already exists."
+					: m,
+			);
 		} finally {
 			setIsLoading(false);
 		}
@@ -180,69 +185,66 @@ export function CategoryDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-[500px]">
-				<form onSubmit={handleSubmit}>
+			<DialogContent className="sm:max-w-[460px]">
+				<form onSubmit={handleSubmit} className="space-y-4">
 					<DialogHeader>
-						<DialogTitle>{title}</DialogTitle>
+						<DialogTitle>
+							{category ? "edit category" : "new category"}
+						</DialogTitle>
 					</DialogHeader>
-					<VStack spacing="md" className="py-4">
-						<VStack spacing="xs">
-							<Caption>slug</Caption>
-							<div className="flex items-center gap-2">
-								<div className="relative flex-1">
-									<Input
-										id="slug"
-										value={slug}
-										onChange={(e) => handleSlugChange(e.target.value)}
-										onKeyDown={handleKeyDown}
-										onBlur={() => setTimeout(dismissSuggestions, 100)}
-										placeholder="food.groceries"
-										disabled={isLoading}
-										className="font-mono"
-										autoComplete="off"
-									/>
-									{showSuggestions && (
-										<div
-											ref={suggestionsRef}
-											className="absolute top-full left-0 right-0 z-50 mt-0.5 border rounded-sm bg-background shadow-md overflow-hidden"
-										>
-											{suggestions.map((s, i) => (
-												<button
-													key={s}
-													type="button"
-													onMouseDown={(e) => {
-														e.preventDefault();
-														acceptSuggestion(s);
-													}}
-													className={cn(
-														"w-full text-left px-3 py-1.5 text-sm font-mono transition-colors duration-150",
-														i === suggestionIndex
-															? "bg-accent text-accent-foreground"
-															: "hover:bg-accent/50",
-													)}
-												>
-													<span>{s.slice(0, typedSlug.length)}</span>
-													<span className="text-muted-foreground">
-														{s.slice(typedSlug.length)}
-													</span>
-												</button>
-											))}
-										</div>
-									)}
-								</div>
-								<ColorSwatch
-									color={color}
-									onChange={setColor}
+					<Field
+						label="Slug"
+						htmlFor="slug"
+						hint="Dots make hierarchy: parent.child"
+					>
+						<div className="flex items-center gap-2">
+							<div className="relative flex-1">
+								<Input
+									id="slug"
+									value={slug}
+									onChange={(e) => handleSlugChange(e.target.value)}
+									onKeyDown={handleKeyDown}
+									onBlur={() => setTimeout(dismissSuggestions, 100)}
+									placeholder="food.groceries"
 									disabled={isLoading}
+									autoComplete="off"
+									autoFocus
 								/>
+								{showSuggestions && (
+									<div
+										ref={suggestionsRef}
+										className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-md border bg-popover p-1 shadow-md"
+									>
+										{suggestions.map((s, i) => (
+											<button
+												key={s}
+												type="button"
+												onMouseDown={(e) => {
+													e.preventDefault();
+													acceptSuggestion(s);
+												}}
+												className={cn(
+													"w-full rounded-md px-2 py-1.5 text-left text-sm",
+													i === suggestionIndex ? "bg-muted" : "hover:bg-muted",
+												)}
+											>
+												<span>{s.slice(0, typedSlug.length)}</span>
+												<span className="text-muted-foreground">
+													{s.slice(typedSlug.length)}
+												</span>
+											</button>
+										))}
+									</div>
+								)}
 							</div>
-							<Text size="xs" color="muted">
-								Use dots to create hierarchy:{" "}
-								<code className="font-mono text-xs">parent.child</code>
-							</Text>
-						</VStack>
-						{error && <ErrorMessage>{error}</ErrorMessage>}
-					</VStack>
+							<ColorSwatch
+								color={color}
+								onChange={setColor}
+								disabled={isLoading}
+							/>
+						</div>
+					</Field>
+					<FormError>{error}</FormError>
 					<DialogFooter>
 						<Button
 							type="button"
@@ -253,7 +255,7 @@ export function CategoryDialog({
 							Cancel
 						</Button>
 						<Button type="submit" disabled={isLoading}>
-							{isLoading ? "saving..." : "save"}
+							{isLoading ? "Saving…" : "Save"}
 						</Button>
 					</DialogFooter>
 				</form>

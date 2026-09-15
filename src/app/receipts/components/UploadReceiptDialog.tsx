@@ -4,7 +4,6 @@ import { Code, ConnectError } from "@connectrpc/connect";
 import { FileImage, Upload, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { VStack } from "@/components/lib";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -13,6 +12,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { FormError } from "@/components/ui/forms";
 import { useUser } from "@/hooks/useReceipts";
 import { receiptsApi } from "@/lib/api/receipts";
 
@@ -46,15 +46,13 @@ export function UploadReceiptDialog({
 	const validateAndSetFile = useCallback((file: File) => {
 		const validTypes = ["image/jpeg", "image/png", "image/webp", "image/heic"];
 		if (!validTypes.includes(file.type)) {
-			setError(
-				"invalid file type. please upload JPEG, PNG, WebP, or HEIC images.",
-			);
+			setError("Use a JPEG, PNG, WebP, or HEIC image.");
 			return;
 		}
 
 		const maxSizeBytes = 16 * 1024 * 1024;
 		if (file.size > maxSizeBytes) {
-			setError("file too large. maximum size is 16MB.");
+			setError("Images must be under 16MB.");
 			return;
 		}
 
@@ -113,8 +111,8 @@ export function UploadReceiptDialog({
 				contentType: selectedFile.type,
 			});
 
-			toast.success("receipt uploaded", {
-				description: "processing may take a few moments.",
+			toast.success("Receipt uploaded", {
+				description: "Reading it may take a moment.",
 			});
 
 			clearFile();
@@ -130,10 +128,7 @@ export function UploadReceiptDialog({
 				setDuplicateReceiptId(parseDuplicateReceiptId(rawMessage));
 				setError(null);
 			} else {
-				setError("failed to upload receipt");
-				toast.error("upload failed", {
-					description: "failed to upload receipt",
-				});
+				setError("Couldn't upload receipt.");
 			}
 		} finally {
 			setIsUploading(false);
@@ -154,20 +149,21 @@ export function UploadReceiptDialog({
 					<DialogTitle>upload receipt</DialogTitle>
 				</DialogHeader>
 
-				<VStack spacing="md" className="py-4">
+				<div className="space-y-4">
 					{!selectedFile ? (
-						<div
+						<button
+							type="button"
 							onDrop={handleDrop}
 							onDragOver={handleDragOver}
 							onClick={() => fileInputRef.current?.click()}
-							className="border-2 border-dashed border-border rounded-sm p-8 text-center cursor-pointer hover:border-primary transition-colors duration-150"
+							className="w-full rounded-md border border-dashed p-8 text-center transition-colors hover:bg-muted/60"
 						>
-							<Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-							<p className="text-sm text-muted-foreground mb-1">
-								drag and drop, paste, or click to select
+							<Upload className="mx-auto mb-3 size-6 text-muted-foreground" />
+							<p className="text-sm">
+								Drop an image, paste, or click to choose
 							</p>
-							<p className="text-xs text-muted-foreground">
-								JPEG, PNG, WebP, HEIC · max 16MB
+							<p className="mt-1 text-sm text-muted-foreground">
+								JPEG, PNG, WebP, or HEIC up to 16MB
 							</p>
 							<input
 								ref={fileInputRef}
@@ -176,51 +172,46 @@ export function UploadReceiptDialog({
 								onChange={handleFileSelect}
 								className="hidden"
 							/>
-						</div>
+						</button>
 					) : (
-						<div className="border border-border rounded-sm p-3 flex items-center gap-3">
-							<FileImage className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-							<span className="text-sm flex-1 truncate">
-								{selectedFile.name}
-							</span>
-							<span className="text-xs text-muted-foreground flex-shrink-0">
-								{(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+						<div className="flex items-center gap-3 rounded-md border p-3 text-sm">
+							<FileImage className="size-4 shrink-0 text-muted-foreground" />
+							<span className="flex-1 truncate">{selectedFile.name}</span>
+							<span className="shrink-0 text-muted-foreground">
+								{(selectedFile.size / 1024 / 1024).toFixed(1)} MB
 							</span>
 							<Button
-								size="icon"
+								size="icon-sm"
 								variant="ghost"
-								className="h-6 w-6 flex-shrink-0"
+								aria-label="Remove file"
 								onClick={clearFile}
 								disabled={isUploading}
 							>
-								<X className="h-3.5 w-3.5" />
+								<X />
 							</Button>
 						</div>
 					)}
 
 					{duplicateReceiptId !== null && (
-						<div className="bg-muted p-3 rounded-sm space-y-2">
-							<p className="text-sm">this receipt has already been uploaded.</p>
+						<p className="text-sm">
+							This receipt was already uploaded.{" "}
 							{onDuplicate && (
 								<button
+									type="button"
 									onClick={() => {
 										onDuplicate(duplicateReceiptId);
 										onOpenChange(false);
 									}}
-									className="text-sm underline underline-offset-4 hover:text-muted-foreground transition-colors duration-150"
+									className="underline underline-offset-2"
 								>
-									view existing receipt
+									View it
 								</button>
 							)}
-						</div>
+						</p>
 					)}
 
-					{error && (
-						<div className="text-sm text-destructive bg-destructive/10 p-3 rounded-sm">
-							{error}
-						</div>
-					)}
-				</VStack>
+					<FormError>{error}</FormError>
+				</div>
 
 				<DialogFooter>
 					<Button
@@ -228,13 +219,13 @@ export function UploadReceiptDialog({
 						onClick={handleClose}
 						disabled={isUploading}
 					>
-						cancel
+						Cancel
 					</Button>
 					<Button
 						onClick={handleUpload}
 						disabled={!selectedFile || isUploading}
 					>
-						{isUploading ? "uploading..." : "upload"}
+						{isUploading ? "Uploading…" : "Upload"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

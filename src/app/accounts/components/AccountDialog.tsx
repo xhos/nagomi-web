@@ -1,8 +1,7 @@
 "use client";
 
-import { Check, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { ErrorMessage, HStack, VStack } from "@/components/lib";
+import { X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ColorSwatch } from "@/components/ui/color-swatch";
 import {
@@ -12,21 +11,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FormError, NativeSelect } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
 import type { Account } from "@/gen/nagomi/v1/account_pb";
 import { AccountType } from "@/gen/nagomi/v1/enums_pb";
 import {
@@ -35,404 +21,271 @@ import {
 	useRemoveAccountAlias,
 } from "@/hooks/useAccounts";
 import { useCurrencies } from "@/hooks/useCurrencies";
+import { ACCOUNT_TYPES } from "@/lib/utils/account";
+
+export interface AccountFormData {
+	name: string;
+	bank: string;
+	type: AccountType;
+	friendlyName?: string;
+	anchorBalance?: { currencyCode: string; units: string; nanos: number };
+	mainCurrency?: string;
+	colors?: string[];
+}
 
 interface AccountDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	account?: Account | null;
-	onSave: (data: {
-		name: string;
-		bank: string;
-		type: AccountType;
-		friendlyName?: string;
-		anchorBalance?: { currencyCode: string; units: string; nanos: number };
-		mainCurrency?: string;
-		colors?: string[];
-	}) => Promise<void>;
-	title: string;
+	onSave: (data: AccountFormData) => Promise<void>;
 }
+
+const DEFAULT_COLORS = ["#1f2937", "#3b82f6", "#10b981"];
 
 export function AccountDialog({
 	open,
 	onOpenChange,
 	account,
 	onSave,
-	title,
 }: AccountDialogProps) {
-	const [name, setName] = useState("");
-	const [friendlyName, setFriendlyName] = useState("");
-	const [bank, setBank] = useState("");
-	const [type, setType] = useState<AccountType>(AccountType.ACCOUNT_CHEQUING);
 	const { currencies } = useCurrencies();
-	const [mainCurrency, setMainCurrency] = useState("");
-	const [colors, setColors] = useState(["#1f2937", "#3b82f6", "#10b981"]);
-	const [initialBalance, setInitialBalance] = useState("0");
-	const [aliases, setAliases] = useState<string[]>([]);
-	const [newAlias, setNewAlias] = useState("");
-	const [isAddingAlias, setIsAddingAlias] = useState(false);
-	const [justAddedAlias, setJustAddedAlias] = useState<string | null>(null);
-	const aliasInputRef = useRef<HTMLInputElement>(null);
-	const [isLoading, setIsLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
 	const { addAliasAsync } = useAddAccountAlias();
 	const { removeAliasAsync } = useRemoveAccountAlias();
 	const { data: hasTransactions } = useAccountHasTransactions(
 		account?.id ?? null,
 	);
 
+	const [name, setName] = useState("");
+	const [friendlyName, setFriendlyName] = useState("");
+	const [bank, setBank] = useState("");
+	const [type, setType] = useState<AccountType>(AccountType.ACCOUNT_CHEQUING);
+	const [mainCurrency, setMainCurrency] = useState("USD");
+	const [colors, setColors] = useState(DEFAULT_COLORS);
+	const [initialBalance, setInitialBalance] = useState("0");
+	const [aliases, setAliases] = useState<string[]>([]);
+	const [newAlias, setNewAlias] = useState("");
+	const [saving, setSaving] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
 	useEffect(() => {
-		if (open) {
-			if (account) {
-				setName(account.name);
-				setFriendlyName(account.friendlyName || "");
-				setBank(account.bank);
-				setType(account.type);
-				setMainCurrency(account.mainCurrency ?? "");
-				setColors(
-					account.colors.length > 0
-						? account.colors
-						: ["#1f2937", "#3b82f6", "#10b981"],
-				);
-				setInitialBalance("0");
-				setAliases(account.aliases.filter((a) => a !== account.name));
-			} else {
-				setName("");
-				setFriendlyName("");
-				setBank("");
-				setType(AccountType.ACCOUNT_CHEQUING);
-				setMainCurrency("USD");
-				setColors(["#1f2937", "#3b82f6", "#10b981"]);
-				setInitialBalance("0");
-				setAliases([]);
-			}
-			setNewAlias("");
-			setIsAddingAlias(false);
-			setJustAddedAlias(null);
-			setError(null);
-		}
+		if (!open) return;
+		setName(account?.name ?? "");
+		setFriendlyName(account?.friendlyName ?? "");
+		setBank(account?.bank ?? "");
+		setType(account?.type ?? AccountType.ACCOUNT_CHEQUING);
+		setMainCurrency(account?.mainCurrency || "USD");
+		setColors(account?.colors.length ? account.colors : DEFAULT_COLORS);
+		setInitialBalance("0");
+		setAliases(account?.aliases.filter((a) => a !== account.name) ?? []);
+		setNewAlias("");
+		setError(null);
 	}, [account, open]);
 
-	useEffect(() => {
-		if (isAddingAlias) aliasInputRef.current?.focus();
-	}, [isAddingAlias]);
-
-	const handleAddAlias = async () => {
-		if (!account || !newAlias.trim()) return;
-		if (aliases.includes(newAlias.trim())) return;
-		const aliasToAdd = newAlias.trim();
+	const addAlias = async () => {
+		const alias = newAlias.trim();
+		if (!account || !alias || aliases.includes(alias)) return;
 		setNewAlias("");
-		setIsAddingAlias(false);
-		setJustAddedAlias(aliasToAdd);
-		await addAliasAsync({ accountId: account.id, alias: aliasToAdd });
-		setAliases((prev) => [...prev, aliasToAdd]);
-		setTimeout(() => setJustAddedAlias(null), 300);
+		await addAliasAsync({ accountId: account.id, alias });
+		setAliases((a) => [...a, alias]);
 	};
-
-	const handleRemoveAlias = async (alias: string) => {
+	const removeAlias = async (alias: string) => {
 		if (!account) return;
 		await removeAliasAsync({ accountId: account.id, alias });
-		setAliases((prev) => prev.filter((a) => a !== alias));
+		setAliases((a) => a.filter((x) => x !== alias));
 	};
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const submit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		setError(null);
-
 		if (!name || !bank) {
-			setError("Name and bank are required");
+			setError("Name and bank are required.");
 			return;
 		}
-
-		setIsLoading(true);
+		setSaving(true);
+		setError(null);
 		try {
-			const data: Parameters<typeof onSave>[0] = {
+			const data: AccountFormData = {
 				name,
 				bank,
 				type,
 				friendlyName: friendlyName || undefined,
 				mainCurrency:
-					account && mainCurrency === (account.mainCurrency ?? "")
+					account && mainCurrency === account.mainCurrency
 						? undefined
 						: mainCurrency,
 				colors,
 			};
-
 			if (!account) {
+				const n = Number(initialBalance || "0");
 				data.anchorBalance = {
 					currencyCode: mainCurrency,
-					units: Math.floor(parseFloat(initialBalance || "0")).toString(),
-					nanos: Math.round((parseFloat(initialBalance || "0") % 1) * 1e9),
+					units: Math.trunc(n).toString(),
+					nanos: Math.round((n - Math.trunc(n)) * 1e9),
 				};
 			}
-
 			await onSave(data);
 			onOpenChange(false);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to save account");
+			const m = err instanceof Error ? err.message : "Couldn't save account";
+			setError(
+				m.includes("duplicate key")
+					? "An account with this name already exists."
+					: m,
+			);
 		} finally {
-			setIsLoading(false);
+			setSaving(false);
 		}
 	};
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-[540px]">
-				<form onSubmit={handleSubmit}>
+			<DialogContent className="sm:max-w-[520px]">
+				<form onSubmit={submit} className="space-y-4">
 					<DialogHeader>
-						<DialogTitle>{title}</DialogTitle>
+						<DialogTitle>
+							{account ? "edit account" : "new account"}
+						</DialogTitle>
 					</DialogHeader>
-					<VStack spacing="md" className="py-4">
-						<div className="grid grid-cols-2 gap-3">
-							<VStack spacing="xs">
-								<Label htmlFor="name">name *</Label>
-								<Input
-									id="name"
-									value={name}
-									onChange={(e) => setName(e.target.value)}
-									placeholder="my checking account"
-									disabled={isLoading}
-									required
-								/>
-							</VStack>
-							<VStack spacing="xs">
-								<Label htmlFor="bank">bank *</Label>
-								<Input
-									id="bank"
-									value={bank}
-									onChange={(e) => setBank(e.target.value)}
-									placeholder="chase"
-									disabled={isLoading}
-									required
-								/>
-							</VStack>
-						</div>
 
-						<div className="grid grid-cols-2 gap-3">
-							<VStack spacing="xs">
-								<Label htmlFor="type">type</Label>
-								<Select
-									value={type.toString()}
-									onValueChange={(value) =>
-										setType(parseInt(value, 10) as AccountType)
-									}
-									disabled={isLoading}
-								>
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value={AccountType.ACCOUNT_CHEQUING.toString()}>
-											chequing
-										</SelectItem>
-										<SelectItem value={AccountType.ACCOUNT_SAVINGS.toString()}>
-											savings
-										</SelectItem>
-										<SelectItem
-											value={AccountType.ACCOUNT_CREDIT_CARD.toString()}
-										>
-											credit card
-										</SelectItem>
-										<SelectItem
-											value={AccountType.ACCOUNT_INVESTMENT.toString()}
-										>
-											investment
-										</SelectItem>
-										<SelectItem value={AccountType.ACCOUNT_OTHER.toString()}>
-											other
-										</SelectItem>
-										<SelectItem value={AccountType.ACCOUNT_FRIEND.toString()}>
-											friend
-										</SelectItem>
-									</SelectContent>
-								</Select>
-							</VStack>
-							<VStack spacing="xs">
-								<Label htmlFor="currency">currency</Label>
-								<TooltipProvider>
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<div>
-												<Select
-													value={mainCurrency}
-													onValueChange={setMainCurrency}
-													disabled={isLoading || !!hasTransactions}
-												>
-													<SelectTrigger>
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														{currencies.map(({ code }) => (
-															<SelectItem key={code} value={code}>
-																{code}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</div>
-										</TooltipTrigger>
-										{hasTransactions && (
-											<TooltipContent>
-												<p>
-													cannot change currency on accounts with transactions
-												</p>
-											</TooltipContent>
-										)}
-									</Tooltip>
-								</TooltipProvider>
-							</VStack>
-						</div>
-
-						<div className="flex gap-3 items-end">
-							<VStack spacing="xs" className="flex-1">
-								<Label htmlFor="friendlyName">friendly name</Label>
-								<Input
-									id="friendlyName"
-									value={friendlyName}
-									onChange={(e) => setFriendlyName(e.target.value)}
-									placeholder="display name (optional)"
-									disabled={isLoading}
-								/>
-							</VStack>
-							<VStack spacing="xs">
-								<Label>colors</Label>
-								<HStack spacing="xs" className="h-9 items-center">
-									{colors.map((color, index) => (
-										<ColorSwatch
-											key={index}
-											color={color}
-											onChange={(newColor) => {
-												const newColors = [...colors];
-												newColors[index] = newColor;
-												setColors(newColors);
-											}}
-											disabled={isLoading}
-										/>
-									))}
-								</HStack>
-							</VStack>
-						</div>
-
+					<div className="grid gap-4 sm:grid-cols-2">
+						<Field label="Name" htmlFor="acct-name">
+							<Input
+								id="acct-name"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								placeholder="As it appears at the bank"
+								required
+								autoFocus
+							/>
+						</Field>
+						<Field label="Bank" htmlFor="acct-bank">
+							<Input
+								id="acct-bank"
+								value={bank}
+								onChange={(e) => setBank(e.target.value)}
+								required
+							/>
+						</Field>
+						<Field label="Type" htmlFor="acct-type">
+							<NativeSelect
+								id="acct-type"
+								value={type}
+								onChange={(e) => setType(Number(e.target.value) as AccountType)}
+							>
+								{ACCOUNT_TYPES.map(([t, label]) => (
+									<option key={t} value={t}>
+										{label}
+									</option>
+								))}
+							</NativeSelect>
+						</Field>
+						<Field
+							label="Currency"
+							htmlFor="acct-currency"
+							hint={
+								hasTransactions
+									? "Can't change once the account has transactions."
+									: undefined
+							}
+						>
+							<NativeSelect
+								id="acct-currency"
+								value={mainCurrency}
+								onChange={(e) => setMainCurrency(e.target.value)}
+								disabled={!!hasTransactions}
+							>
+								{currencies.map(({ code }) => (
+									<option key={code} value={code}>
+										{code}
+									</option>
+								))}
+							</NativeSelect>
+						</Field>
+						<Field label="Display name" htmlFor="acct-friendly">
+							<Input
+								id="acct-friendly"
+								value={friendlyName}
+								onChange={(e) => setFriendlyName(e.target.value)}
+								placeholder="Optional"
+							/>
+						</Field>
+						<Field label="Colors">
+							<div className="flex h-9 items-center gap-2">
+								{colors.map((color, i) => (
+									<ColorSwatch
+										key={`${i}-${color}`}
+										color={color}
+										onChange={(c) =>
+											setColors((cs) => cs.map((x, j) => (j === i ? c : x)))
+										}
+									/>
+								))}
+							</div>
+						</Field>
 						{!account && (
-							<VStack spacing="xs">
-								<Label htmlFor="initialBalance">initial balance</Label>
+							<Field label="Starting balance" htmlFor="acct-balance">
 								<Input
-									id="initialBalance"
+									id="acct-balance"
 									type="number"
 									step="0.01"
 									value={initialBalance}
 									onChange={(e) => setInitialBalance(e.target.value)}
-									placeholder="0.00"
-									disabled={isLoading}
-									required
 								/>
-							</VStack>
+							</Field>
 						)}
+					</div>
 
-						{account && (
-							<VStack spacing="xs" className="min-w-0">
-								<Label>aliases</Label>
-								<div className="flex flex-wrap gap-1.5">
-									{aliases.map((alias) => (
-										<div
-											key={alias}
-											className={`flex items-center gap-1 rounded border px-2 py-1 shrink-0 ${justAddedAlias === alias ? "animate-in fade-in duration-200" : ""}`}
-											onAuxClick={(e) =>
-												e.button === 1 && handleRemoveAlias(alias)
-											}
-										>
-											<span className="text-sm font-mono">{alias}</span>
-											<button
-												type="button"
-												onClick={() => handleRemoveAlias(alias)}
-												disabled={isLoading}
-												className="text-muted-foreground hover:text-destructive transition-colors duration-150"
-											>
-												<X className="h-3 w-3" />
-											</button>
-										</div>
-									))}
-									<div
-										className={`relative flex items-center overflow-hidden rounded transition-all duration-200 ease-in-out ${
-											isAddingAlias ? "border gap-1 px-2 py-1 w-36" : "w-6 h-6"
-										}`}
+					{account && (
+						<Field
+							label="Aliases"
+							hint="Other names this account appears under in imports."
+						>
+							<div className="flex flex-wrap items-center gap-2">
+								{aliases.map((alias) => (
+									<span
+										key={alias}
+										className="flex h-7 items-center gap-1 rounded-md border pr-1 pl-2 text-sm"
 									>
-										<span
-											className={`absolute inset-0 flex items-center justify-center transition-opacity duration-150 ${
-												isAddingAlias
-													? "opacity-0 pointer-events-none"
-													: "opacity-100"
-											}`}
+										{alias}
+										<button
+											type="button"
+											aria-label={`Remove ${alias}`}
+											onClick={() => removeAlias(alias)}
+											className="rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
 										>
-											<button
-												type="button"
-												onClick={() => setIsAddingAlias(true)}
-												disabled={isLoading}
-												className="text-muted-foreground hover:text-foreground transition-colors duration-150"
-											>
-												<span className="text-base leading-none">+</span>
-											</button>
-										</span>
-										<span
-											className={`flex items-center gap-1 transition-opacity duration-150 ${
-												isAddingAlias
-													? "opacity-100"
-													: "opacity-0 pointer-events-none"
-											}`}
-										>
-											<input
-												ref={aliasInputRef}
-												value={newAlias}
-												onChange={(e) => setNewAlias(e.target.value)}
-												onKeyDown={(e) => {
-													if (e.key === "Enter") {
-														e.preventDefault();
-														handleAddAlias();
-													}
-													if (e.key === "Escape") {
-														setIsAddingAlias(false);
-														setNewAlias("");
-													}
-												}}
-												onBlur={() => {
-													if (!newAlias.trim()) {
-														setIsAddingAlias(false);
-													}
-												}}
-												placeholder="alias"
-												disabled={isLoading}
-												className="text-sm font-mono bg-transparent outline-none w-full placeholder:text-muted-foreground"
-											/>
-											<button
-												type="button"
-												onMouseDown={(e) => {
-													e.preventDefault();
-													handleAddAlias();
-												}}
-												disabled={isLoading || !newAlias.trim()}
-												className="text-muted-foreground hover:text-foreground transition-colors duration-150 disabled:opacity-30 shrink-0"
-											>
-												<Check className="h-3 w-3" />
-											</button>
-										</span>
-									</div>
-								</div>
-							</VStack>
-						)}
+											<X className="size-3" />
+										</button>
+									</span>
+								))}
+								<Input
+									value={newAlias}
+									onChange={(e) => setNewAlias(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter") {
+											e.preventDefault();
+											addAlias();
+										}
+									}}
+									onBlur={addAlias}
+									placeholder="Add alias"
+									className="h-7 w-36"
+								/>
+							</div>
+						</Field>
+					)}
 
-						{error && <ErrorMessage>{error}</ErrorMessage>}
-					</VStack>
+					<FormError>{error}</FormError>
+
 					<DialogFooter>
 						<Button
 							type="button"
 							variant="outline"
 							onClick={() => onOpenChange(false)}
-							disabled={isLoading}
+							disabled={saving}
 						>
-							cancel
+							Cancel
 						</Button>
-						<Button type="submit" disabled={isLoading}>
-							{isLoading ? "saving..." : "save"}
+						<Button type="submit" disabled={saving}>
+							{saving ? "Saving…" : "Save"}
 						</Button>
 					</DialogFooter>
 				</form>

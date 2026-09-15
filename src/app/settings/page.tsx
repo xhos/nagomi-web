@@ -4,37 +4,22 @@ import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useMemo, useState } from "react";
-import { Card, HStack, LoadingSkeleton, Muted, VStack } from "@/components/lib";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/forms";
 import {
 	PageContainer,
 	PageContent,
 	PageHeaderWithTitle,
 } from "@/components/ui/layout";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Connection } from "@/gen/nagomi/v1/connection_services_pb";
 import { useConnections } from "@/hooks/useConnections";
 import { useSession, useUserId } from "@/hooks/useSession";
 import { authClient } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 import { ConnectProviderDialog } from "./components/ConnectProviderDialog";
 import { ManageConnectionDialog } from "./components/ManageConnectionDialog";
 import { intervalLabel, PROVIDERS, type Provider } from "./providers";
-
-const STATUS_VARIANT: Record<
-	string,
-	"default" | "secondary" | "destructive" | "outline"
-> = {
-	active: "default",
-	disabled: "secondary",
-	broken: "destructive",
-};
 
 function timestampToDate(ts?: { seconds?: bigint; nanos?: number }) {
 	if (!ts?.seconds) return null;
@@ -72,23 +57,26 @@ export default function SettingsPage() {
 			<PageContent>
 				<PageHeaderWithTitle title="settings" />
 
-				<div className="divide-y divide-border">
-					<Section title="profile" description="signed-in account and session.">
+				<div className="divide-y">
+					<Section title="profile" description="Signed-in account and session.">
 						<ProfileSection />
 					</Section>
 
-					<Section title="appearance" description="theme used on this device.">
+					<Section title="appearance" description="Theme used on this device.">
 						<AppearanceSection />
 					</Section>
 
 					<Section
 						title="connections"
-						description="pull transactions from outside accounts on a schedule."
+						description="Pull transactions from outside services on a schedule."
 					>
 						{!userId || isLoading ? (
-							<LoadingSkeleton />
+							<div className="space-y-3">
+								<Skeleton className="h-4 w-48" />
+								<Skeleton className="h-4 w-40" />
+							</div>
 						) : (
-							<VStack spacing="sm">
+							<div className="divide-y border-y">
 								{PROVIDERS.map((provider) => (
 									<ProviderRow
 										key={provider.slug}
@@ -100,7 +88,7 @@ export default function SettingsPage() {
 										onManage={(connection) => setManageConnection(connection)}
 									/>
 								))}
-							</VStack>
+							</div>
 						)}
 					</Section>
 				</div>
@@ -130,13 +118,11 @@ interface SectionProps {
 
 function Section({ title, description, children }: SectionProps) {
 	return (
-		<div className="grid grid-cols-1 gap-6 py-8 md:grid-cols-[220px_1fr] md:gap-10 first:pt-0 last:pb-0">
+		<div className="grid grid-cols-1 gap-4 py-8 first:pt-0 last:pb-0 md:grid-cols-[220px_1fr] md:gap-10">
 			<div>
-				<h2 className="font-serif text-lg font-semibold">{title}</h2>
+				<h2 className="text-base font-semibold">{title}</h2>
 				{description && (
-					<Muted size="xs" className="mt-1 block">
-						{description}
-					</Muted>
+					<p className="mt-1 text-sm text-muted-foreground">{description}</p>
 				)}
 			</div>
 			<div className="min-w-0">{children}</div>
@@ -162,43 +148,39 @@ function ProfileSection() {
 	};
 
 	return (
-		<Card padding="md">
-			<HStack justify="between" align="center">
-				<VStack spacing="xs" className="min-w-0">
-					<Muted size="xs">signed in as</Muted>
-					<span className="truncate font-mono text-sm">{email ?? "—"}</span>
-				</VStack>
-				<Button
-					variant="outline"
-					size="sm"
-					onClick={onSignOut}
-					disabled={isSigningOut}
-				>
-					{isSigningOut ? "signing out..." : "sign out"}
-				</Button>
-			</HStack>
-		</Card>
+		<div className="flex items-center justify-between gap-4 text-sm">
+			<div className="min-w-0">
+				<div className="text-muted-foreground">Signed in as</div>
+				<div className="truncate">{email ?? "—"}</div>
+			</div>
+			<Button
+				variant="outline"
+				size="sm"
+				onClick={onSignOut}
+				disabled={isSigningOut}
+			>
+				{isSigningOut ? "Signing out…" : "Sign out"}
+			</Button>
+		</div>
 	);
 }
 
 function AppearanceSection() {
 	const { theme, setTheme } = useTheme();
 	return (
-		<Card padding="md">
-			<HStack justify="between" align="center">
-				<span className="text-sm">theme</span>
-				<Select value={theme ?? "system"} onValueChange={setTheme}>
-					<SelectTrigger className="w-[160px]">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="light">light</SelectItem>
-						<SelectItem value="dark">dark</SelectItem>
-						<SelectItem value="system">system</SelectItem>
-					</SelectContent>
-				</Select>
-			</HStack>
-		</Card>
+		<div className="flex items-center justify-between gap-4 text-sm">
+			<label htmlFor="theme">Theme</label>
+			<NativeSelect
+				id="theme"
+				className="w-40"
+				value={theme ?? "system"}
+				onChange={(e) => setTheme(e.target.value)}
+			>
+				<option value="light">Light</option>
+				<option value="dark">Dark</option>
+				<option value="system">System</option>
+			</NativeSelect>
+		</div>
 	);
 }
 
@@ -221,46 +203,50 @@ function ProviderRow({
 	const lastSyncedDate = timestampToDate(connection?.lastSynced);
 	const statusLine = connection
 		? lastSyncedDate
-			? `synced ${formatDistanceToNow(lastSyncedDate, { addSuffix: true })} · ${intervalLabel(connection.syncIntervalMinutes)}`
-			: `never synced · ${intervalLabel(connection.syncIntervalMinutes)}`
+			? `Synced ${formatDistanceToNow(lastSyncedDate, { addSuffix: true })} · ${intervalLabel(connection.syncIntervalMinutes)}`
+			: `Never synced · ${intervalLabel(connection.syncIntervalMinutes)}`
 		: comingSoon
-			? "coming soon"
+			? "Coming soon"
 			: provider.description;
 
 	return (
-		<Card
-			padding="md"
-			interactive={isConnected}
-			onClick={connection ? () => onManage(connection) : undefined}
-		>
-			<HStack justify="between" align="center">
-				<VStack spacing="xs" className="min-w-0 flex-1">
-					<HStack spacing="sm" align="center">
-						<span className="font-medium">{provider.label}</span>
-						{isConnected && (
-							<Badge variant={STATUS_VARIANT[connection.status] ?? "outline"}>
-								{connection.status}
-							</Badge>
-						)}
-					</HStack>
-					<Muted size="xs" className="truncate">
-						{statusLine}
-					</Muted>
-				</VStack>
-				{isConnected ? (
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => onManage(connection)}
-					>
-						manage
-					</Button>
-				) : (
-					<Button size="sm" onClick={onConnect} disabled={comingSoon}>
-						connect
-					</Button>
-				)}
-			</HStack>
-		</Card>
+		<div className="flex items-center gap-4 py-3 text-sm">
+			<div className="min-w-0 flex-1">
+				<div className="font-medium">
+					{provider.label}
+					{isConnected && connection.status !== "active" && (
+						<span
+							className={cn(
+								"ml-2 font-normal",
+								connection.status === "broken"
+									? "text-destructive"
+									: "text-muted-foreground",
+							)}
+						>
+							{connection.status}
+						</span>
+					)}
+				</div>
+				<div className="truncate text-muted-foreground">{statusLine}</div>
+			</div>
+			{isConnected ? (
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => onManage(connection)}
+				>
+					Manage
+				</Button>
+			) : (
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={onConnect}
+					disabled={comingSoon}
+				>
+					Connect
+				</Button>
+			)}
+		</div>
 	);
 }
