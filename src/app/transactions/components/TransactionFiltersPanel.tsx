@@ -1,12 +1,16 @@
 "use client";
 
-import { format } from "date-fns";
-import { CalendarIcon, X } from "lucide-react";
-import { Card, VStack } from "@/components/lib";
+import {
+	endOfMonth,
+	format,
+	isSameDay,
+	startOfMonth,
+	subDays,
+	subMonths,
+} from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
 	Popover,
 	PopoverContent,
@@ -15,6 +19,7 @@ import {
 import { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
 import { useCategories } from "@/hooks/useCategories";
 import { cn } from "@/lib/utils";
+import { getCategoryDisplayName } from "@/lib/utils/category";
 
 export interface TransactionFilters {
 	startDate?: Date;
@@ -23,277 +28,212 @@ export interface TransactionFilters {
 	amountMax?: number;
 	direction?: TransactionDirection;
 	categories?: string[];
+	uncategorized?: boolean;
+}
+
+export function countActiveFilters(f: TransactionFilters) {
+	return [
+		f.startDate || f.endDate,
+		f.amountMin !== undefined || f.amountMax !== undefined,
+		f.direction !== undefined,
+		f.categories?.length,
+		f.uncategorized,
+	].filter(Boolean).length;
 }
 
 interface TransactionFiltersPanelProps {
 	filters: TransactionFilters;
 	onFiltersChange: (filters: TransactionFilters) => void;
-	isOpen: boolean;
+}
+
+const fieldLabel = "text-sm text-muted-foreground";
+const chip = (on: boolean) =>
+	cn(
+		"h-7 rounded-md border px-2.5 text-sm transition-colors",
+		on
+			? "border-foreground bg-foreground text-background"
+			: "border-border hover:bg-muted",
+	);
+
+function DateButton({
+	value,
+	placeholder,
+	onChange,
+}: {
+	value?: Date;
+	placeholder: string;
+	onChange: (d?: Date) => void;
+}) {
+	return (
+		<Popover>
+			<PopoverTrigger asChild>
+				<Button
+					variant="outline"
+					size="sm"
+					className={cn(
+						"w-32 justify-start font-normal",
+						!value && "text-muted-foreground",
+					)}
+				>
+					{value ? format(value, "MMM d, yyyy") : placeholder}
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent className="w-auto p-0" align="start">
+				<Calendar mode="single" selected={value} onSelect={onChange} />
+			</PopoverContent>
+		</Popover>
+	);
 }
 
 export function TransactionFiltersPanel({
 	filters,
 	onFiltersChange,
-	isOpen,
 }: TransactionFiltersPanelProps) {
 	const { categories } = useCategories();
-
-	if (!isOpen) return null;
-
-	const updateFilter = <K extends keyof TransactionFilters>(
+	const set = <K extends keyof TransactionFilters>(
 		key: K,
 		value: TransactionFilters[K],
-	) => {
-		onFiltersChange({ ...filters, [key]: value });
+	) => onFiltersChange({ ...filters, [key]: value });
+
+	const toggleCategory = (slug: string) => {
+		const cur = filters.categories ?? [];
+		set(
+			"categories",
+			cur.includes(slug) ? cur.filter((s) => s !== slug) : [...cur, slug],
+		);
 	};
 
-	const removeFilter = (key: keyof TransactionFilters) => {
-		const newFilters = { ...filters };
-		delete newFilters[key];
-		onFiltersChange(newFilters);
-	};
+	const today = new Date();
+	const presets: [string, Date, Date][] = [
+		["This month", startOfMonth(today), endOfMonth(today)],
+		[
+			"Last month",
+			startOfMonth(subMonths(today, 1)),
+			endOfMonth(subMonths(today, 1)),
+		],
+		["Last 30 days", subDays(today, 30), today],
+	];
+	const presetActive = (a: Date, b: Date) =>
+		!!filters.startDate &&
+		!!filters.endDate &&
+		isSameDay(filters.startDate, a) &&
+		isSameDay(filters.endDate, b);
 
-	const handleClearAll = () => {
-		onFiltersChange({});
-	};
-
-	const toggleCategory = (categorySlug: string) => {
-		const currentSlugs = filters.categories || [];
-		const exists = currentSlugs.includes(categorySlug);
-
-		if (exists) {
-			updateFilter(
-				"categories",
-				currentSlugs.filter((slug) => slug !== categorySlug),
-			);
-		} else {
-			updateFilter("categories", [...currentSlugs, categorySlug]);
-		}
-	};
-
-	const hasAnyFilters =
-		filters.startDate ||
-		filters.endDate ||
-		filters.amountMin !== undefined ||
-		filters.amountMax !== undefined ||
-		filters.direction !== undefined ||
-		(filters.categories && filters.categories.length > 0);
+	const directions: [string, TransactionDirection | undefined][] = [
+		["All", undefined],
+		["In", TransactionDirection.DIRECTION_INCOMING],
+		["Out", TransactionDirection.DIRECTION_OUTGOING],
+	];
 
 	return (
-		<Card className="p-4">
-			<VStack spacing="md">
-				{/* Date Range */}
-				<div>
-					<Label className="text-xs font-medium mb-2 block">date range</Label>
-					<VStack spacing="xs">
-						<Popover>
-							<PopoverTrigger asChild>
-								<Button
-									variant="outline"
-									size="sm"
-									className={cn(
-										"w-full justify-start text-left font-normal h-8 text-xs",
-										!filters.startDate && "text-muted-foreground",
-									)}
-								>
-									<CalendarIcon className="mr-2 h-3 w-3" />
-									{filters.startDate
-										? format(filters.startDate, "PPP")
-										: "start date"}
-								</Button>
-							</PopoverTrigger>
-							<PopoverContent className="w-auto p-0" align="start">
-								<Calendar
-									mode="single"
-									selected={filters.startDate}
-									onSelect={(date) => updateFilter("startDate", date)}
-									initialFocus
-								/>
-							</PopoverContent>
-						</Popover>
-						<Popover>
-							<PopoverTrigger asChild>
-								<Button
-									variant="outline"
-									size="sm"
-									className={cn(
-										"w-full justify-start text-left font-normal h-8 text-xs",
-										!filters.endDate && "text-muted-foreground",
-									)}
-								>
-									<CalendarIcon className="mr-2 h-3 w-3" />
-									{filters.endDate
-										? format(filters.endDate, "PPP")
-										: "end date"}
-								</Button>
-							</PopoverTrigger>
-							<PopoverContent className="w-auto p-0" align="start">
-								<Calendar
-									mode="single"
-									selected={filters.endDate}
-									onSelect={(date) => updateFilter("endDate", date)}
-									initialFocus
-								/>
-							</PopoverContent>
-						</Popover>
-					</VStack>
-					{(filters.startDate || filters.endDate) && (
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => {
-								removeFilter("startDate");
-								removeFilter("endDate");
-							}}
-							className="mt-1 h-6 px-2 text-xs"
-						>
-							<X className="h-3 w-3 mr-1" />
-							clear
-						</Button>
-					)}
-				</div>
-
-				{/* Amount Range */}
-				<div>
-					<Label className="text-xs font-medium mb-2 block">amount range</Label>
-					<VStack spacing="xs">
-						<Input
-							type="number"
-							placeholder="min"
-							value={filters.amountMin ?? ""}
-							onChange={(e) =>
-								updateFilter(
-									"amountMin",
-									e.target.value ? parseFloat(e.target.value) : undefined,
-								)
-							}
-							className="h-8 text-xs"
-						/>
-						<Input
-							type="number"
-							placeholder="max"
-							value={filters.amountMax ?? ""}
-							onChange={(e) =>
-								updateFilter(
-									"amountMax",
-									e.target.value ? parseFloat(e.target.value) : undefined,
-								)
-							}
-							className="h-8 text-xs"
-						/>
-					</VStack>
-					{(filters.amountMin !== undefined ||
-						filters.amountMax !== undefined) && (
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => {
-								removeFilter("amountMin");
-								removeFilter("amountMax");
-							}}
-							className="mt-1 h-6 px-2 text-xs"
-						>
-							<X className="h-3 w-3 mr-1" />
-							clear
-						</Button>
-					)}
-				</div>
-
-				{/* Direction */}
-				<div>
-					<Label className="text-xs font-medium mb-2 block">direction</Label>
-					<VStack spacing="xs">
-						<Button
-							variant={filters.direction === undefined ? "default" : "outline"}
-							size="sm"
-							onClick={() => removeFilter("direction")}
-							className="w-full h-7 text-xs"
-						>
-							all
-						</Button>
-						<Button
-							variant={
-								filters.direction === TransactionDirection.DIRECTION_INCOMING
-									? "default"
-									: "outline"
-							}
-							size="sm"
-							onClick={() =>
-								updateFilter(
-									"direction",
-									TransactionDirection.DIRECTION_INCOMING,
-								)
-							}
-							className="w-full h-7 text-xs"
-						>
-							incoming
-						</Button>
-						<Button
-							variant={
-								filters.direction === TransactionDirection.DIRECTION_OUTGOING
-									? "default"
-									: "outline"
-							}
-							size="sm"
-							onClick={() =>
-								updateFilter(
-									"direction",
-									TransactionDirection.DIRECTION_OUTGOING,
-								)
-							}
-							className="w-full h-7 text-xs"
-						>
-							outgoing
-						</Button>
-					</VStack>
-				</div>
-
-				{/* Categories */}
-				{categories.length > 0 && (
-					<div>
-						<Label className="text-xs font-medium mb-2 block">categories</Label>
-						<div className="flex flex-wrap gap-1.5">
-							{categories.map((category) => {
-								const isSelected = filters.categories?.includes(category.slug);
-								return (
-									<Button
-										key={category.id.toString()}
-										variant={isSelected ? "default" : "outline"}
-										size="sm"
-										onClick={() => toggleCategory(category.slug)}
-										className="h-6 px-2 text-xs"
-									>
-										{category.slug}
-									</Button>
-								);
-							})}
-						</div>
-						{filters.categories && filters.categories.length > 0 && (
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={() => removeFilter("categories")}
-								className="mt-1 h-6 px-2 text-xs"
-							>
-								<X className="h-3 w-3 mr-1" />
-								clear ({filters.categories.length})
-							</Button>
-						)}
-					</div>
-				)}
-
-				{/* Clear All */}
-				{hasAnyFilters && (
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={handleClearAll}
-						className="w-full h-8 text-xs"
+		<div className="mb-6 grid gap-x-8 gap-y-3 border-b pb-6 sm:grid-cols-[auto_1fr] sm:items-center">
+			<span className={fieldLabel}>Date</span>
+			<div className="flex flex-wrap items-center gap-2">
+				{presets.map(([label, a, b]) => (
+					<button
+						key={label}
+						type="button"
+						className={chip(presetActive(a, b))}
+						onClick={() =>
+							onFiltersChange({ ...filters, startDate: a, endDate: b })
+						}
 					>
-						clear all filters
+						{label}
+					</button>
+				))}
+				<span className="w-2" />
+				<DateButton
+					value={filters.startDate}
+					placeholder="From"
+					onChange={(d) => set("startDate", d)}
+				/>
+				<span className="text-muted-foreground">–</span>
+				<DateButton
+					value={filters.endDate}
+					placeholder="To"
+					onChange={(d) => set("endDate", d)}
+				/>
+			</div>
+
+			<span className={fieldLabel}>Amount</span>
+			<div className="flex items-center gap-2">
+				<Input
+					type="number"
+					placeholder="Min"
+					className="h-8 w-32"
+					value={filters.amountMin ?? ""}
+					onChange={(e) =>
+						set(
+							"amountMin",
+							e.target.value ? Number(e.target.value) : undefined,
+						)
+					}
+				/>
+				<span className="text-muted-foreground">–</span>
+				<Input
+					type="number"
+					placeholder="Max"
+					className="h-8 w-32"
+					value={filters.amountMax ?? ""}
+					onChange={(e) =>
+						set(
+							"amountMax",
+							e.target.value ? Number(e.target.value) : undefined,
+						)
+					}
+				/>
+			</div>
+
+			<span className={fieldLabel}>Direction</span>
+			<div className="flex gap-2">
+				{directions.map(([label, value]) => (
+					<button
+						key={label}
+						type="button"
+						className={chip(filters.direction === value)}
+						onClick={() => set("direction", value)}
+					>
+						{label}
+					</button>
+				))}
+			</div>
+
+			{categories.length > 0 && (
+				<>
+					<span className={cn(fieldLabel, "sm:self-start sm:pt-1")}>
+						Category
+					</span>
+					<div className="flex flex-wrap gap-2">
+						<button
+							type="button"
+							className={chip(!!filters.uncategorized)}
+							onClick={() =>
+								set("uncategorized", filters.uncategorized ? undefined : true)
+							}
+						>
+							Uncategorized
+						</button>
+						{categories.map((c) => (
+							<button
+								key={c.id.toString()}
+								type="button"
+								className={chip(!!filters.categories?.includes(c.slug))}
+								onClick={() => toggleCategory(c.slug)}
+							>
+								{getCategoryDisplayName(c.slug)}
+							</button>
+						))}
+					</div>
+				</>
+			)}
+
+			{countActiveFilters(filters) > 0 && (
+				<div className="sm:col-start-2">
+					<Button variant="ghost" size="sm" onClick={() => onFiltersChange({})}>
+						Clear filters
 					</Button>
-				)}
-			</VStack>
-		</Card>
+				</div>
+			)}
+		</div>
 	);
 }

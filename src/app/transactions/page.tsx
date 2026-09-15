@@ -1,18 +1,10 @@
 "use client";
 
-import { Plus, RefreshCw, Search } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, Search, SlidersHorizontal } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { UICondition } from "@/app/rules/components/ConditionBuilder";
 import { RuleDialog } from "@/app/rules/components/RuleDialog";
-import { ErrorMessage, HStack, VStack } from "@/components/lib";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
 	PageContainer,
@@ -23,48 +15,41 @@ import type { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
 import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useCategories } from "@/hooks/useCategories";
 import { useCreateRule } from "@/hooks/useRules";
-import { useTransactionsQuery } from "@/hooks/useTransactionsQuery";
-import { SplitTransactionDialog } from "./components/SplitTransactionDialog";
-import { TransactionDetailsDialog } from "./components/TransactionDetailsDialog";
 import {
+	useTransactionsQuery,
+	useUncategorizedCount,
+} from "@/hooks/useTransactionsQuery";
+import { cn } from "@/lib/utils";
+import { SplitTransactionDialog } from "./components/SplitTransactionDialog";
+import {
+	countActiveFilters,
 	type TransactionFilters,
 	TransactionFiltersPanel,
 } from "./components/TransactionFiltersPanel";
 import { TransactionList } from "./components/TransactionList";
-import { TransactionSidebar } from "./components/TransactionSidebar";
 import { TransactionDialog } from "./components/transaction-dialog";
 
 export default function TransactionsPage() {
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
-	const [editingTransaction, setEditingTransaction] =
-		useState<Transaction | null>(null);
-	const [selectedTransactions, setSelectedTransactions] = useState<
-		Transaction[]
-	>([]);
-	const [detailsTransaction, setDetailsTransaction] =
-		useState<Transaction | null>(null);
-	const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-	const [splitTransaction, setSplitTransaction] = useState<Transaction | null>(
-		null,
-	);
-	const [isSplitDialogOpen, setIsSplitDialogOpen] = useState(false);
+	const [editing, setEditing] = useState<Transaction | null>(null);
+	const [splitting, setSplitting] = useState<Transaction | null>(null);
 	const [searchInput, setSearchInput] = useState("");
-	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-	const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-	const [filters, setFilters] = useState<TransactionFilters>({});
-	const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [filtersOpen, setFiltersOpen] = useState(false);
+	const [filters, setFilters] = useState<TransactionFilters>(() =>
+		typeof window !== "undefined" &&
+		new URLSearchParams(window.location.search).get("uncategorized") === "1"
+			? { uncategorized: true }
+			: {},
+	);
 	const [rulePrefill, setRulePrefill] = useState<{
 		ruleName: string;
 		condition: UICondition;
 	} | null>(null);
 
-	// Debounce search input
 	useEffect(() => {
-		const timer = setTimeout(() => {
-			setDebouncedSearchQuery(searchInput);
-		}, 300);
-
-		return () => clearTimeout(timer);
+		const t = setTimeout(() => setSearchQuery(searchInput), 300);
+		return () => clearTimeout(t);
 	}, [searchInput]);
 
 	const { categories } = useCategories();
@@ -74,8 +59,6 @@ export default function TransactionsPage() {
 		error: createRuleError,
 		reset: resetCreateRule,
 	} = useCreateRule();
-
-	// Use hook for mutations only (TransactionList handles its own query with search)
 	const {
 		deleteTransactions,
 		createTransaction,
@@ -85,15 +68,14 @@ export default function TransactionsPage() {
 		createError,
 		updateError,
 		deleteError,
-		refetch,
-		isLoading,
 	} = useTransactionsQuery({});
 
-	const handleSelectionChange = useCallback((transactions: Transaction[]) => {
-		setSelectedTransactions(transactions);
-	}, []);
+	const { data: uncategorized = 0 } = useUncategorizedCount();
 
-	const handleSaveTransaction = async (formData: {
+	const mutationError = createError || updateError || deleteError;
+	const activeFilters = countActiveFilters(filters);
+
+	const handleSave = async (formData: {
 		accountId: bigint;
 		txDate: Date;
 		txAmount: { currencyCode: string; units: string; nanos: number };
@@ -101,285 +83,151 @@ export default function TransactionsPage() {
 		description?: string;
 		merchant?: string;
 		userNotes?: string;
-		categoryId?: bigint;
+		categoryId?: bigint | null;
 	}) => {
-		if (editingTransaction) {
-			await updateTransaction({
-				id: editingTransaction.id,
+		if (editing) await updateTransaction({ id: editing.id, ...formData });
+		else
+			await createTransaction({
 				...formData,
+				categoryId: formData.categoryId ?? undefined,
 			});
-		} else {
-			await createTransaction(formData);
-		}
 		setIsDialogOpen(false);
-		setEditingTransaction(null);
+		setEditing(null);
 	};
 
-	const handleClearSelection = () => {
-		setSelectedTransactions([]);
-	};
-
-	const handleDeleteSelected = async () => {
-		const transactionIds = selectedTransactions.map((t) => t.id);
-		await deleteTransactions(transactionIds);
-		handleClearSelection();
-	};
-
-	const handleBulkModify = () => {
-		alert("Bulk modify functionality coming soon!");
-	};
-
-	const handleEditTransaction = (transaction: Transaction) => {
-		setEditingTransaction(transaction);
+	const openCreate = () => {
+		setEditing(null);
 		setIsDialogOpen(true);
 	};
 
-	const handleDialogOpenChange = (open: boolean) => {
-		setIsDialogOpen(open);
-		if (!open) {
-			setEditingTransaction(null);
-		}
+	const openRuleFor = (tx: Transaction) => {
+		const description = tx.description || "";
+		setRulePrefill({
+			ruleName: description,
+			condition: {
+				field: "tx_desc",
+				operator: "contains",
+				currentInput: description,
+				case_sensitive: false,
+			},
+		});
 	};
-
-	const handleDeleteTransaction = async (transaction: Transaction) => {
-		await deleteTransactions([transaction.id]);
-	};
-
-	const handleViewDetails = (transaction: Transaction) => {
-		setDetailsTransaction(transaction);
-		setIsDetailsDialogOpen(true);
-	};
-
-	const handleSplitTransaction = (transaction: Transaction) => {
-		setSplitTransaction(transaction);
-		setIsSplitDialogOpen(true);
-	};
-
-	const handleCreateRuleFromTransaction = (transaction: Transaction) => {
-		const description = transaction.description || "";
-		const condition: UICondition = {
-			field: "tx_desc",
-			operator: "contains",
-			currentInput: description,
-			case_sensitive: false,
-		};
-
-		setRulePrefill({ ruleName: description, condition });
-		setRuleDialogOpen(true);
-	};
-
-	const activeFilterCount = useMemo(() => {
-		let count = 0;
-		if (filters.startDate || filters.endDate) count++;
-		if (filters.amountMin !== undefined || filters.amountMax !== undefined)
-			count++;
-		if (filters.direction !== undefined) count++;
-		if (filters.categories && filters.categories.length > 0) count++;
-		return count;
-	}, [filters]);
 
 	return (
 		<PageContainer>
 			<PageContent>
-				<PageHeaderWithTitle title="test transactions" />
-
-				{(createError || updateError || deleteError) && (
-					<ErrorMessage className="mb-6">
-						{createError?.message ||
-							updateError?.message ||
-							deleteError?.message}
-					</ErrorMessage>
-				)}
-
-				<div className="flex flex-col xl:flex-row xl:gap-8 gap-4">
-					{/* Top toolbar - visible on all screens */}
-					<div className="xl:hidden">
-						<VStack spacing="sm">
-							<HStack spacing="sm" justify="between">
-								<div className="relative flex-1">
-									<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-									<Input
-										placeholder="search"
-										className="pl-9 border border-border rounded-sm"
-										value={searchInput}
-										onChange={(e) => setSearchInput(e.target.value)}
-									/>
-								</div>
-								<HStack spacing="xs">
-									<Button
-										onClick={() => refetch()}
-										size="icon"
-										variant="ghost"
-										disabled={isLoading}
-									>
-										<RefreshCw
-											className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-										/>
-									</Button>
-									<Button
-										onClick={() => setIsDialogOpen(true)}
-										size="icon"
-										disabled={isCreating || isUpdating}
-									>
-										<Plus className="h-4 w-4" />
-									</Button>
-								</HStack>
-							</HStack>
-							<Button
-								variant="outline"
-								size="sm"
-								className="w-full rounded-sm relative"
-								onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-							>
-								filters
-								{activeFilterCount > 0 && (
-									<Badge
-										variant="default"
-										className="ml-2 h-5 min-w-5 px-1.5 text-[10px]"
-									>
-										{activeFilterCount}
-									</Badge>
-								)}
-							</Button>
-						</VStack>
-						<TransactionFiltersPanel
-							filters={filters}
-							onFiltersChange={setFilters}
-							isOpen={isFiltersOpen}
-						/>
-					</div>
-
-					<div className="flex-1 min-w-0 xl:order-2">
-						<TransactionList
-							searchQuery={debouncedSearchQuery}
-							filters={filters}
-							onSelectionChange={handleSelectionChange}
-							onEditTransaction={handleEditTransaction}
-							onDeleteTransaction={handleDeleteTransaction}
-							onViewDetails={handleViewDetails}
-							onSplitTransaction={handleSplitTransaction}
-							onCreateRule={handleCreateRuleFromTransaction}
-						/>
-					</div>
-
-					{/* Sidebar - visible on xl and up */}
-					<aside className="hidden xl:block xl:flex-shrink-0 xl:sticky xl:top-8 xl:h-fit xl:w-80 xl:order-1">
-						<VStack spacing="md">
-							<HStack spacing="sm" justify="end">
+				<PageHeaderWithTitle
+					title="transactions"
+					actions={
+						<>
+							{uncategorized > 0 && (
 								<Button
-									onClick={() => refetch()}
-									size="icon"
-									variant="ghost"
-									disabled={isLoading}
+									variant="outline"
+									aria-pressed={!!filters.uncategorized}
+									onClick={() =>
+										setFilters((f) => ({
+											...f,
+											uncategorized: f.uncategorized ? undefined : true,
+										}))
+									}
+									className={cn(
+										filters.uncategorized &&
+											"bg-foreground text-background hover:bg-foreground/90 hover:text-background",
+									)}
 								>
-									<RefreshCw
-										className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-									/>
+									<span className="tabular-nums">{uncategorized}</span>{" "}
+									uncategorized
 								</Button>
-								<Button
-									onClick={() => setIsDialogOpen(true)}
-									size="default"
-									disabled={isCreating || isUpdating}
-								>
-									<Plus className="h-4 w-4" />
-									new
-								</Button>
-							</HStack>
-
+							)}
 							<div className="relative">
-								<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+								<Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
-									placeholder="search"
-									className="pl-9 border border-border rounded-sm"
+									placeholder="Search"
+									aria-label="Search transactions"
+									className="w-40 pl-8 sm:w-56"
 									value={searchInput}
 									onChange={(e) => setSearchInput(e.target.value)}
 								/>
 							</div>
 							<Button
 								variant="outline"
-								size="sm"
-								className="w-full rounded-sm relative"
-								onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+								onClick={() => setFiltersOpen((o) => !o)}
+								aria-expanded={filtersOpen}
+								className={cn(filtersOpen && "bg-muted")}
 							>
-								filters
-								{activeFilterCount > 0 && (
-									<Badge
-										variant="default"
-										className="ml-2 h-5 min-w-5 px-1.5 text-[10px]"
-									>
-										{activeFilterCount}
-									</Badge>
+								<SlidersHorizontal />
+								Filters
+								{activeFilters > 0 && (
+									<span className="rounded-md bg-foreground px-1.5 text-xs text-background tabular-nums">
+										{activeFilters}
+									</span>
 								)}
 							</Button>
+							<Button onClick={openCreate} disabled={isCreating || isUpdating}>
+								<Plus />
+								New
+							</Button>
+						</>
+					}
+				/>
 
-							<TransactionFiltersPanel
-								filters={filters}
-								onFiltersChange={setFilters}
-								isOpen={isFiltersOpen}
-							/>
+				{filtersOpen && (
+					<TransactionFiltersPanel
+						filters={filters}
+						onFiltersChange={setFilters}
+					/>
+				)}
 
-							{selectedTransactions.length > 0 && (
-								<TransactionSidebar
-									transactions={selectedTransactions}
-									onClose={handleClearSelection}
-									onDeleteSelected={handleDeleteSelected}
-									onBulkModify={handleBulkModify}
-								/>
-							)}
-						</VStack>
-					</aside>
-				</div>
+				{mutationError && (
+					<p className="mb-4 text-sm text-destructive">
+						{mutationError.message}
+					</p>
+				)}
+
+				<TransactionList
+					searchQuery={searchQuery}
+					filters={filters}
+					onCreate={openCreate}
+					onDeleteMany={(txs) => deleteTransactions(txs.map((t) => t.id))}
+					onEditTransaction={(tx) => {
+						setEditing(tx);
+						setIsDialogOpen(true);
+					}}
+					onDeleteTransaction={(tx) => deleteTransactions([tx.id])}
+					onSplitTransaction={setSplitting}
+					onCreateRule={openRuleFor}
+				/>
 
 				<TransactionDialog
 					open={isDialogOpen}
-					onOpenChange={handleDialogOpenChange}
-					transaction={editingTransaction}
-					onSave={handleSaveTransaction}
-					title={editingTransaction ? "edit transaction" : "create transaction"}
+					onOpenChange={(open) => {
+						setIsDialogOpen(open);
+						if (!open) setEditing(null);
+					}}
+					transaction={editing}
+					onSave={handleSave}
+					title={editing ? "edit transaction" : "new transaction"}
 				/>
 
-				<Dialog
-					open={isDetailsDialogOpen}
-					onOpenChange={setIsDetailsDialogOpen}
-				>
-					<DialogContent className="max-w-lg">
-						<DialogHeader>
-							<DialogTitle>transaction details</DialogTitle>
-						</DialogHeader>
-						{detailsTransaction && (
-							<TransactionDetailsDialog transaction={detailsTransaction} />
-						)}
-					</DialogContent>
-				</Dialog>
-
 				<SplitTransactionDialog
-					transaction={splitTransaction}
-					open={isSplitDialogOpen}
-					onOpenChange={(open) => {
-						setIsSplitDialogOpen(open);
-						if (!open) setSplitTransaction(null);
-					}}
+					transaction={splitting}
+					open={!!splitting}
+					onOpenChange={(o) => !o && setSplitting(null)}
 				/>
 
 				<RuleDialog
-					isOpen={ruleDialogOpen}
+					isOpen={!!rulePrefill}
 					onClose={() => {
-						setRuleDialogOpen(false);
 						setRulePrefill(null);
 						resetCreateRule();
 					}}
-					onSubmit={(ruleData) => {
-						createRule(ruleData, {
-							onSuccess: () => {
-								setRuleDialogOpen(false);
-								setRulePrefill(null);
-							},
-						});
-					}}
+					onSubmit={(rule) =>
+						createRule(rule, { onSuccess: () => setRulePrefill(null) })
+					}
 					categories={categories}
 					prefill={rulePrefill}
 					title="create rule"
-					submitText="create rule"
+					submitText="Create rule"
 					isLoading={isCreatingRule}
 					error={createRuleError?.message}
 				/>

@@ -2,52 +2,54 @@
 
 import {
 	BookmarkPlus,
+	Check,
 	Copy,
-	Edit,
+	Ellipsis,
 	FileText,
+	Pencil,
 	ReceiptText,
 	Split,
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { ReceiptDetailDialog } from "@/app/receipts/components/ReceiptDetailDialog";
-import { Amount, Card, HStack, Muted, VStack } from "@/components/lib";
-import { Badge } from "@/components/ui/badge";
+import { Amount } from "@/components/ui/amount";
+import { CategoryPicker } from "@/components/ui/category-picker";
 import {
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuItem,
+	ContextMenuSeparator,
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ListRow, RowMenuButton } from "@/components/ui/list";
+import type { Category } from "@/gen/nagomi/v1/category_pb";
+import { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
 import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useReceipt } from "@/hooks/useReceipts";
-import { getCategoryTextColor } from "@/lib/color-utils";
 import { cn } from "@/lib/utils";
 import { getCategoryDisplayName } from "@/lib/utils/category";
-import {
-	formatAmount,
-	formatCurrency,
-	formatTime,
-	getCategorizationStatus,
-	getDirectionDisplay,
-	getMerchantStatus,
-} from "@/lib/utils/transaction";
+import { formatAmount, formatTime } from "@/lib/utils/transaction";
+import { TransactionDetails } from "./TransactionDetails";
 
 interface TransactionItemProps {
 	transaction: Transaction;
 	isSelected: boolean;
 	onSelect: (id: bigint, index: number, event: React.MouseEvent) => void;
 	globalIndex: number;
+	expanded: boolean;
+	onToggle: () => void;
+	onSetCategory: (category: Category | null) => void;
 	getAccountDisplayName: (accountId: bigint, accountName?: string) => string;
 	onEdit?: (transaction: Transaction) => void;
 	onDelete?: (transaction: Transaction) => void;
-	onViewDetails?: (transaction: Transaction) => void;
 	onSplit?: (transaction: Transaction) => void;
 	onCreateRule?: (transaction: Transaction) => void;
 	inlineSplits?: Transaction[];
@@ -58,271 +60,283 @@ export function TransactionItem({
 	isSelected,
 	onSelect,
 	globalIndex,
+	expanded,
+	onToggle,
+	onSetCategory,
 	getAccountDisplayName,
 	onEdit,
 	onDelete,
-	onViewDetails,
 	onSplit,
 	onCreateRule,
 	inlineSplits,
 }: TransactionItemProps) {
-	const handleClick = (event: React.MouseEvent) => {
+	const [receiptOpen, setReceiptOpen] = useState(false);
+	const { data: receiptData, isLoading: isReceiptLoading } = useReceipt(
+		receiptOpen && transaction.receiptId ? transaction.receiptId : null,
+	);
+
+	const tone =
+		transaction.direction === TransactionDirection.DIRECTION_INCOMING
+			? "in"
+			: "out";
+	const amount = formatAmount(transaction.txAmount);
+	const currency = transaction.txAmount?.currencyCode;
+	const title =
+		transaction.description || transaction.merchant || "Unknown transaction";
+	const showMerchant =
+		transaction.merchant && transaction.merchant !== transaction.description;
+	const hasSplits = !!inlineSplits?.length;
+
+	const handleRowClick = (event: React.MouseEvent) => {
 		if (event.ctrlKey || event.metaKey || event.shiftKey) {
 			event.preventDefault();
 			onSelect(transaction.id, globalIndex, event);
+			return;
 		}
+		onToggle();
 	};
 
-	const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
-	const { data: receiptData, isLoading: isReceiptLoading } = useReceipt(
-		receiptDialogOpen && transaction.receiptId ? transaction.receiptId : null,
-	);
-
-	const handleCopyMerchant = () => {
-		const merchantName = transaction.merchant || transaction.description || "";
-		navigator.clipboard.writeText(merchantName);
+	const handleCheck = (event: React.MouseEvent) => {
+		event.stopPropagation();
+		onSelect(
+			transaction.id,
+			globalIndex,
+			event.shiftKey ? event : ({ ctrlKey: true } as React.MouseEvent),
+		);
 	};
 
-	const directionInfo = getDirectionDisplay(transaction.direction);
-	const categoryInfo = getCategorizationStatus(transaction);
-	const merchantInfo = getMerchantStatus(transaction);
-	const amount = formatAmount(transaction.txAmount);
-	const _formattedAmount = formatCurrency(
-		amount,
-		transaction.txAmount?.currencyCode,
-	);
+	const copyName = () =>
+		navigator.clipboard.writeText(transaction.merchant || title);
 
-	const hasSplits = inlineSplits && inlineSplits.length > 0;
+	// same items for right-click and the hover menu
+	const actions = (
+		Item: typeof ContextMenuItem,
+		Separator: typeof ContextMenuSeparator,
+	) => (
+		<>
+			<Item onClick={onToggle}>
+				<FileText /> {expanded ? "Collapse" : "Details"}
+			</Item>
+			{onEdit && (
+				<Item onClick={() => onEdit(transaction)}>
+					<Pencil /> Edit
+				</Item>
+			)}
+			{onSplit && (
+				<Item onClick={() => onSplit(transaction)}>
+					<Split /> {hasSplits ? "Re-split" : "Split"}
+				</Item>
+			)}
+			{transaction.receiptId && (
+				<Item onClick={() => setReceiptOpen(true)}>
+					<ReceiptText /> View receipt
+				</Item>
+			)}
+			{onCreateRule && (
+				<Item onClick={() => onCreateRule(transaction)}>
+					<BookmarkPlus /> Create rule
+				</Item>
+			)}
+			<Item onClick={copyName}>
+				<Copy /> Copy name
+			</Item>
+			{onDelete && (
+				<>
+					<Separator />
+					<Item variant="destructive" onClick={() => onDelete(transaction)}>
+						<Trash2 /> Delete
+					</Item>
+				</>
+			)}
+		</>
+	);
 
 	return (
-		<div className="relative">
+		<>
 			<ContextMenu>
 				<ContextMenuTrigger asChild>
-					<Card
-						variant="default"
-						padding="sm"
-						interactive
-						onClick={handleClick}
-						className={cn(isSelected && "ring-1 ring-primary")}
+					<ListRow
+						selected={isSelected}
+						expanded={expanded}
+						onClick={handleRowClick}
 					>
-						<HStack spacing="xl" justify="between">
-							{/* Left: Description & Category */}
-							<VStack spacing="sm" align="start" className="flex-1 min-w-0">
-								<div className="text-sm font-semibold truncate">
-									{transaction.description ||
-										transaction.merchant ||
-										"Unknown transaction"}
-								</div>
+						<div className="flex items-start gap-3">
+							<span className="relative mt-1 flex size-4 shrink-0 items-center justify-center">
+								<input
+									type="checkbox"
+									aria-label="Select transaction"
+									checked={isSelected}
+									onChange={() => {}}
+									onClick={handleCheck}
+									className={cn(
+										"peer size-4 cursor-pointer appearance-none rounded-md border transition-opacity",
+										"opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [[data-selecting]_&]:opacity-100",
+										"border-input bg-background checked:border-accent checked:bg-accent checked:opacity-100",
+									)}
+								/>
+								<Check
+									className="pointer-events-none absolute size-3 text-accent-foreground opacity-0 peer-checked:opacity-100"
+									strokeWidth={3}
+								/>
+							</span>
 
-								<HStack spacing="sm" align="center" className="flex-wrap gap-2">
-									{transaction.merchant &&
-										transaction.description !== transaction.merchant && (
-											<>
-												<TooltipProvider>
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<Muted size="xs" className="truncate cursor-help">
-																{transaction.merchant}
-															</Muted>
-														</TooltipTrigger>
-														<TooltipContent>
-															<p>{merchantInfo.text}</p>
-														</TooltipContent>
-													</Tooltip>
-												</TooltipProvider>
-												<Muted size="xs">•</Muted>
-											</>
-										)}
-
-									{transaction.category?.slug && (
-										<TooltipProvider>
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<Badge
-														variant="outline"
-														className="text-xs border-0 cursor-help"
+							<div className="min-w-0 flex-1">
+								<div className="truncate font-medium">{title}</div>
+								<div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+									{showMerchant && (
+										<span className="truncate">{transaction.merchant}</span>
+									)}
+									{showMerchant && <span aria-hidden>·</span>}
+									<CategoryPicker
+										value={transaction.categoryId}
+										onChange={onSetCategory}
+									>
+										<button
+											type="button"
+											onClick={(e) => e.stopPropagation()}
+											title="Change category"
+											className="-mx-1 flex shrink-0 items-center gap-1.5 rounded-md px-1 hover:bg-muted hover:text-foreground"
+										>
+											{transaction.category ? (
+												<>
+													<span
+														className="size-2 rounded-full"
 														style={{
 															backgroundColor: transaction.category.color,
-															color: getCategoryTextColor(
-																transaction.category.slug,
-															),
 														}}
-													>
-														{getCategoryDisplayName(transaction.category.slug)}
-													</Badge>
-												</TooltipTrigger>
-												<TooltipContent>
-													<p>{categoryInfo.text}</p>
-												</TooltipContent>
-											</Tooltip>
-										</TooltipProvider>
+													/>
+													{getCategoryDisplayName(transaction.category.slug)}
+												</>
+											) : (
+												<>
+													<span className="size-2 rounded-full border border-dashed border-current" />
+													Uncategorized
+												</>
+											)}
+										</button>
+									</CategoryPicker>
+									{transaction.accountId && (
+										<>
+											<span aria-hidden>·</span>
+											<span className="truncate">
+												{getAccountDisplayName(
+													transaction.accountId,
+													transaction.accountName,
+												)}
+											</span>
+										</>
 									)}
-								</HStack>
-							</VStack>
+									{transaction.receiptId && (
+										<button
+											type="button"
+											aria-label="View receipt"
+											onClick={(e) => {
+												e.stopPropagation();
+												setReceiptOpen(true);
+											}}
+											className="shrink-0 hover:text-foreground"
+										>
+											<ReceiptText className="size-3.5" />
+										</button>
+									)}
+								</div>
 
-							{/* Right: Amount & Account/Time */}
-							<VStack spacing="sm" align="end" className="shrink-0">
+								{hasSplits && !expanded && (
+									<div className="mt-2 space-y-1 border-l-2 border-border pl-3 text-sm text-muted-foreground">
+										{inlineSplits?.map((split) => (
+											<div
+												key={split.id.toString()}
+												className="flex items-center justify-between gap-3"
+											>
+												<span className="truncate">
+													{getAccountDisplayName(
+														split.accountId,
+														split.accountName,
+													)}
+													{split.forgiven && " · forgiven"}
+												</span>
+												<Amount
+													value={formatAmount(split.txAmount)}
+													currency={split.txAmount?.currencyCode}
+													tone="out"
+													className={cn(split.forgiven && "line-through")}
+												/>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+
+							<div className="shrink-0 text-right">
 								{transaction.foreignAmount ? (
-									<VStack spacing="xs" align="end">
+									<>
 										<Amount
 											value={formatAmount(transaction.foreignAmount)}
 											currency={transaction.foreignAmount.currencyCode}
-											variant={
-												directionInfo.label === "in" ? "positive" : "negative"
-											}
-											className="text-lg"
+											tone={tone}
+											className="block font-medium"
 										/>
-										<TooltipProvider>
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<Muted size="xs" className="font-mono cursor-help">
-														{formatCurrency(
-															amount,
-															transaction.txAmount?.currencyCode,
-														)}
-													</Muted>
-												</TooltipTrigger>
-												<TooltipContent>
-													<p>rate: {transaction.exchangeRate}</p>
-												</TooltipContent>
-											</Tooltip>
-										</TooltipProvider>
-									</VStack>
+										<span
+											className="block text-sm text-muted-foreground"
+											title={`rate ${transaction.exchangeRate}`}
+										>
+											<Amount value={amount} currency={currency} tone="out" />
+										</span>
+									</>
 								) : (
 									<Amount
 										value={amount}
-										currency={transaction.txAmount?.currencyCode}
-										variant={
-											directionInfo.label === "in" ? "positive" : "negative"
-										}
-										className="text-lg"
+										currency={currency}
+										tone={tone}
+										className="block font-medium"
 									/>
 								)}
+								<span className="block text-sm text-muted-foreground">
+									{formatTime(transaction.txDate)}
+								</span>
+							</div>
 
-								<VStack spacing="xs" align="end">
-									{transaction.accountId && (
-										<Muted size="xs">
-											{getAccountDisplayName(
-												transaction.accountId,
-												transaction.accountName,
-											)}
-										</Muted>
-									)}
-									<HStack spacing="sm" align="center">
-										{transaction.receiptId && (
-											<TooltipProvider>
-												<Tooltip>
-													<TooltipTrigger asChild>
-														<button
-															onClick={(e) => {
-																e.stopPropagation();
-																setReceiptDialogOpen(true);
-															}}
-															className="text-emerald-500 hover:text-emerald-400 transition-colors duration-150"
-														>
-															<ReceiptText className="h-3.5 w-3.5" />
-														</button>
-													</TooltipTrigger>
-													<TooltipContent>
-														<p>receipt verified</p>
-													</TooltipContent>
-												</Tooltip>
-											</TooltipProvider>
-										)}
-										<Muted size="xs">{formatTime(transaction.txDate)}</Muted>
-									</HStack>
-								</VStack>
-							</VStack>
-						</HStack>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<RowMenuButton
+										aria-label="Actions"
+										onClick={(e) => e.stopPropagation()}
+									>
+										<Ellipsis className="size-4" />
+									</RowMenuButton>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent
+									align="end"
+									onClick={(e) => e.stopPropagation()}
+								>
+									{actions(DropdownMenuItem, DropdownMenuSeparator)}
+								</DropdownMenuContent>
+							</DropdownMenu>
+						</div>
 
-						{/* Inline splits */}
-						{hasSplits && (
-							<div className="mt-3 pt-2.5 border-t border-border/60 space-y-1.5">
-								{inlineSplits.map((split) => {
-									const splitAmount = formatCurrency(
-										formatAmount(split.txAmount),
-										split.txAmount?.currencyCode,
-									);
-									return (
-										<HStack
-											key={split.id.toString()}
-											justify="between"
-											align="center"
-										>
-											<Muted size="xs">
-												{getAccountDisplayName(
-													split.accountId,
-													split.accountName,
-												)}
-											</Muted>
-											<HStack spacing="sm" align="center">
-												{split.forgiven && (
-													<span className="text-[10px] text-muted-foreground/50 italic">
-														forgiven
-													</span>
-												)}
-												<Muted
-													size="xs"
-													className={cn(
-														"font-mono",
-														split.forgiven && "line-through opacity-40",
-													)}
-												>
-													{splitAmount}
-												</Muted>
-											</HStack>
-										</HStack>
-									);
-								})}
+						{expanded && (
+							<div className="pl-7" onClick={(e) => e.stopPropagation()}>
+								<TransactionDetails
+									transaction={transaction}
+									getAccountDisplayName={getAccountDisplayName}
+									onEdit={onEdit && (() => onEdit(transaction))}
+									onSplit={onSplit && (() => onSplit(transaction))}
+									onCreateRule={
+										onCreateRule && (() => onCreateRule(transaction))
+									}
+									onViewReceipt={
+										transaction.receiptId
+											? () => setReceiptOpen(true)
+											: undefined
+									}
+									onDelete={onDelete && (() => onDelete(transaction))}
+								/>
 							</div>
 						)}
-					</Card>
+					</ListRow>
 				</ContextMenuTrigger>
-
 				<ContextMenuContent>
-					{onViewDetails && (
-						<ContextMenuItem onClick={() => onViewDetails(transaction)}>
-							<FileText className="mr-2 h-4 w-4" />
-							Details
-						</ContextMenuItem>
-					)}
-					{onEdit && (
-						<ContextMenuItem onClick={() => onEdit(transaction)}>
-							<Edit className="mr-2 h-4 w-4" />
-							Edit
-						</ContextMenuItem>
-					)}
-					{onSplit && (
-						<ContextMenuItem onClick={() => onSplit(transaction)}>
-							<Split className="mr-2 h-4 w-4" />
-							{hasSplits ? "Re-split" : "Split"}
-						</ContextMenuItem>
-					)}
-					{transaction.receiptId && (
-						<ContextMenuItem onClick={() => setReceiptDialogOpen(true)}>
-							<ReceiptText className="mr-2 h-4 w-4" />
-							View Receipt
-						</ContextMenuItem>
-					)}
-					<ContextMenuItem onClick={handleCopyMerchant}>
-						<Copy className="mr-2 h-4 w-4" />
-						Copy Name
-					</ContextMenuItem>
-					{onCreateRule && (
-						<ContextMenuItem onClick={() => onCreateRule(transaction)}>
-							<BookmarkPlus className="mr-2 h-4 w-4" />
-							Create Rule
-						</ContextMenuItem>
-					)}
-					{onDelete && (
-						<ContextMenuItem
-							onClick={() => onDelete(transaction)}
-							className="text-destructive"
-						>
-							<Trash2 className="mr-2 h-4 w-4" />
-							Delete
-						</ContextMenuItem>
-					)}
+					{actions(ContextMenuItem, ContextMenuSeparator)}
 				</ContextMenuContent>
 			</ContextMenu>
 
@@ -330,11 +344,11 @@ export function TransactionItem({
 				<ReceiptDetailDialog
 					receipt={receiptData?.receipt ?? null}
 					linkCandidates={receiptData?.linkCandidates}
-					open={receiptDialogOpen}
-					onOpenChange={setReceiptDialogOpen}
+					open={receiptOpen}
+					onOpenChange={setReceiptOpen}
 					isLoading={isReceiptLoading}
 				/>
 			)}
-		</div>
+		</>
 	);
 }

@@ -1,21 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Caption, HStack, Muted, VStack } from "@/components/lib";
+import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { FormError } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
 import { AccountType } from "@/gen/nagomi/v1/enums_pb";
 import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useSplitTransaction } from "@/hooks/useSplits";
-import { formatAmount, formatCurrency } from "@/lib/utils/transaction";
+import { cn } from "@/lib/utils";
 
 interface SplitTransactionDialogProps {
 	transaction: Transaction | null;
@@ -65,7 +67,7 @@ export function SplitTransactionDialog({
 
 	const handleSubmit = async () => {
 		if (activeSplits.length === 0) {
-			setError("enter an amount for at least one friend");
+			setError("Enter an amount for at least one friend.");
 			return;
 		}
 
@@ -89,111 +91,72 @@ export function SplitTransactionDialog({
 			});
 			onOpenChange(false);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "failed to create split");
+			setError(
+				err instanceof Error ? err.message : "Couldn't split transaction",
+			);
 		}
 	};
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-[480px]">
+			<DialogContent className="sm:max-w-[460px]">
 				<DialogHeader>
 					<DialogTitle>split transaction</DialogTitle>
+					<DialogDescription>
+						{transaction.description || transaction.merchant || "Transaction"} ·{" "}
+						<Amount value={sourceAmount} currency={currencyCode} />
+					</DialogDescription>
 				</DialogHeader>
 
-				<VStack spacing="lg" className="py-2">
-					<div className="rounded border border-border p-3 bg-muted/30">
-						<HStack spacing="sm" justify="between">
-							<VStack spacing="xs" align="start">
-								<div className="text-sm font-medium">
-									{transaction.description ||
-										transaction.merchant ||
-										"transaction"}
-								</div>
-								<Muted size="xs">
-									{transaction.txDate?.seconds
-										? new Date(
-												Number(transaction.txDate.seconds) * 1000,
-											).toLocaleDateString()
-										: ""}
-								</Muted>
-							</VStack>
-							<div className="text-sm font-mono font-semibold">
-								{formatCurrency(
-									formatAmount(transaction.txAmount),
-									currencyCode,
-								)}
-							</div>
-						</HStack>
-					</div>
-
-					{friendAccounts.length === 0 ? (
-						<VStack spacing="xs" align="center" className="py-4">
-							<Muted size="sm">no friend accounts yet</Muted>
-							<Muted size="xs">
-								create a friend account first from the accounts page
-							</Muted>
-						</VStack>
-					) : (
-						<VStack spacing="sm">
-							<Caption>assign amounts</Caption>
-							{friendAccounts.map((account) => (
-								<HStack
-									key={account.id.toString()}
-									spacing="md"
-									justify="between"
-									align="center"
-								>
-									<div className="text-sm flex-1 truncate">
-										{account.friendlyName || account.name}
-									</div>
-									<HStack spacing="xs" align="center">
-										<Muted size="xs" className="font-mono">
-											{currencyCode}
-										</Muted>
-										<Input
-											type="number"
-											step="0.01"
-											min="0"
-											placeholder="0.00"
-											className="w-28 font-mono text-sm"
-											value={splitAmounts[account.id.toString()] ?? ""}
-											onChange={(e) =>
-												setSplitAmounts((prev) => ({
-													...prev,
-													[account.id.toString()]: e.target.value,
-												}))
-											}
-										/>
-									</HStack>
-								</HStack>
-							))}
-						</VStack>
-					)}
-
-					{friendAccounts.length > 0 && (
-						<HStack
-							spacing="sm"
-							justify="between"
-							className="pt-2 border-t border-border text-sm"
-						>
-							<Muted size="sm">assigned</Muted>
-							<span
-								className={`font-mono text-sm ${totalAssigned > sourceAmount + 0.001 ? "text-destructive" : ""}`}
+				{friendAccounts.length === 0 ? (
+					<p className="py-4 text-sm text-muted-foreground">
+						No friend accounts yet. Add one on the accounts page first.
+					</p>
+				) : (
+					<div className="divide-y">
+						{friendAccounts.map((account) => (
+							<div
+								key={account.id.toString()}
+								className="flex items-center justify-between gap-4 py-2 text-sm"
 							>
-								{formatCurrency(totalAssigned, currencyCode)}
-								<span className="text-muted-foreground ml-2">
-									/ {formatCurrency(sourceAmount, currencyCode)}
+								<span className="truncate">
+									{account.friendlyName || account.name}
+								</span>
+								<Input
+									type="number"
+									step="0.01"
+									min="0"
+									placeholder="0.00"
+									aria-label={`Amount for ${account.friendlyName || account.name}`}
+									className="h-8 w-32"
+									value={splitAmounts[account.id.toString()] ?? ""}
+									onChange={(e) =>
+										setSplitAmounts((prev) => ({
+											...prev,
+											[account.id.toString()]: e.target.value,
+										}))
+									}
+								/>
+							</div>
+						))}
+						<div className="flex items-center justify-between pt-3 text-sm">
+							<span className="text-muted-foreground">Assigned</span>
+							<span
+								className={cn(
+									"tabular-nums",
+									totalAssigned > sourceAmount + 0.001 && "text-destructive",
+								)}
+							>
+								<Amount value={totalAssigned} currency={currencyCode} />
+								<span className="ml-1 text-muted-foreground">
+									of <Amount value={sourceAmount} currency={currencyCode} />
 								</span>
 							</span>
-						</HStack>
-					)}
+						</div>
+					</div>
+				)}
 
-					{error && (
-						<p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded p-2">
-							{error}
-						</p>
-					)}
-				</VStack>
+				<FormError>{error}</FormError>
 
 				<DialogFooter>
 					<Button
@@ -202,13 +165,13 @@ export function SplitTransactionDialog({
 						onClick={() => onOpenChange(false)}
 						disabled={isPending}
 					>
-						cancel
+						Cancel
 					</Button>
 					<Button
 						onClick={handleSubmit}
 						disabled={isPending || activeSplits.length === 0}
 					>
-						{isPending ? "splitting..." : `split (${activeSplits.length})`}
+						{isPending ? "Splitting…" : "Split"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

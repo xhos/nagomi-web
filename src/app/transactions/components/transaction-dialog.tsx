@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { CategoryDialog } from "@/app/categories/category-dialog";
-import { ErrorMessage, VStack } from "@/components/lib";
 import { Button } from "@/components/ui/button";
+import { CategoryPicker } from "@/components/ui/category-picker";
 import {
 	Dialog,
 	DialogContent,
@@ -11,21 +11,14 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FormError, NativeSelect } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
 import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories, useCreateCategory } from "@/hooks/useCategories";
 import { useCurrencies } from "@/hooks/useCurrencies";
+import { cn } from "@/lib/utils";
 
 interface TransactionDialogProps {
 	open: boolean;
@@ -39,7 +32,7 @@ interface TransactionDialogProps {
 		description?: string;
 		merchant?: string;
 		userNotes?: string;
-		categoryId?: bigint;
+		categoryId?: bigint | null;
 	}) => Promise<void>;
 	title: string;
 }
@@ -139,17 +132,15 @@ export function TransactionDialog({
 		setError(null);
 
 		if (!formData.accountId) {
-			setError("please select an account");
+			setError("Choose an account.");
 			return;
 		}
-
 		if (!formData.amount || parseFloat(formData.amount) <= 0) {
-			setError("please enter a valid amount");
+			setError("Enter an amount above zero.");
 			return;
 		}
-
 		if (!formData.description.trim()) {
-			setError("please enter a description");
+			setError("Enter a description.");
 			return;
 		}
 
@@ -168,14 +159,12 @@ export function TransactionDialog({
 				description: formData.description || undefined,
 				merchant: formData.merchant || undefined,
 				userNotes: formData.userNotes || undefined,
-				categoryId: formData.categoryId
-					? BigInt(formData.categoryId)
-					: undefined,
+				categoryId: formData.categoryId ? BigInt(formData.categoryId) : null,
 			});
 			onOpenChange(false);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : undefined;
-			setError(message || "failed to save transaction");
+			setError(message || "Couldn't save transaction");
 		} finally {
 			setIsLoading(false);
 		}
@@ -191,7 +180,6 @@ export function TransactionDialog({
 			<CategoryDialog
 				open={createCategoryOpen}
 				onOpenChange={setCreateCategoryOpen}
-				title="new category"
 				onSave={async (slug, color) => {
 					await createCategoryAsync({ slug, color });
 					setPendingCategorySlug(slug);
@@ -199,100 +187,77 @@ export function TransactionDialog({
 			/>
 			<Dialog open={open} onOpenChange={onOpenChange}>
 				<DialogContent className="sm:max-w-[520px]">
-					<form onSubmit={handleSubmit}>
+					<form onSubmit={handleSubmit} className="space-y-4">
 						<DialogHeader>
 							<DialogTitle>{title}</DialogTitle>
 						</DialogHeader>
 
-						<VStack spacing="md" className="py-4">
-							{/* core: account, type, amount, date */}
-							<div className="grid grid-cols-[1fr_auto] gap-3">
-								<VStack spacing="xs">
-									<Label>account *</Label>
-									<Select
-										value={formData.accountId}
-										onValueChange={(value) => {
-											const selectedAccount = accounts.find(
-												(a) => a.id.toString() === value,
-											);
-											setFormData((prev) => ({
-												...prev,
-												accountId: value,
-												currency:
-													selectedAccount?.mainCurrency || prev.currency,
-											}));
-										}}
-										disabled={isLoading}
-										required
-									>
-										<SelectTrigger>
-											<SelectValue placeholder="select account" />
-										</SelectTrigger>
-										<SelectContent>
-											{accounts.map((account) => (
-												<SelectItem
-													key={account.id.toString()}
-													value={account.id.toString()}
-												>
-													{account.friendlyName || account.name} ({account.bank}
-													)
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</VStack>
+						<div className="flex gap-2">
+							{(
+								[
+									[TransactionDirection.DIRECTION_OUTGOING, "Expense"],
+									[TransactionDirection.DIRECTION_INCOMING, "Income"],
+								] as const
+							).map(([dir, label]) => (
+								<button
+									key={dir}
+									type="button"
+									onClick={() => set("direction", dir)}
+									className={cn(
+										"h-8 rounded-md border px-3 text-sm transition-colors",
+										formData.direction === dir
+											? "border-foreground bg-foreground text-background"
+											: "hover:bg-muted",
+									)}
+								>
+									{label}
+								</button>
+							))}
+						</div>
 
-								<VStack spacing="xs">
-									<Label>type</Label>
-									<Select
-										value={formData.direction.toString()}
-										onValueChange={(value) =>
-											set(
-												"direction",
-												parseInt(value, 10) as TransactionDirection,
-											)
-										}
-										disabled={isLoading}
-									>
-										<SelectTrigger className="w-28">
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem
-												value={TransactionDirection.DIRECTION_OUTGOING.toString()}
-											>
-												expense
-											</SelectItem>
-											<SelectItem
-												value={TransactionDirection.DIRECTION_INCOMING.toString()}
-											>
-												income
-											</SelectItem>
-										</SelectContent>
-									</Select>
-								</VStack>
-							</div>
-
-							<VStack spacing="xs">
-								<Label>amount *</Label>
-								<div className="flex">
-									<Select
+						<div className="grid gap-4 sm:grid-cols-2">
+							<Field label="Account" htmlFor="tx-account">
+								<NativeSelect
+									id="tx-account"
+									value={formData.accountId}
+									onChange={(e) => {
+										const a = accounts.find(
+											(x) => x.id.toString() === e.target.value,
+										);
+										setFormData((prev) => ({
+											...prev,
+											accountId: e.target.value,
+											currency: a?.mainCurrency || prev.currency,
+										}));
+									}}
+									disabled={isLoading}
+									required
+								>
+									<option value="">Choose an account</option>
+									{accounts.map((a) => (
+										<option key={a.id.toString()} value={a.id.toString()}>
+											{a.friendlyName || a.name} · {a.bank}
+										</option>
+									))}
+								</NativeSelect>
+							</Field>
+							<Field label="Amount" htmlFor="tx-amount">
+								<div className="flex gap-2">
+									<NativeSelect
+										aria-label="Currency"
+										className="w-24"
 										value={formData.currency}
-										onValueChange={(value) => set("currency", value)}
+										onChange={(e) => set("currency", e.target.value)}
 										disabled={isLoading}
 									>
-										<SelectTrigger className="w-24 rounded-r-none border-r-0 focus:z-10">
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											{currencies.map(({ code }) => (
-												<SelectItem key={code} value={code}>
-													{code}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
+										{currencies.map(({ code }) => (
+											<option key={code} value={code}>
+												{code}
+											</option>
+										))}
+									</NativeSelect>
 									<Input
+										id="tx-amount"
 										type="number"
 										step="0.01"
 										value={formData.amount}
@@ -300,109 +265,109 @@ export function TransactionDialog({
 										placeholder="0.00"
 										disabled={isLoading}
 										required
-										className="rounded-l-none font-mono"
+										autoFocus
 									/>
 								</div>
-							</VStack>
+							</Field>
+						</div>
 
-							<VStack spacing="xs">
-								<Label>description *</Label>
+						<Field label="Description" htmlFor="tx-desc">
+							<Input
+								id="tx-desc"
+								value={formData.description}
+								onChange={(e) => set("description", e.target.value)}
+								placeholder="What was this for"
+								disabled={isLoading}
+							/>
+						</Field>
+
+						<div className="grid gap-4 sm:grid-cols-2">
+							<Field label="Date" htmlFor="tx-date">
 								<Input
-									value={formData.description}
-									onChange={(e) => set("description", e.target.value)}
-									placeholder="what was this for"
+									id="tx-date"
+									type="date"
+									value={formData.date}
+									onChange={(e) => set("date", e.target.value)}
 									disabled={isLoading}
 								/>
-							</VStack>
-
-							<div className="grid grid-cols-[1fr_auto] gap-3">
-								<VStack spacing="xs">
-									<Label>date *</Label>
-									<Input
-										type="text"
-										value={formData.date}
-										onChange={(e) => set("date", e.target.value)}
-										placeholder="YYYY-MM-DD"
-										disabled={isLoading}
-										className="font-mono"
-									/>
-								</VStack>
-								<VStack spacing="xs">
-									<Label>time</Label>
-									<Input
-										type="text"
-										value={formData.time}
-										onChange={(e) => set("time", e.target.value)}
-										placeholder="HH:MM"
-										disabled={isLoading}
-										className="w-24 font-mono"
-									/>
-								</VStack>
-							</div>
-
-							<Separator />
-
-							{/* metadata: merchant, category, notes */}
-							<VStack spacing="xs">
-								<Label>merchant</Label>
+							</Field>
+							<Field label="Time" htmlFor="tx-time">
 								<Input
+									id="tx-time"
+									type="time"
+									value={formData.time}
+									onChange={(e) => set("time", e.target.value)}
+									disabled={isLoading}
+								/>
+							</Field>
+						</div>
+
+						<div className="grid gap-4 border-t pt-4 sm:grid-cols-2">
+							<Field label="Merchant" htmlFor="tx-merchant">
+								<Input
+									id="tx-merchant"
 									value={formData.merchant}
 									onChange={(e) => set("merchant", e.target.value)}
-									placeholder="who was this with"
+									placeholder="Optional"
 									disabled={isLoading}
 								/>
-							</VStack>
-
-							<VStack spacing="xs">
-								<Label>category</Label>
-								<Select
-									value={formData.categoryId || "_none"}
-									onValueChange={(value) => {
-										if (value === "_create_new") {
-											setCreateCategoryOpen(true);
-											return;
-										}
-										set("categoryId", value === "_none" ? "" : value);
-									}}
-									disabled={isLoading}
+							</Field>
+							<Field label="Category">
+								<CategoryPicker
+									value={
+										formData.categoryId
+											? BigInt(formData.categoryId)
+											: undefined
+									}
+									onChange={(c) => set("categoryId", c?.id.toString() ?? "")}
 								>
-									<SelectTrigger>
-										<SelectValue placeholder="no category" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="_none">no category</SelectItem>
-										{categories.map(
-											(category: { id: bigint; slug: string }) => (
-												<SelectItem
-													key={category.id.toString()}
-													value={category.id.toString()}
-												>
-													{category.slug}
-												</SelectItem>
-											),
-										)}
-										<SelectItem
-											value="_create_new"
-											className="text-muted-foreground"
-										>
-											+ new category
-										</SelectItem>
-									</SelectContent>
-								</Select>
-							</VStack>
+									<Button
+										type="button"
+										variant="outline"
+										className="w-full justify-start font-normal"
+										disabled={isLoading}
+									>
+										{(() => {
+											const c = categories.find(
+												(x) => x.id.toString() === formData.categoryId,
+											);
+											return c ? (
+												<>
+													<span
+														className="size-2 rounded-full"
+														style={{ backgroundColor: c.color }}
+													/>
+													{c.slug}
+												</>
+											) : (
+												<span className="text-muted-foreground">None</span>
+											);
+										})()}
+									</Button>
+								</CategoryPicker>
+								<Button
+									type="button"
+									variant="link"
+									size="sm"
+									className="h-auto p-0"
+									onClick={() => setCreateCategoryOpen(true)}
+								>
+									New category
+								</Button>
+							</Field>
+						</div>
 
-							<VStack spacing="xs">
-								<Label>notes</Label>
-								<Input
-									value={formData.userNotes}
-									onChange={(e) => set("userNotes", e.target.value)}
-									placeholder="personal notes"
-									disabled={isLoading}
-								/>
-							</VStack>
+						<Field label="Notes" htmlFor="tx-notes">
+							<Input
+								id="tx-notes"
+								value={formData.userNotes}
+								onChange={(e) => set("userNotes", e.target.value)}
+								placeholder="Optional"
+								disabled={isLoading}
+							/>
+						</Field>
 
-							{error && <ErrorMessage>{error}</ErrorMessage>}
-						</VStack>
+						<FormError>{error}</FormError>
 
 						<DialogFooter>
 							<Button
@@ -411,10 +376,10 @@ export function TransactionDialog({
 								onClick={() => onOpenChange(false)}
 								disabled={isLoading}
 							>
-								cancel
+								Cancel
 							</Button>
 							<Button type="submit" disabled={isLoading}>
-								{isLoading ? "saving..." : "save"}
+								{isLoading ? "Saving…" : "Save"}
 							</Button>
 						</DialogFooter>
 					</form>
