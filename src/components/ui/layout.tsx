@@ -16,7 +16,7 @@ export const PageContent = ({
 	...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
 	<div
-		className={cn("mx-auto max-w-full px-4 sm:px-6 py-6 sm:py-8", className)}
+		className={cn("mx-auto w-full max-w-[1200px] px-6 pt-10 pb-8", className)}
 		{...props}
 	>
 		{children}
@@ -38,7 +38,7 @@ export const PageHeader = ({
 	className,
 	...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-	<header className={cn("mb-8", className)} {...props}>
+	<header className={cn("mb-6", className)} {...props}>
 		{children}
 	</header>
 );
@@ -55,27 +55,12 @@ export const PageHeaderWithTitle = ({
 	actions?: React.ReactNode;
 } & React.HTMLAttributes<HTMLDivElement>) => (
 	<PageHeader className={className} {...props}>
-		<div className="flex items-center justify-between">
-			<h1
-				className="tracking-tight"
-				style={{
-					fontFamily: "var(--font-lora), serif",
-					fontSize: "28px",
-					fontWeight: 600,
-					lineHeight: 1.2,
-				}}
-			>
-				{title}
-			</h1>
+		<div className="flex min-h-9 flex-wrap items-center justify-between gap-4">
+			<h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
 			{actions && <ActionBar>{actions}</ActionBar>}
 		</div>
 		{subtitle && (
-			<div
-				style={{ fontSize: "13px", fontWeight: 400, letterSpacing: "0.1px" }}
-				className="text-muted-foreground mt-2"
-			>
-				{subtitle}
-			</div>
+			<div className="mt-1 text-sm text-muted-foreground">{subtitle}</div>
 		)}
 	</PageHeader>
 );

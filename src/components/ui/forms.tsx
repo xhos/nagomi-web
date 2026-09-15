@@ -1,36 +1,41 @@
 import { cn } from "@/lib/utils";
 import { Label } from "./label";
 
-export const FormField = ({
+export function Field({
 	label,
-	required,
-	children,
+	htmlFor,
+	hint,
 	className,
-	...props
+	children,
 }: {
 	label: string;
-	required?: boolean;
+	htmlFor?: string;
+	hint?: React.ReactNode;
+	className?: string;
 	children: React.ReactNode;
-} & React.HTMLAttributes<HTMLDivElement>) => (
-	<div className={cn("space-y-2", className)} {...props}>
-		<Label>
-			{label}
-			{required && <span className="text-destructive ml-1">*</span>}
-		</Label>
-		{children}
-	</div>
-);
+}) {
+	return (
+		<div className={cn("space-y-1.5", className)}>
+			<Label htmlFor={htmlFor}>{label}</Label>
+			{children}
+			{hint && <p className="text-sm text-muted-foreground">{hint}</p>}
+		</div>
+	);
+}
 
-export const Select = ({
+export function FormError({ children }: { children: React.ReactNode }) {
+	if (!children) return null;
+	return <p className="text-sm text-destructive">{children}</p>;
+}
+
+export const NativeSelect = ({
 	className,
 	...props
 }: React.SelectHTMLAttributes<HTMLSelectElement>) => (
 	<select
 		className={cn(
-			"flex h-9 w-full items-center justify-between rounded-sm border border-input",
-			"bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background",
-			"placeholder:text-muted-foreground",
-			"focus:outline-none focus:ring-1 focus:ring-ring",
+			"flex h-9 w-full items-center rounded-md border border-input bg-transparent px-3 text-sm outline-none",
+			"focus-visible:border-ring focus-visible:ring-[1px] focus-visible:ring-ring/20",
 			"disabled:cursor-not-allowed disabled:opacity-50",
 			className,
 		)}

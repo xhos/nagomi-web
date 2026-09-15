@@ -82,7 +82,7 @@ export function ColorSwatch({ color, onChange, disabled }: ColorSwatchProps) {
 							onBlur={() => commitHex(hexInputValue)}
 							placeholder="#000000"
 							maxLength={7}
-							className="text-xs font-mono bg-transparent outline-none w-full placeholder:text-muted-foreground"
+							className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
 						/>
 					</span>
 				</div>

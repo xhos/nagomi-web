@@ -351,7 +351,7 @@ export const transactionClient = fake(TransactionService, {
 			}
 			if (p === "user_notes" && r.userNotes !== undefined)
 				t.userNotes = r.userNotes;
-			if (p === "category_id" && r.categoryId !== undefined) {
+			if (p === "category_id") {
 				t.categoryId = r.categoryId;
 				t.categoryManuallySet = true;
 			}

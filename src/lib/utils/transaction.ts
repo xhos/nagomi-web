@@ -22,17 +22,29 @@ export function formatAmount(amount?: AmountType): number {
 	return units + (amount.nanos || 0) / 1e9;
 }
 
-export function formatCurrency(amount: number, currencyCode = "USD"): string {
+export function formatCurrency(
+	amount: number,
+	currencyCode = "USD",
+	fractionDigits?: number,
+): string {
 	const isValidCurrency =
 		currencyCode &&
 		currencyCode.length === 3 &&
 		/^[A-Z]{3}$/.test(currencyCode);
 	const finalCurrencyCode = isValidCurrency ? currencyCode : "USD";
+	const digits =
+		fractionDigits === undefined
+			? {}
+			: {
+					minimumFractionDigits: fractionDigits,
+					maximumFractionDigits: fractionDigits,
+				};
 
 	try {
 		return new Intl.NumberFormat("en-US", {
 			style: "currency",
 			currency: finalCurrencyCode,
+			...digits,
 		}).format(amount);
 	} catch {
 		return new Intl.NumberFormat("en-US", {

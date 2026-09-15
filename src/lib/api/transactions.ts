@@ -57,8 +57,20 @@ export interface UpdateTransactionInput {
 	description?: string;
 	merchant?: string;
 	userNotes?: string;
-	categoryId?: bigint;
+	// null clears the category; undefined leaves it untouched
+	categoryId?: bigint | null;
 }
+
+const maskFor: [keyof UpdateTransactionInput, string][] = [
+	["accountId", "account_id"],
+	["txDate", "tx_date"],
+	["txAmount", "tx_amount"],
+	["direction", "direction"],
+	["description", "description"],
+	["merchant", "merchant"],
+	["userNotes", "user_notes"],
+	["categoryId", "category_id"],
+];
 
 export const transactionsApi = {
 	async list(data: ListTransactionsInput) {
@@ -96,6 +108,7 @@ export const transactionsApi = {
 		const response = await transactionClient.listTransactions(request);
 		return {
 			transactions: response.transactions,
+			totalCount: Number(response.totalCount),
 			nextCursor: response.nextCursor,
 			hasMore: !!response.nextCursor && response.transactions.length > 0,
 		};
@@ -130,16 +143,9 @@ export const transactionsApi = {
 			userId: data.userId,
 			id: data.id,
 			updateMask: {
-				paths: [
-					"account_id",
-					"tx_date",
-					"tx_amount",
-					"direction",
-					"description",
-					"merchant",
-					"user_notes",
-					"category_id",
-				],
+				paths: maskFor
+					.filter(([key]) => data[key] !== undefined)
+					.map(([, path]) => path),
 			},
 			accountId: data.accountId,
 			txDate: data.txDate
@@ -156,7 +162,7 @@ export const transactionsApi = {
 			description: data.description,
 			merchant: data.merchant,
 			userNotes: data.userNotes,
-			categoryId: data.categoryId,
+			categoryId: data.categoryId ?? undefined,
 		});
 		await transactionClient.updateTransaction(request);
 	},

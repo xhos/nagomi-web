@@ -1,10 +1,11 @@
 import {
 	useInfiniteQuery,
 	useMutation,
+	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
 import { useMemo } from "react";
-import type { TransactionFilters } from "@/app/transactions/components/TransactionFiltersDialog";
+import type { TransactionFilters } from "@/app/transactions/components/TransactionFiltersPanel";
 import type { Cursor } from "@/gen/nagomi/v1/common_pb";
 import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import {
@@ -45,6 +46,7 @@ export function useTransactionsQuery({
 				endDate: filters?.endDate,
 				direction: filters?.direction,
 				categories: filters?.categories,
+				uncategorized: filters?.uncategorized || undefined,
 				amountMin: filters?.amountMin,
 				amountMax: filters?.amountMax,
 			});
@@ -145,7 +147,7 @@ export function useTransactionsQuery({
 		loadMore: transactionsQuery.fetchNextPage,
 
 		// Mutations
-		deleteTransactions: deleteTransactionsMutation.mutate,
+		deleteTransactions: deleteTransactionsMutation.mutateAsync,
 		isDeleting: deleteTransactionsMutation.isPending,
 		deleteError: deleteTransactionsMutation.error,
 
@@ -164,4 +166,22 @@ export function useTransactionsQuery({
 				queryKey: ["transactions", accountId?.toString()],
 			}),
 	};
+}
+
+export function useUncategorizedCount() {
+	const userId = useUserId();
+	return useQuery({
+		queryKey: ["transactions", "uncategorized-count", userId],
+		queryFn: async () => {
+			if (!userId) throw new Error("User not authenticated");
+			const page = await transactionsApi.list({
+				userId,
+				limit: 1,
+				uncategorized: true,
+			});
+			return page.totalCount;
+		},
+		enabled: !!userId,
+		staleTime: 60 * 1000,
+	});
 }
