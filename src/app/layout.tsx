@@ -13,7 +13,7 @@ import { QueryProvider } from "@/lib/query-client";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-	title: "nagomi // financial tracker",
+	title: { default: "nagomi", template: "%s · nagomi" },
 	description: "minimal financial transaction tracking",
 	icons: { apple: "/apple-icon.png" },
 };
