@@ -2,13 +2,20 @@ import type { Metadata } from "next";
 import { satoshi } from "@/fonts/satoshi";
 import "./globals.css";
 import ConditionalLayout from "@/components/ConditionalLayout";
+import { ThemeFavicon } from "@/components/theme-favicon";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { DEMO } from "@/lib/demo";
+import { gatewayUrl } from "@/lib/gateway-url";
 import { QueryProvider } from "@/lib/query-client";
+
+// the gateway URL is read from the environment per request, never at build time
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
 	title: "nagomi // financial tracker",
 	description: "minimal financial transaction tracking",
+	icons: { apple: "/apple-icon.png" },
 };
 
 export default function RootLayout({
@@ -17,7 +24,11 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en" suppressHydrationWarning>
+		<html
+			lang="en"
+			suppressHydrationWarning
+			data-gateway-url={DEMO ? undefined : gatewayUrl()}
+		>
 			<body className={`${satoshi.variable} antialiased`}>
 				<QueryProvider>
 					<ThemeProvider
@@ -26,6 +37,7 @@ export default function RootLayout({
 						enableSystem
 						disableTransitionOnChange
 					>
+						<ThemeFavicon />
 						<ConditionalLayout>{children}</ConditionalLayout>
 						<Toaster />
 					</ThemeProvider>
