@@ -40,7 +40,9 @@ export function PaceChart({
 				</span>
 				<span className="flex items-center gap-2">
 					<span className="h-0.5 w-4 rounded-full bg-muted-foreground/60" />
-					Typical ({priorMonths}-month average)
+					{priorMonths
+						? `Typical (${priorMonths}-month average)`
+						: "Not enough history to compare"}
 				</span>
 			</div>
 			<div className="h-56 w-full text-xs text-muted-foreground">
@@ -102,6 +104,7 @@ export function PaceChart({
 						<Line
 							type="monotone"
 							dataKey="typical"
+							hide={priorMonths === 0}
 							stroke="var(--muted-foreground)"
 							strokeOpacity={0.6}
 							strokeWidth={2}

@@ -147,6 +147,7 @@ function addAccount(
 	anchorDate: Date,
 	colors: string[],
 	friendlyName?: string,
+	currency = CUR,
 ) {
 	const a = create(AccountSchema, {
 		id: nextId(),
@@ -155,9 +156,9 @@ function addAccount(
 		bank,
 		type,
 		friendlyName,
-		mainCurrency: CUR,
+		mainCurrency: currency,
 		colors,
-		anchorBalance: money(anchor),
+		anchorBalance: money(anchor, currency),
 		anchorDate: ts(anchorDate),
 		createdAt: ts(anchorDate),
 		updatedAt: ts(anchorDate),
@@ -263,6 +264,16 @@ function seed() {
 		start,
 		["#0c4a6e", "#0ea5e9", "#bae6fd"],
 		"tfsa",
+	);
+	addAccount(
+		"Wise USD",
+		"Wise",
+		AccountType.ACCOUNT_SAVINGS,
+		250_000,
+		start,
+		["#64748b"],
+		"US dollars",
+		"USD",
 	);
 	const friends = ["alex", "sam", "jordan"].map((n) =>
 		addAccount(n, "friend", AccountType.ACCOUNT_FRIEND, 0, start, [

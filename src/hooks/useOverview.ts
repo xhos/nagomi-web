@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
 	addDays,
-	addMonths,
 	differenceInCalendarDays,
 	endOfMonth,
 	getDaysInMonth,
@@ -12,14 +11,17 @@ import {
 } from "date-fns";
 import type { Account } from "@/gen/nagomi/v1/account_pb";
 import { AccountType, TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
-import { ReceiptStatus } from "@/gen/nagomi/v1/receipt_pb";
 import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
+import { dashboardApi } from "@/lib/api/dashboard";
 import { transactionsApi } from "@/lib/api/transactions";
+import { comparisonMonths, nextOccurrence } from "@/lib/overview-history";
+import { collectPages } from "@/lib/pagination";
+import { REPORTING_CURRENCY, reportingAmount } from "@/lib/reporting";
 import { formatAmount } from "@/lib/utils/transaction";
 import { useAccounts } from "./useAccounts";
 import { useCategories } from "./useCategories";
 import { useConnections } from "./useConnections";
-import { useReceipts } from "./useReceipts";
+import { useUnlinkedReceiptCount } from "./useReceipts";
 import { useUserId } from "./useSession";
 import { useFriendBalances } from "./useSplits";
 import { useUncategorizedCount } from "./useTransactionsQuery";
@@ -41,6 +43,9 @@ export interface CategorySpend {
 	average: number;
 }
 export interface Recurring {
+	accountId: bigint;
+	originalAmount: number;
+	originalCurrency: string;
 	merchant: string;
 	direction: TransactionDirection;
 	amount: number;
@@ -52,12 +57,15 @@ export interface AccountRow {
 	account: Account;
 	balance: number;
 	series: number[];
+	reportingBalance: number;
 }
 export interface Attention {
 	kind: "uncategorized" | "receipts" | "friend" | "sync";
 	text: string;
 	href: string;
 	amount?: number;
+	originalAmount?: number;
+	originalCurrency?: string;
 }
 
 const txDate = (t: Transaction) =>
@@ -71,21 +79,15 @@ const median = (xs: number[]) => {
 const topSlug = (slug?: string) => slug?.split(".")[0];
 
 async function fetchAll(userId: string, startDate: Date, endDate: Date) {
-	const out: Transaction[] = [];
-	let cursor: Awaited<ReturnType<typeof transactionsApi.list>>["nextCursor"];
-	for (let i = 0; i < 40; i++) {
-		const page = await transactionsApi.list({
+	return collectPages((cursor) =>
+		transactionsApi.list({
 			userId,
 			limit: 500,
 			startDate,
 			endDate,
 			cursor,
-		});
-		out.push(...page.transactions);
-		if (!page.hasMore) break;
-		cursor = page.nextCursor;
-	}
-	return out;
+		}),
+	);
 }
 
 export function useOverview(month: Date) {
@@ -97,27 +99,79 @@ export function useOverview(month: Date) {
 	const rangeStart = startOfMonth(subMonths(monthStart, LOOKBACK_MONTHS));
 	const rangeEnd = monthEnd > today ? monthEnd : today;
 
-	const { accounts, isLoading: accountsLoading } = useAccounts();
-	const { categoryMap, categories } = useCategories();
-	const { connections } = useConnections();
-	const receipts = useReceipts({ unlinkedOnly: true });
+	const accountQuery = useAccounts();
+	const { accounts } = accountQuery;
+	const categoryQuery = useCategories();
+	const { categoryMap, categories } = categoryQuery;
+	const connectionQuery = useConnections();
+	const { connections } = connectionQuery;
+	const receipts = useUnlinkedReceiptCount();
 	const friends = useFriendBalances();
 	const uncategorized = useUncategorizedCount();
 
 	const txQuery = useQuery({
-		queryKey: ["transactions", "overview", userId, rangeStart.toISOString()],
+		queryKey: [
+			"transactions",
+			"overview",
+			userId,
+			rangeStart.toISOString(),
+			rangeEnd.toISOString(),
+		],
 		queryFn: () => fetchAll(userId as string, rangeStart, addDays(rangeEnd, 1)),
 		enabled: !!userId,
 		staleTime: 60 * 1000,
 	});
 
-	const isLoading = accountsLoading || txQuery.isLoading;
-	const error = txQuery.error;
 	const txs = txQuery.data ?? [];
+	const currencies = [
+		...new Set(
+			[
+				...accounts.map((a) => a.balance?.currencyCode ?? a.mainCurrency),
+				...txs.map((t) => t.txAmount?.currencyCode ?? ""),
+				...(friends.data ?? []).map((f) => f.balance?.currencyCode ?? ""),
+			].filter(Boolean),
+		),
+	].sort();
+	const ratesQuery = useQuery({
+		queryKey: ["reporting-rates", userId, currencies],
+		queryFn: () => dashboardApi.getExchangeRates(currencies),
+		enabled:
+			!!userId &&
+			!accountQuery.isLoading &&
+			!txQuery.isLoading &&
+			!friends.isLoading,
+		staleTime: 60 * 60 * 1000,
+	});
+	const isLoading =
+		ratesQuery.isPending ||
+		[
+			accountQuery,
+			categoryQuery,
+			connectionQuery,
+			receipts,
+			friends,
+			uncategorized,
+			txQuery,
+		].some((q) => q.isLoading);
+	const error =
+		accountQuery.error ??
+		categoryQuery.error ??
+		connectionQuery.error ??
+		receipts.error ??
+		friends.error ??
+		uncategorized.error ??
+		txQuery.error ??
+		ratesQuery.error;
+	const rates = ratesQuery.data ?? {};
+	// Results stay hidden while rates load or a dependency fails.
+	const converted = (amount: Transaction["txAmount"]) => {
+		if (isLoading || error) return 0;
+		return reportingAmount(amount, rates);
+	};
 
 	const real = accounts.filter((a) => a.type !== AccountType.ACCOUNT_FRIEND);
 	const realIds = new Set(real.map((a) => a.id));
-	const currency = real[0]?.mainCurrency ?? "USD";
+	const currency = REPORTING_CURRENCY;
 	const slugOf = (t: Transaction) =>
 		t.category?.slug ?? categoryMap.get(t.categoryId?.toString() ?? "")?.slug;
 	const isMove = (t: Transaction) => MOVES.has(topSlug(slugOf(t)) ?? "");
@@ -128,7 +182,7 @@ export function useOverview(month: Date) {
 
 	const inMonth = (t: Transaction, m: Date) => isSameMonth(txDate(t), m);
 	const sum = (xs: Transaction[]) =>
-		xs.reduce((n, t) => n + formatAmount(t.txAmount), 0);
+		xs.reduce((n, t) => n + converted(t.txAmount), 0);
 
 	// cumulative-by-day for one month, padded to `days`
 	const cumulative = (
@@ -140,7 +194,7 @@ export function useOverview(month: Date) {
 		for (const t of txs) {
 			if (!pred(t) || !inMonth(t, m)) continue;
 			const d = txDate(t).getDate() - 1;
-			if (d < days) daily[d] += formatAmount(t.txAmount);
+			if (d < days) daily[d] += converted(t.txAmount);
 		}
 		let acc = 0;
 		return daily.map((v) => (acc += v));
@@ -153,9 +207,11 @@ export function useOverview(month: Date) {
 			? daysInMonth
 			: 0;
 	const cur = cumulative(monthStart, spend, daysInMonth);
-	const prior = Array.from({ length: LOOKBACK_MONTHS }, (_, i) =>
-		subMonths(monthStart, i + 1),
-	).filter((m) => m >= rangeStart && m < monthStart);
+	const prior = comparisonMonths(
+		monthStart,
+		LOOKBACK_MONTHS,
+		txs.filter((t) => realIds.has(t.accountId)).map(txDate),
+	);
 	const priorCum = prior.map((m) => cumulative(m, spend, 31));
 	const typicalAt = (day: number) =>
 		priorCum.length
@@ -193,9 +249,10 @@ export function useOverview(month: Date) {
 		if (!spend(t)) continue;
 		const key = topSlug(slugOf(t)) ?? "uncategorized";
 		const d = txDate(t);
-		if (isSameMonth(d, monthStart)) add(key, formatAmount(t.txAmount), false);
+		if (isSameMonth(d, monthStart) && d <= addDays(today, 1))
+			add(key, converted(t.txAmount), false);
 		else if (d.getDate() <= cutDay && prior.some((m) => isSameMonth(d, m)))
-			add(key, formatAmount(t.txAmount), true);
+			add(key, converted(t.txAmount), true);
 	}
 	const whereItWent = [...byTop.values()]
 		.filter((c) => c.amount > 0 || c.average > 0)
@@ -205,8 +262,8 @@ export function useOverview(month: Date) {
 	const groups = new Map<string, Transaction[]>();
 	for (const t of txs) {
 		if (!realIds.has(t.accountId) || isMove(t) || !t.merchant) continue;
-		if (txDate(t) > today) continue;
-		const key = `${t.direction}:${t.merchant}`;
+		if (txDate(t) >= addDays(today, 1)) continue;
+		const key = `${t.accountId}:${t.txAmount?.currencyCode}:${t.direction}:${t.merchant}`;
 		groups.set(key, [...(groups.get(key) ?? []), t]);
 	}
 	const upcoming: Recurring[] = [];
@@ -240,16 +297,24 @@ export function useOverview(month: Date) {
 		const approximate = amounts.some(
 			(a) => Math.abs(a - amount) > amount * 0.05,
 		);
-		const step = (d: Date) =>
-			cadence === "monthly" ? addMonths(d, 1) : addDays(d, gap);
-		let next = step(txDate(sorted[sorted.length - 1]));
-		while (next < today) next = step(next);
+		const next = nextOccurrence(
+			txDate(sorted[sorted.length - 1]),
+			cadence === "monthly",
+			gap,
+			today,
+		);
+		if (!next) continue;
 		if (differenceInCalendarDays(next, today) > 30) continue;
 		const last = sorted[sorted.length - 1];
 		upcoming.push({
+			accountId: last.accountId,
+			originalAmount: amount,
+			originalCurrency: last.txAmount?.currencyCode ?? currency,
 			merchant: last.merchant as string,
 			direction: last.direction,
-			amount,
+			amount:
+				(converted(last.txAmount) / (formatAmount(last.txAmount) || 1)) *
+				amount,
 			approximate,
 			next: startOfDay(next),
 			cadence,
@@ -274,12 +339,24 @@ export function useOverview(month: Date) {
 					);
 				series.push(balance - after);
 			}
-			return { account, balance, series };
+			return {
+				account,
+				balance,
+				series,
+				reportingBalance: converted(account.balance),
+			};
 		})
 		.sort((a, b) => a.account.type - b.account.type);
 
-	const netWorth = accountRows.reduce((n, r) => n + r.balance, 0);
-	const netWorth30 = accountRows.reduce((n, r) => n + r.series[0], 0);
+	const netWorth = accountRows.reduce((n, r) => n + r.reportingBalance, 0);
+	const netWorth30 = accountRows.reduce(
+		(n, r) =>
+			n +
+			r.series[0] *
+				(rates[r.account.balance?.currencyCode ?? r.account.mainCurrency] ??
+					(r.account.mainCurrency === currency ? 1 : 0)),
+		0,
+	);
 	const cash = accountRows
 		.filter((r) =>
 			[
@@ -288,7 +365,7 @@ export function useOverview(month: Date) {
 				AccountType.ACCOUNT_CREDIT_CARD,
 			].includes(r.account.type),
 		)
-		.reduce((n, r) => n + r.balance, 0);
+		.reduce((n, r) => n + r.reportingBalance, 0);
 
 	const nextPayday = upcoming.find((u) => u.direction === IN);
 
@@ -299,9 +376,7 @@ export function useOverview(month: Date) {
 			text: `${uncategorized.data} uncategorized transaction${uncategorized.data === 1 ? "" : "s"}`,
 			href: "/transactions?uncategorized=1",
 		});
-	const unlinked = (receipts.receipts ?? []).filter(
-		(r) => r.status !== ReceiptStatus.FAILED,
-	).length;
+	const unlinked = receipts.data ?? 0;
 	if (unlinked)
 		attention.push({
 			kind: "receipts",
@@ -315,21 +390,25 @@ export function useOverview(month: Date) {
 			kind: "friend",
 			text: b > 0 ? `${f.friendName} owes you` : `You owe ${f.friendName}`,
 			href: "/friends",
-			amount: Math.abs(b),
+			amount: Math.abs(converted(f.balance)),
+			originalAmount: Math.abs(b),
+			originalCurrency: f.balance?.currencyCode,
 		});
 	}
 	for (const c of connections) {
 		const last = c.lastSynced
 			? new Date(Number(c.lastSynced.seconds) * 1000)
 			: undefined;
-		const days = last ? differenceInCalendarDays(today, last) : undefined;
-		if (c.status !== "active" || days === undefined || days >= 2)
+		const overdue =
+			c.nextRunAt &&
+			Date.now() - Number(c.nextRunAt.seconds) * 1000 > 60 * 60 * 1000;
+		if (c.status !== "active" || overdue)
 			attention.push({
 				kind: "sync",
 				text:
 					c.status !== "active"
 						? `${c.provider} connection is ${c.status}`
-						: `${c.provider} last synced ${days} days ago`,
+						: `${c.provider} sync is overdue${last ? "" : "; never synced"}`,
 				href: "/settings",
 			});
 	}
@@ -338,6 +417,7 @@ export function useOverview(month: Date) {
 		isLoading,
 		error,
 		currency,
+		hasForeignCurrency: currencies.some((c) => c !== currency),
 		current,
 		throughDay,
 		daysInMonth,

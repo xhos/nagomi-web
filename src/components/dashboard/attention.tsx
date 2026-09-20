@@ -28,6 +28,16 @@ export function AttentionList({
 						{item.amount !== undefined && (
 							<span className="tabular-nums">
 								{formatCurrency(item.amount, currency)}
+								{item.originalAmount !== undefined &&
+									item.originalCurrency !== currency && (
+										<span className="block text-right text-muted-foreground">
+											{formatCurrency(
+												item.originalAmount,
+												item.originalCurrency,
+											)}{" "}
+											{item.originalCurrency}
+										</span>
+									)}
 							</span>
 						)}
 						<ChevronRight className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground" />

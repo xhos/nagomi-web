@@ -6,6 +6,7 @@ import {
 	GetCurrenciesRequestSchema,
 	GetDashboardSummaryRequestSchema,
 	type GetDashboardSummaryResponse,
+	GetExchangeRatesRequestSchema,
 	GetFinancialSummaryRequestSchema,
 	type GetFinancialSummaryResponse,
 	GetNetWorthHistoryRequestSchema,
@@ -35,6 +36,15 @@ export interface DashboardSummaryParams {
 }
 
 export const dashboardApi = {
+	async getExchangeRates(currencies: string[], reportingCurrency = "CAD") {
+		const response = await dashboardClient.getExchangeRates(
+			create(GetExchangeRatesRequestSchema, {
+				currencies,
+				reportingCurrency,
+			}),
+		);
+		return response.rates;
+	},
 	async getCategorySpendingComparison(
 		params: CategorySpendingComparisonParams,
 	): Promise<GetCategorySpendingComparisonResponse> {

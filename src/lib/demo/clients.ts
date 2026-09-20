@@ -41,6 +41,7 @@ import {
 	GetCategorySpendingComparisonResponseSchema,
 	GetCurrenciesResponseSchema,
 	GetDashboardSummaryResponseSchema,
+	GetExchangeRatesResponseSchema,
 	GetFinancialSummaryResponseSchema,
 	GetNetWorthHistoryResponseSchema,
 } from "@/gen/nagomi/v1/dashboard_services_pb";
@@ -117,7 +118,9 @@ function fake<T extends DescService>(svc: T, impl: Impl<T>): Client<T> {
 			if (!fn || !m)
 				return () =>
 					Promise.reject(new Error(`demo: ${String(k)} not implemented`));
-			return (req: unknown) => fn(create(m.input, req as never));
+			// Network responses are snapshots, not references to mutable server data.
+			return async (req: unknown) =>
+				clone(m.output, (await fn(create(m.input, req as never))) as never);
 		},
 	});
 }
@@ -275,6 +278,7 @@ export const transactionClient = fake(TransactionService, {
 			);
 		});
 		xs.sort(byDateDesc);
+		const totalCount = BigInt(xs.length);
 		if (r.cursor?.date && r.cursor.id !== undefined) {
 			const cd = secs(r.cursor.date);
 			const ci = r.cursor.id;
@@ -287,7 +291,7 @@ export const transactionClient = fake(TransactionService, {
 		const last = page[page.length - 1];
 		return create(ListTransactionsResponseSchema, {
 			transactions: page.map(view),
-			totalCount: BigInt(xs.length),
+			totalCount,
 			nextCursor:
 				xs.length > limit && last
 					? { date: last.txDate, id: last.id }
@@ -564,6 +568,28 @@ function periodBounds(type: PeriodType, custom?: { s?: Date; e?: Date }) {
 }
 
 export const dashboardClient = fake(DashboardService, {
+	async getExchangeRates(r) {
+		// Fixed illustrative rates keep the demo deterministic; live uses core's FX provider.
+		const cad: Record<string, number> = {
+			CAD: 1,
+			USD: 1.36,
+			EUR: 1.5,
+			GBP: 1.75,
+			JPY: 0.009,
+			MXN: 0.075,
+		};
+		if (!cad[r.reportingCurrency])
+			throw new Error("Unsupported reporting currency");
+		const rates: Record<string, number> = {};
+		for (const code of r.currencies) {
+			if (!cad[code]) throw new Error(`No exchange rate for ${code}`);
+			rates[code] = cad[code] / cad[r.reportingCurrency];
+		}
+		return create(GetExchangeRatesResponseSchema, {
+			reportingCurrency: r.reportingCurrency,
+			rates,
+		});
+	},
 	async getFinancialSummary() {
 		let pos = 0;
 		let neg = 0;
@@ -872,12 +898,32 @@ export const connectionsClient = fake(ConnectionsService, {
 	},
 	async triggerSync(req) {
 		const c = db.connections.find((x) => x.id === req.id);
-		if (c) c.lastSynced = now();
+		if (c) {
+			c.status = "active";
+			c.nextRunAt = now();
+			setTimeout(() => {
+				c.lastSynced = now();
+				c.nextRunAt = c.syncIntervalMinutes
+					? {
+							...now(),
+							seconds: now().seconds + BigInt(c.syncIntervalMinutes * 60),
+						}
+					: undefined;
+			}, 1500);
+		}
 		return create(TriggerSyncResponseSchema, {});
 	},
 	async setSyncInterval(req) {
 		const c = db.connections.find((x) => x.id === req.id);
-		if (c) c.syncIntervalMinutes = req.syncIntervalMinutes;
+		if (c) {
+			c.syncIntervalMinutes = req.syncIntervalMinutes;
+			c.nextRunAt = req.syncIntervalMinutes
+				? {
+						...now(),
+						seconds: now().seconds + BigInt(req.syncIntervalMinutes * 60),
+					}
+				: undefined;
+		}
 		return create(SetSyncIntervalResponseSchema, {});
 	},
 });

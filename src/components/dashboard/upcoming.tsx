@@ -31,7 +31,7 @@ export function Upcoming({
 			<ul className="divide-y">
 				{items.map((i) => (
 					<li
-						key={`${i.direction}:${i.merchant}`}
+						key={`${i.accountId}:${i.direction}:${i.merchant}`}
 						className="flex items-center gap-4 py-2.5 text-sm"
 					>
 						<span className="w-28 shrink-0 text-muted-foreground">
@@ -51,6 +51,12 @@ export function Upcoming({
 										: "out"
 								}
 							/>
+							{i.originalCurrency !== currency && (
+								<span className="block text-right text-muted-foreground">
+									{formatCurrency(i.originalAmount, i.originalCurrency)}{" "}
+									{i.originalCurrency}
+								</span>
+							)}
 						</span>
 					</li>
 				))}

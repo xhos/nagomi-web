@@ -3,6 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
+		"test": "bun test src/lib/*.test.ts",
 		"postinstall": "bun2nix -o bun.nix",
 		"dev": "next dev --turbopack",
 		"demo": "NEXT_PUBLIC_DEMO=1 next dev --turbopack",

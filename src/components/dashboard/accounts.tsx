@@ -7,7 +7,7 @@ import { Sparkline } from "./sparkline";
 export function Accounts({ rows }: { rows: AccountRow[] }) {
 	return (
 		<ul className="divide-y">
-			{rows.map(({ account, balance, series }) => (
+			{rows.map(({ account, balance, series, reportingBalance }) => (
 				<li key={account.id.toString()}>
 					<Link
 						href="/accounts"
@@ -26,7 +26,17 @@ export function Accounts({ rows }: { rows: AccountRow[] }) {
 							className="hidden shrink-0 text-muted-foreground sm:block"
 						/>
 						<span className="w-32 text-right tabular-nums">
-							{formatCurrency(balance, account.mainCurrency)}
+							{formatCurrency(
+								balance,
+								account.balance?.currencyCode ?? account.mainCurrency,
+							)}
+							{` ${account.balance?.currencyCode ?? account.mainCurrency}`}
+							{(account.balance?.currencyCode ?? account.mainCurrency) !==
+								"CAD" && (
+								<span className="block text-muted-foreground">
+									≈ {formatCurrency(reportingBalance, "CAD")} CAD
+								</span>
+							)}
 						</span>
 					</Link>
 				</li>

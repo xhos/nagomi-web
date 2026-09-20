@@ -115,8 +115,14 @@ export default function OverviewPage() {
 						<Skeleton className="h-64 w-full" />
 						<Skeleton className="h-48 w-full" />
 					</div>
-				) : (
+				) : o.error ? null : (
 					<div className="space-y-10">
+						{o.hasForeignCurrency && (
+							<p className="text-sm text-muted-foreground">
+								Totals in CAD at latest exchange rates. Account amounts retain
+								their original currency.
+							</p>
+						)}
 						<FigureRow>
 							<Figure
 								label="Net worth"
@@ -173,7 +179,11 @@ export default function OverviewPage() {
 						<div className="grid gap-10 lg:grid-cols-2">
 							<Section
 								title="where it went"
-								note={`vs ${o.priorMonths}-month average${isNow ? " to date" : ""}`}
+								note={
+									o.priorMonths
+										? `vs ${o.priorMonths}-month average${isNow ? " to date" : ""}`
+										: "No earlier complete months to compare"
+								}
 							>
 								<WhereItWent rows={o.whereItWent} currency={o.currency} />
 							</Section>
