@@ -30,7 +30,7 @@ function timestampToDate(ts?: { seconds?: bigint; nanos?: number }) {
 
 export default function SettingsPage() {
 	const userId = useUserId();
-	const { connections, isLoading } = useConnections();
+	const { connections, isLoading, error } = useConnections();
 
 	const [connectProvider, setConnectProvider] = useState<Provider | null>(null);
 	const [manageConnection, setManageConnection] = useState<Connection | null>(
@@ -56,6 +56,11 @@ export default function SettingsPage() {
 		<PageContainer>
 			<PageContent>
 				<PageHeaderWithTitle title="settings" />
+				{error && (
+					<p className="mb-4 text-sm text-destructive">
+						Couldn't load connections: {String(error)}
+					</p>
+				)}
 
 				<div className="divide-y">
 					<Section title="profile" description="Signed-in account and session.">
@@ -101,7 +106,9 @@ export default function SettingsPage() {
 				{manageProvider && (
 					<ManageConnectionDialog
 						provider={manageProvider}
-						connection={manageConnection}
+						connection={
+							connections.find((c) => c.id === manageConnection?.id) ?? null
+						}
 						onOpenChange={(open) => !open && setManageConnection(null)}
 					/>
 				)}

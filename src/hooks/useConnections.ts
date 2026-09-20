@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import {
 	type CreateConnectionInput,
 	connectionsApi,
@@ -7,6 +8,8 @@ import { useUserId } from "./useSession";
 
 export function useConnections() {
 	const userId = useUserId();
+	const queryClient = useQueryClient();
+	const previousSyncs = useRef<Map<string, string>>(new Map());
 
 	const {
 		data: connections = [],
@@ -17,7 +20,36 @@ export function useConnections() {
 		queryFn: () => connectionsApi.list(),
 		enabled: !!userId,
 		staleTime: 60 * 1000,
+		refetchInterval: (query) =>
+			query.state.data?.some(
+				(c) => c.nextRunAt && Number(c.nextRunAt.seconds) * 1000 <= Date.now(),
+			)
+				? 3000
+				: 30_000,
 	});
+	useEffect(() => {
+		let changed = false;
+		const next = new Map<string, string>();
+		for (const c of connections) {
+			const key = `${userId}:${c.id}`;
+			const stamp = `${c.lastSynced?.seconds ?? ""}:${c.lastSynced?.nanos ?? ""}`;
+			if (
+				previousSyncs.current.has(key) &&
+				previousSyncs.current.get(key) !== stamp
+			)
+				changed = true;
+			next.set(key, stamp);
+		}
+		previousSyncs.current = next;
+		if (changed)
+			for (const key of [
+				"accounts",
+				"transactions",
+				"receipts",
+				"friendBalances",
+			])
+				queryClient.invalidateQueries({ queryKey: [key] });
+	}, [connections, queryClient, userId]);
 
 	return { connections, isLoading, error };
 }

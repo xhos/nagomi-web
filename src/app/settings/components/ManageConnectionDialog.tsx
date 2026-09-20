@@ -55,6 +55,7 @@ export function ManageConnectionDialog({
 }: ManageConnectionDialogProps) {
 	const open = !!connection;
 	const [confirmOpen, setConfirmOpen] = useState(false);
+	const [actionError, setActionError] = useState<string | null>(null);
 
 	const { triggerSyncAsync, isPending: isSyncing } = useTriggerSync();
 	const { setSyncIntervalAsync, isPending: isSavingInterval } =
@@ -69,9 +70,21 @@ export function ManageConnectionDialog({
 
 	const lastSyncedDate = timestampToDate(connection.lastSynced);
 	const nextRunDate = timestampToDate(connection.nextRunAt);
+	const queued =
+		connection.status === "active" &&
+		!!nextRunDate &&
+		nextRunDate <= new Date();
 	const createdDate = timestampToDate(connection.createdAt);
 	const errorMessage =
-		deleteError instanceof Error ? deleteError.message : null;
+		actionError ?? (deleteError instanceof Error ? deleteError.message : null);
+	const perform = async (action: () => Promise<unknown>) => {
+		setActionError(null);
+		try {
+			await action();
+		} catch (err) {
+			setActionError(err instanceof Error ? err.message : "Action failed");
+		}
+	};
 
 	const syncedLabel = lastSyncedDate
 		? `Synced ${formatDistanceToNow(lastSyncedDate, { addSuffix: true })}`
@@ -113,6 +126,9 @@ export function ManageConnectionDialog({
 						<DialogDescription>
 							{syncedLabel}
 							{nextRunLabel && ` · ${nextRunLabel}`}
+							{queued && " · Sync requested; waiting for completion"}
+							{connection.status === "broken" &&
+								" · Last sync failed. Check credentials or retry."}
 						</DialogDescription>
 					</DialogHeader>
 
@@ -120,7 +136,7 @@ export function ManageConnectionDialog({
 						<NativeSelect
 							id="sync-interval"
 							value={intervalToValue(connection.syncIntervalMinutes)}
-							onChange={(e) => onIntervalChange(e.target.value)}
+							onChange={(e) => perform(() => onIntervalChange(e.target.value))}
 							disabled={isSavingInterval}
 						>
 							{INTERVAL_OPTIONS.map((o) => (
@@ -153,10 +169,14 @@ export function ManageConnectionDialog({
 							</Button>
 							<Button
 								type="button"
-								onClick={() => triggerSyncAsync(connection.id)}
-								disabled={isSyncing}
+								onClick={() => perform(() => triggerSyncAsync(connection.id))}
+								disabled={isSyncing || queued}
 							>
-								{isSyncing ? "Syncing…" : "Sync now"}
+								{isSyncing
+									? "Requesting…"
+									: queued
+										? "Sync requested"
+										: "Sync now"}
 							</Button>
 						</div>
 					</DialogFooter>
@@ -174,7 +194,10 @@ export function ManageConnectionDialog({
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={onDisconnect} disabled={isDeleting}>
+						<AlertDialogAction
+							onClick={() => perform(onDisconnect)}
+							disabled={isDeleting}
+						>
 							{isDeleting ? "Disconnecting…" : "Disconnect"}
 						</AlertDialogAction>
 					</AlertDialogFooter>
