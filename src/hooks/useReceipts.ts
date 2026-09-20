@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	useInfiniteQuery,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { ReceiptStatus } from "@/gen/nagomi/v1/receipt_pb";
 import { receiptsApi } from "@/lib/api/receipts";
 import { useUserId } from "./useSession";
@@ -28,7 +33,7 @@ export function useReceipts({
 	const queryClient = useQueryClient();
 	const userId = useUserId();
 
-	const receiptsQuery = useQuery({
+	const receiptsQuery = useInfiniteQuery({
 		queryKey: [
 			"receipts",
 			userId,
@@ -39,10 +44,12 @@ export function useReceipts({
 			unlinkedOnly,
 			currency,
 		],
-		queryFn: async () => {
+		initialPageParam: 0,
+		queryFn: async ({ pageParam }) => {
 			if (!userId) throw new Error("User not authenticated");
 			return receiptsApi.list({
 				userId,
+				offset: pageParam,
 				query,
 				minTotalCents,
 				maxTotalCents,
@@ -51,13 +58,19 @@ export function useReceipts({
 				currency,
 			});
 		},
+		getNextPageParam: (last, pages) => {
+			const loaded = pages.reduce((n, p) => n + p.receipts.length, 0);
+			return last.receipts.length && BigInt(loaded) < last.totalCount
+				? loaded
+				: undefined;
+		},
 		enabled: enabled && !!userId,
 		staleTime: 5 * 60 * 1000,
 		gcTime: 10 * 60 * 1000,
 		refetchInterval: (query) => {
 			const data = query.state.data;
-			const hasPendingReceipts = data?.receipts.some(
-				(r) => r.status === ReceiptStatus.PENDING,
+			const hasPendingReceipts = data?.pages.some((p) =>
+				p.receipts.some((r) => r.status === ReceiptStatus.PENDING),
 			);
 			return hasPendingReceipts ? 3000 : false;
 		},
@@ -84,8 +97,11 @@ export function useReceipts({
 	});
 
 	return {
-		receipts: receiptsQuery.data?.receipts ?? [],
-		totalCount: receiptsQuery.data?.totalCount ?? BigInt(0),
+		receipts: receiptsQuery.data?.pages.flatMap((p) => p.receipts) ?? [],
+		totalCount: receiptsQuery.data?.pages[0]?.totalCount ?? BigInt(0),
+		hasMore: receiptsQuery.hasNextPage,
+		loadMore: receiptsQuery.fetchNextPage,
+		isLoadingMore: receiptsQuery.isFetchingNextPage,
 		isLoading: receiptsQuery.isLoading,
 		error: receiptsQuery.error,
 		refetch: receiptsQuery.refetch,
@@ -95,6 +111,24 @@ export function useReceipts({
 		retryParse: retryParseMutation.mutate,
 		isRetrying: retryParseMutation.isPending,
 	};
+}
+
+export function useUnlinkedReceiptCount() {
+	const userId = useUserId();
+	return useQuery({
+		queryKey: ["receipts", "unlinked-count", userId],
+		enabled: !!userId,
+		queryFn: async () => {
+			if (!userId) throw new Error("User not authenticated");
+			const pages = await Promise.all(
+				[ReceiptStatus.PENDING, ReceiptStatus.PARSED].map((status) =>
+					receiptsApi.list({ userId, unlinkedOnly: true, status, limit: 1 }),
+				),
+			);
+			return pages.reduce((n, p) => n + Number(p.totalCount), 0);
+		},
+		refetchInterval: 30_000,
+	});
 }
 
 export function useUser() {

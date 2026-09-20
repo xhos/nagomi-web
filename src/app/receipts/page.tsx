@@ -48,11 +48,20 @@ export default function ReceiptsPage() {
 	const query = useDebouncedValue(searchInput, 300);
 	const active = countActiveReceiptFilters(filters);
 
-	const { receipts, isLoading, error, deleteReceipt, isDeleting, retryParse } =
-		useReceipts({
-			...filters,
-			query: query || undefined,
-		});
+	const {
+		receipts,
+		isLoading,
+		error,
+		deleteReceipt,
+		isDeleting,
+		retryParse,
+		hasMore,
+		loadMore,
+		isLoadingMore,
+	} = useReceipts({
+		...filters,
+		query: query || undefined,
+	});
 	const duplicate = useReceipt(duplicateId);
 
 	return (
@@ -139,6 +148,17 @@ export default function ReceiptsPage() {
 							/>
 						))}
 					</div>
+				)}
+
+				{hasMore && (
+					<Button
+						variant="outline"
+						className="mt-4"
+						disabled={isLoadingMore}
+						onClick={() => loadMore()}
+					>
+						{isLoadingMore ? "Loading…" : "Load more"}
+					</Button>
 				)}
 
 				<UploadReceiptDialog
