@@ -582,8 +582,8 @@ export const dashboardClient = fake(DashboardService, {
 			throw new Error("Unsupported reporting currency");
 		const rates: Record<string, number> = {};
 		for (const code of r.currencies) {
-			if (!cad[code]) throw new Error(`No exchange rate for ${code}`);
-			rates[code] = cad[code] / cad[r.reportingCurrency];
+			// core omits currencies its FX provider doesn't support
+			if (cad[code]) rates[code] = cad[code] / cad[r.reportingCurrency];
 		}
 		return create(GetExchangeRatesResponseSchema, {
 			reportingCurrency: r.reportingCurrency,

@@ -57,10 +57,11 @@ export interface AccountRow {
 	account: Account;
 	balance: number;
 	series: number[];
-	reportingBalance: number;
+	// undefined when the balance's currency has no exchange rate
+	reportingBalance?: number;
 }
 export interface Attention {
-	kind: "uncategorized" | "receipts" | "friend" | "sync";
+	kind: "uncategorized" | "receipts" | "friend" | "sync" | "rates";
 	text: string;
 	href: string;
 	amount?: number;
@@ -163,9 +164,15 @@ export function useOverview(month: Date) {
 		txQuery.error ??
 		ratesQuery.error;
 	const rates = ratesQuery.data ?? {};
+	// Currencies the exchange API can't price are left out of reporting totals.
+	const unconverted = ratesQuery.data
+		? currencies.filter((c) => c !== REPORTING_CURRENCY && !(c in rates))
+		: [];
+	const convertible = (amount: Transaction["txAmount"]) =>
+		!unconverted.includes(amount?.currencyCode ?? "");
 	// Results stay hidden while rates load or a dependency fails.
 	const converted = (amount: Transaction["txAmount"]) => {
-		if (isLoading || error) return 0;
+		if (isLoading || error || !convertible(amount)) return 0;
 		return reportingAmount(amount, rates);
 	};
 
@@ -343,12 +350,17 @@ export function useOverview(month: Date) {
 				account,
 				balance,
 				series,
-				reportingBalance: converted(account.balance),
+				reportingBalance: convertible(account.balance)
+					? converted(account.balance)
+					: undefined,
 			};
 		})
 		.sort((a, b) => a.account.type - b.account.type);
 
-	const netWorth = accountRows.reduce((n, r) => n + r.reportingBalance, 0);
+	const netWorth = accountRows.reduce(
+		(n, r) => n + (r.reportingBalance ?? 0),
+		0,
+	);
 	const netWorth30 = accountRows.reduce(
 		(n, r) =>
 			n +
@@ -365,7 +377,7 @@ export function useOverview(month: Date) {
 				AccountType.ACCOUNT_CREDIT_CARD,
 			].includes(r.account.type),
 		)
-		.reduce((n, r) => n + r.reportingBalance, 0);
+		.reduce((n, r) => n + (r.reportingBalance ?? 0), 0);
 
 	const nextPayday = upcoming.find((u) => u.direction === IN);
 
@@ -395,6 +407,12 @@ export function useOverview(month: Date) {
 			originalCurrency: f.balance?.currencyCode,
 		});
 	}
+	if (unconverted.length)
+		attention.push({
+			kind: "rates",
+			text: `No exchange rate for ${unconverted.join(", ")}; left out of ${currency} totals`,
+			href: "/accounts",
+		});
 	for (const c of connections) {
 		const last = c.lastSynced
 			? new Date(Number(c.lastSynced.seconds) * 1000)

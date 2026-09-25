@@ -31,12 +31,13 @@ export function Accounts({ rows }: { rows: AccountRow[] }) {
 								account.balance?.currencyCode ?? account.mainCurrency,
 							)}
 							{` ${account.balance?.currencyCode ?? account.mainCurrency}`}
-							{(account.balance?.currencyCode ?? account.mainCurrency) !==
-								"CAD" && (
-								<span className="block text-muted-foreground">
-									≈ {formatCurrency(reportingBalance, "CAD")} CAD
-								</span>
-							)}
+							{reportingBalance !== undefined &&
+								(account.balance?.currencyCode ?? account.mainCurrency) !==
+									"CAD" && (
+									<span className="block text-muted-foreground">
+										≈ {formatCurrency(reportingBalance, "CAD")} CAD
+									</span>
+								)}
 						</span>
 					</Link>
 				</li>
