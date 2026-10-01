@@ -29,6 +29,7 @@ import { statementsApi } from "@/lib/api/statements";
 import { periodLabel as period } from "@/lib/utils/statement";
 
 import { ImportStatementsDialog } from "./ImportStatementsDialog";
+import { ReparseStatementDialog } from "./ReparseStatementDialog";
 
 const periodLabel = (s: Statement) =>
 	period(s.periodStart, s.periodEnd) ?? s.fileName;
@@ -57,6 +58,7 @@ export function AccountStatements({ accountId }: { accountId: bigint }) {
 		useStatementCoverage(accountId);
 	const { accounts } = useAccounts();
 	const [uploading, setUploading] = useState(false);
+	const [reparsing, setReparsing] = useState<Statement | null>(null);
 	const { mutateAsync: deleteStatement, isPending: deleting } =
 		useDeleteStatement();
 	const [confirming, setConfirming] = useState<Statement | null>(null);
@@ -157,6 +159,14 @@ export function AccountStatements({ accountId }: { accountId: bigint }) {
 											variant="link"
 											size="sm"
 											className="h-auto p-0 text-muted-foreground hover:text-foreground"
+											onClick={() => setReparsing(s)}
+										>
+											Re-parse
+										</Button>
+										<Button
+											variant="link"
+											size="sm"
+											className="h-auto p-0 text-muted-foreground hover:text-foreground"
 											onClick={() => setConfirming(s)}
 										>
 											Delete
@@ -209,6 +219,11 @@ export function AccountStatements({ accountId }: { accountId: bigint }) {
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+			<ReparseStatementDialog
+				statement={reparsing}
+				onOpenChange={(open) => !open && setReparsing(null)}
+			/>
 
 			<ImportStatementsDialog
 				open={uploading}

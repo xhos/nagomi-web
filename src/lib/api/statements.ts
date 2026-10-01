@@ -9,6 +9,7 @@ import {
 	ListStatementsRequestSchema,
 	PlanStatementImportRequestSchema,
 	PreviewStatementImportRequestSchema,
+	ReparseStatementRequestSchema,
 } from "@/gen/nagomi/v1/statement_services_pb";
 import { statementClient } from "@/lib/grpc-client";
 
@@ -76,6 +77,16 @@ export const statementsApi = {
 		const request = create(ListStatementAlertsRequestSchema, { userId });
 		const response = await statementClient.listStatementAlerts(request);
 		return response.alerts;
+	},
+
+	// runs the stored file through the parser again; only writes when applied
+	async reparse(userId: string, id: bigint, apply: boolean) {
+		const request = create(ReparseStatementRequestSchema, {
+			userId,
+			id,
+			apply,
+		});
+		return statementClient.reparseStatement(request);
 	},
 
 	async delete(userId: string, id: bigint, deleteTransactions: boolean) {

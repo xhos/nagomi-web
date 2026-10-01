@@ -90,6 +90,7 @@ import {
 	ListStatementsResponseSchema,
 	PlanStatementImportResponseSchema,
 	PreviewStatementImportResponseSchema,
+	ReparseStatementResponseSchema,
 	StatementService,
 } from "@/gen/nagomi/v1/statement_services_pb";
 import {
@@ -1314,6 +1315,46 @@ export const statementClient = fake(StatementService, {
 		return create(GetStatementResponseSchema, {
 			statement: s,
 			pdfData: file.pdf.length ? file.pdf : demoPdf([s.fileName]),
+		});
+	},
+	// the demo has no parser to fix, so a re-parse keeps the stored lines and reads
+	// the balances again, which mends the statement seeded as misread
+	async reparseStatement(r) {
+		const { s, file } = statementAndFile(r.id);
+		if (s.status !== StatementStatus.IMPORTED || s.accountId === undefined)
+			throw new ConnectError(
+				`StatementService.Reparse: statement ${s.id} isn't imported: validation failed`,
+				Code.InvalidArgument,
+			);
+		const opening = Number(s.openingBalanceCents ?? BigInt(0));
+		const net = file.lines.reduce((sum, l) => sum + Number(signedCents(l)), 0);
+		const reparsed = create(StatementSchema, {
+			...s,
+			closingBalanceCents: BigInt(opening + net),
+			balanceOk: true,
+			lineCount: file.lines.length,
+		});
+		const recon = reconcileAccount(
+			file.lines,
+			reparsed.periodStart,
+			reparsed.periodEnd,
+			s.accountId,
+			s.id,
+		);
+		const reconciliation = reconciliationToPb(recon);
+		if (r.apply) {
+			applyReconciliation(recon, reparsed, removeTransactions);
+			syncBalances(s.accountId);
+			Object.assign(s, {
+				closingBalanceCents: reparsed.closingBalanceCents,
+				balanceOk: reparsed.balanceOk,
+				lineCount: reparsed.lineCount,
+			});
+		}
+		return create(ReparseStatementResponseSchema, {
+			statement: r.apply ? s : reparsed,
+			lines: file.lines,
+			reconciliation,
 		});
 	},
 	async getStatementCoverage(r) {

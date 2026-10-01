@@ -495,3 +495,30 @@ test("the demo account's coverage shows its missing month and the misread statem
 	);
 	assert.ok(alerts.some((a) => a.accountId === chequing.id));
 });
+
+test("re-parsing the misread demo statement mends its balance and leaves its transactions", async () => {
+	const misread = db.statements.find((s) => s.balanceOk === false);
+	assert.ok(misread);
+	const txCount = db.transactions.length;
+
+	const dry = await statementClient.reparseStatement({
+		userId: "demo",
+		id: misread.id,
+		apply: false,
+	});
+	assert.equal(dry.statement?.balanceOk, true);
+	assert.equal(misread.balanceOk, false, "a dry run writes nothing");
+	assert.ok(
+		dry.reconciliation?.items.every(
+			(i) => i.action === ReconciliationAction.ALREADY_IMPORTED,
+		),
+	);
+
+	await statementClient.reparseStatement({
+		userId: "demo",
+		id: misread.id,
+		apply: true,
+	});
+	assert.equal(misread.balanceOk, true);
+	assert.equal(db.transactions.length, txCount);
+});

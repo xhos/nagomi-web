@@ -31,10 +31,13 @@ export function ReconciliationSummary({
 	reconciliation,
 	lines,
 	currency,
+	alreadyLabel = "already imported",
 }: {
 	reconciliation: StatementReconciliation;
 	lines: ParsedStatementLine[];
 	currency: string;
+	// lines already in the account; on a re-parse, the ones it didn't change
+	alreadyLabel?: string;
 }) {
 	const [open, setOpen] = useState(false);
 	const items = reconciliation.items;
@@ -47,7 +50,7 @@ export function ReconciliationSummary({
 		[count(A.CREATE), "new"],
 		[count(A.DELETE), "to delete"],
 		[count(A.KEEP), "kept"],
-		[count(A.ALREADY_IMPORTED), "already imported"],
+		[count(A.ALREADY_IMPORTED), alreadyLabel],
 	] as const;
 	const sentence = parts
 		.filter(([n]) => n > 0)
