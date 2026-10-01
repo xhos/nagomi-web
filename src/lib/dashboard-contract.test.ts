@@ -14,6 +14,7 @@ import { db, money, nextId } from "./demo/data";
 import { comparisonMonths, nextOccurrence } from "./overview-history";
 import { collectPages } from "./pagination";
 import { reportingAmount } from "./reporting";
+import { formatAmount } from "./utils/transaction";
 
 test("comparisons exclude missing history and the first partial import month", () => {
 	const month = new Date(2026, 8, 1);
@@ -152,4 +153,11 @@ test("demo reporting rates have the same direction as the core API", async () =>
 	});
 	assert.equal(response.rates.CAD, 1);
 	assert.equal(response.rates.USD, 1.36);
+});
+
+test("amounts under a dollar keep their cents", () => {
+	assert.equal(formatAmount(money(35)), 0.35);
+	assert.equal(formatAmount(money(-35)), -0.35);
+	assert.equal(formatAmount(money(1234)), 12.34);
+	assert.equal(formatAmount(undefined), 0);
 });

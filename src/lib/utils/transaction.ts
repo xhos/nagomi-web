@@ -14,11 +14,12 @@ export interface TimestampType {
 }
 
 export function formatAmount(amount?: AmountType): number {
-	if (!amount?.units) return 0;
+	if (!amount) return 0;
+	// units is 0 for anything under a dollar; the cents are all in nanos
 	const units =
 		typeof amount.units === "bigint"
 			? Number(amount.units)
-			: parseFloat(amount.units);
+			: parseFloat(amount.units || "0");
 	return units + (amount.nanos || 0) / 1e9;
 }
 
