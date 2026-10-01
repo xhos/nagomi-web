@@ -5,7 +5,7 @@ import {
 	type DescService,
 	type MessageShape,
 } from "@bufbuild/protobuf";
-import type { Client } from "@connectrpc/connect";
+import { type Client, Code, ConnectError } from "@connectrpc/connect";
 import { AccountSchema } from "@/gen/nagomi/v1/account_pb";
 import {
 	AccountService,
@@ -70,6 +70,19 @@ import {
 	UpdateRuleResponseSchema,
 } from "@/gen/nagomi/v1/rule_services_pb";
 import {
+	type ParsedStatementLine,
+	ParsedStatementLineSchema,
+} from "@/gen/nagomi/v1/statement_parser_pb";
+import { StatementSchema, StatementStatus } from "@/gen/nagomi/v1/statement_pb";
+import {
+	CommitStatementImportResponseSchema,
+	DeleteStatementResponseSchema,
+	GetStatementResponseSchema,
+	ListStatementsResponseSchema,
+	PreviewStatementImportResponseSchema,
+	StatementService,
+} from "@/gen/nagomi/v1/statement_services_pb";
+import {
 	type Transaction,
 	TransactionSchema,
 } from "@/gen/nagomi/v1/transaction_pb";
@@ -87,10 +100,12 @@ import {
 	cents,
 	DEMO_USER,
 	db,
+	demoPdf,
 	fromPdate,
 	money,
 	nextId,
 	pdate,
+	statementFiles,
 	syncBalances,
 	ts,
 } from "./data";
@@ -925,5 +940,237 @@ export const connectionsClient = fake(ConnectionsService, {
 				: undefined;
 		}
 		return create(SetSyncIntervalResponseSchema, {});
+	},
+});
+
+// the demo can't read pdfs, so an upload becomes a plausible statement: a file named
+// like a visa statement belongs to an account the user doesn't have yet, anything else
+// fills the chequing account's missing month
+const STATEMENT_MERCHANTS = [
+	"LOBLAWS #1021",
+	"PILOT COFFEE ROASTERS",
+	"PRESTO FARE",
+	"SHOPPERS DRUG MART",
+	"UBER EATS",
+	"CINEPLEX",
+	"HYDRO ONE",
+	"NO FRILLS",
+];
+
+async function sha256(data: Uint8Array) {
+	const digest = await crypto.subtle.digest("SHA-256", data as BufferSource);
+	return Array.from(new Uint8Array(digest), (b) =>
+		b.toString(16).padStart(2, "0"),
+	).join("");
+}
+
+function fakeLines(seed: string, from: Date, to: Date) {
+	const days = Math.max(
+		1,
+		Math.round((to.getTime() - from.getTime()) / 86400e3),
+	);
+	return Array.from(
+		{ length: 6 + (parseInt(seed.slice(0, 2), 16) % 5) },
+		(_, i) => {
+			const n = parseInt(seed.slice(i * 2, i * 2 + 4), 16);
+			const d = new Date(from);
+			d.setDate(d.getDate() + (n % days));
+			return create(ParsedStatementLineSchema, {
+				date: pdate(d),
+				postingDate: pdate(d),
+				amountCents: BigInt(500 + (n % 9000)),
+				direction: OUT,
+				description: STATEMENT_MERCHANTS[n % STATEMENT_MERCHANTS.length],
+			});
+		},
+	).sort(
+		(a, b) =>
+			fromPdate(a.date ?? pdate(from)).getTime() -
+			fromPdate(b.date ?? pdate(from)).getTime(),
+	);
+}
+
+const lineKey = (accountId: bigint, l: ParsedStatementLine) =>
+	`stmt:${accountId}:${l.date?.year}-${l.date?.month}-${l.date?.day}:${l.amountCents}:${l.description}`;
+
+function previewOf(id: bigint) {
+	const s = db.statements.find((x) => x.id === id);
+	const file = statementFiles.get(id);
+	if (!s || !file) throw new Error("statement not found");
+	const match = db.accounts.find((a) => a.aliases.includes(s.accountNumber));
+	const existing = new Set(db.transactions.map((t) => t.externalId));
+	return create(PreviewStatementImportResponseSchema, {
+		statement: s,
+		lines: file.lines,
+		matchedAccountId: match?.id,
+		duplicateCount: match
+			? file.lines.filter((l) => existing.has(lineKey(match.id, l))).length
+			: 0,
+	});
+}
+
+export const statementClient = fake(StatementService, {
+	async previewStatementImport(r) {
+		if (new TextDecoder().decode(r.pdfData.slice(0, 5)) !== "%PDF-")
+			throw new ConnectError(
+				"StatementService.Preview: not a readable pdf: validation failed",
+				Code.InvalidArgument,
+			);
+		const hash = await sha256(r.pdfData);
+		const known = db.statements.find(
+			(s) => statementFiles.get(s.id)?.hash === hash,
+		);
+		if (known?.status === StatementStatus.IMPORTED)
+			throw new ConnectError(
+				"statement has already been imported",
+				Code.AlreadyExists,
+			);
+		if (known) return previewOf(known.id);
+
+		const today = new Date();
+		const visa = /visa|credit/i.test(r.fileName);
+		const from = visa
+			? new Date(today.getFullYear(), today.getMonth() - 1, 12)
+			: new Date(today.getFullYear(), today.getMonth() - 4, 1);
+		const to = visa
+			? new Date(today.getFullYear(), today.getMonth(), 11)
+			: new Date(today.getFullYear(), today.getMonth() - 3, 0);
+		const lines = fakeLines(hash, from, to);
+		const id = nextId();
+		db.statements.push(
+			create(StatementSchema, {
+				id,
+				status: StatementStatus.PENDING,
+				fileName: r.fileName,
+				parser: visa ? "rbc-visa" : "td-chequing",
+				bank: visa ? "RBC" : "TD",
+				accountType: visa
+					? AccountType.ACCOUNT_CREDIT_CARD
+					: AccountType.ACCOUNT_CHEQUING,
+				accountNumber: visa ? "4821" : "5163878",
+				periodStart: pdate(from),
+				periodEnd: pdate(to),
+				currency: "CAD",
+				lineCount: lines.length,
+				createdAt: now(),
+			}),
+		);
+		statementFiles.set(id, { hash, pdf: r.pdfData, lines });
+		return previewOf(id);
+	},
+	async commitStatementImport(r) {
+		const s = db.statements.find((x) => x.id === r.statementId);
+		const file = statementFiles.get(r.statementId);
+		if (!s || !file) throw new Error("statement not found");
+		if (s.status !== StatementStatus.PENDING)
+			throw new ConnectError(
+				`StatementService.Commit: statement ${s.id} is already imported: validation failed`,
+				Code.InvalidArgument,
+			);
+
+		let acc =
+			r.account.case === "accountId" ? account(r.account.value) : undefined;
+		if (r.account.case === "newAccountName") {
+			const name = r.account.value;
+			if (db.accounts.some((a) => a.name === name))
+				throw new ConnectError(
+					`StatementService.Commit: an account named "${name}" already exists: validation failed`,
+					Code.InvalidArgument,
+				);
+			acc = create(AccountSchema, {
+				id: nextId(),
+				ownerId: DEMO_USER.id,
+				name,
+				bank: s.bank,
+				type: s.accountType,
+				mainCurrency: s.currency,
+				colors: ["#1f2937", "#3b82f6", "#10b981"],
+				anchorBalance: money(0, s.currency),
+				anchorDate: now(),
+				createdAt: now(),
+				updatedAt: now(),
+			});
+			db.accounts.push(acc);
+		}
+		if (!acc) throw new Error("account not found");
+		if (!acc.aliases.includes(s.accountNumber))
+			acc.aliases.push(s.accountNumber);
+
+		const existing = new Set(db.transactions.map((t) => t.externalId));
+		let created = 0;
+		for (const l of file.lines) {
+			const externalId = lineKey(acc.id, l);
+			if (existing.has(externalId)) continue;
+			const d = fromPdate(l.date ?? pdate(new Date()));
+			db.transactions.push(
+				create(TransactionSchema, {
+					id: nextId(),
+					accountId: acc.id,
+					txDate: ts(d),
+					txAmount: money(Number(l.amountCents), s.currency),
+					direction: l.direction,
+					description: l.description,
+					externalId,
+					createdAt: now(),
+					updatedAt: now(),
+				}),
+			);
+			created++;
+		}
+		syncBalances(acc.id);
+
+		s.status = StatementStatus.IMPORTED;
+		s.accountId = acc.id;
+		s.accountName = acc.friendlyName ?? acc.name;
+		s.importedAt = now();
+		return create(CommitStatementImportResponseSchema, {
+			statement: s,
+			createdCount: created,
+			duplicateCount: file.lines.length - created,
+		});
+	},
+	async listStatements(r) {
+		const xs = db.statements
+			.filter(
+				(s) =>
+					(r.accountId === undefined || s.accountId === r.accountId) &&
+					(r.status === undefined || s.status === r.status),
+			)
+			.sort(
+				(a, b) =>
+					fromPdate(b.periodStart ?? pdate(new Date())).getTime() -
+					fromPdate(a.periodStart ?? pdate(new Date())).getTime(),
+			);
+		return create(ListStatementsResponseSchema, { statements: xs });
+	},
+	async getStatement(r) {
+		const s = db.statements.find((x) => x.id === r.id);
+		const file = statementFiles.get(r.id);
+		if (!s || !file) throw new Error("statement not found");
+		return create(GetStatementResponseSchema, {
+			statement: s,
+			pdfData: file.pdf.length ? file.pdf : demoPdf([s.fileName]),
+		});
+	},
+	async deleteStatement(r) {
+		const s = db.statements.find((x) => x.id === r.id);
+		if (!s) throw new Error("statement not found");
+		let deleted = 0;
+		if (r.deleteTransactions && s.accountId !== undefined) {
+			const file = statementFiles.get(s.id);
+			const keys = new Set(
+				(file?.lines ?? []).map((l) => lineKey(s.accountId as bigint, l)),
+			);
+			const ids = db.transactions
+				.filter((t) => t.externalId && keys.has(t.externalId))
+				.map((t) => t.id);
+			deleted = ids.length;
+			removeTransactions(ids);
+		}
+		db.statements = db.statements.filter((x) => x.id !== r.id);
+		statementFiles.delete(r.id);
+		return create(DeleteStatementResponseSchema, {
+			deletedTransactions: deleted,
+		});
 	},
 });

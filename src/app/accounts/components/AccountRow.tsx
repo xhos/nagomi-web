@@ -24,6 +24,7 @@ import { DetailRow, ListRow, RowMenuButton } from "@/components/ui/list";
 import type { Account } from "@/gen/nagomi/v1/account_pb";
 import { accountTypeName } from "@/lib/utils/account";
 import { formatAmount } from "@/lib/utils/transaction";
+import { AccountStatements } from "./AccountStatements";
 
 interface AccountRowProps {
 	account: Account;
@@ -243,6 +244,7 @@ export function AccountRow({
 									</DetailRow>
 								</div>
 							</div>
+							<AccountStatements accountId={account.id} />
 							<div className="mt-3 flex flex-wrap gap-2">
 								<Button variant="outline" size="sm" onClick={onEdit}>
 									Edit

@@ -6,6 +6,7 @@ import { ConnectionsService } from "@/gen/nagomi/v1/connection_services_pb";
 import { DashboardService } from "@/gen/nagomi/v1/dashboard_services_pb";
 import { ReceiptService } from "@/gen/nagomi/v1/receipt_services_pb";
 import { RuleService } from "@/gen/nagomi/v1/rule_services_pb";
+import { StatementService } from "@/gen/nagomi/v1/statement_services_pb";
 import { TransactionService } from "@/gen/nagomi/v1/transaction_services_pb";
 import { DEMO } from "@/lib/demo";
 import * as demo from "@/lib/demo/clients";
@@ -42,3 +43,6 @@ export const receiptClient = DEMO
 export const connectionsClient = DEMO
 	? demo.connectionsClient
 	: createClient(ConnectionsService, transport as Transport);
+export const statementClient = DEMO
+	? demo.statementClient
+	: createClient(StatementService, transport as Transport);

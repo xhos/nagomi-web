@@ -15,6 +15,12 @@ import {
 	ReceiptStatus,
 } from "@/gen/nagomi/v1/receipt_pb";
 import { type Rule, RuleSchema } from "@/gen/nagomi/v1/rule_pb";
+import type { ParsedStatementLine } from "@/gen/nagomi/v1/statement_parser_pb";
+import {
+	type Statement,
+	StatementSchema,
+	StatementStatus,
+} from "@/gen/nagomi/v1/statement_pb";
 import {
 	type Transaction,
 	TransactionSchema,
@@ -74,7 +80,43 @@ export const db = {
 	rules: [] as Rule[],
 	receipts: [] as Receipt[],
 	connections: [] as Connection[],
+	statements: [] as Statement[],
 };
+
+// what core keeps next to a statement row: the file and its parsed lines
+export const statementFiles = new Map<
+	bigint,
+	{ hash: string; pdf: Uint8Array; lines: ParsedStatementLine[] }
+>();
+
+// a one-page pdf with a few lines of text, so "view statement" opens something real
+export function demoPdf(lines: string[]): Uint8Array {
+	const esc = (s: string) => s.replace(/[\\()]/g, (c) => `\\${c}`);
+	const text = lines
+		.map(
+			(l, i) =>
+				`BT /F1 ${i ? 11 : 16} Tf 56 ${740 - i * 22} Td (${esc(l)}) Tj ET`,
+		)
+		.join("\n");
+	const objects = [
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+		`<< /Length ${text.length} >>\nstream\n${text}\nendstream`,
+		"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+	];
+	let out = "%PDF-1.4\n";
+	const offsets = objects.map((body, i) => {
+		const at = out.length;
+		out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+		return at;
+	});
+	const xref = out.length;
+	out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+	for (const o of offsets) out += `${String(o).padStart(10, "0")} 00000 n \n`;
+	out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+	return new TextEncoder().encode(out);
+}
 
 // recompute balanceAfter for one account from its anchor, like core's SyncAccountBalances
 export function syncBalances(accountId: bigint) {
@@ -806,6 +848,50 @@ function seed() {
 			createdAt: ts(addDays(start, 90)),
 		}),
 	);
+
+	// monthly statements for the chequing account, one month missing
+	chequing.aliases.push("5163878");
+	for (let back = 11; back >= 1; back--) {
+		if (back === 4) continue;
+		const from = new Date(today.getFullYear(), today.getMonth() - back, 1);
+		const to = new Date(today.getFullYear(), today.getMonth() - back + 1, 0);
+		if (from < start) continue;
+		const inPeriod = db.transactions.filter((t) => {
+			const d = tsDate(t.txDate);
+			return t.accountId === chequing.id && d >= from && d <= addDays(to, 1);
+		});
+		const id = nextId();
+		const month = from.toLocaleString("en", { month: "long", year: "numeric" });
+		db.statements.push(
+			create(StatementSchema, {
+				id,
+				status: StatementStatus.IMPORTED,
+				accountId: chequing.id,
+				accountName: chequing.friendlyName ?? chequing.name,
+				fileName: `td-chequing-${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, "0")}.pdf`,
+				parser: "td-chequing",
+				bank: "TD",
+				accountType: AccountType.ACCOUNT_CHEQUING,
+				accountNumber: "5163878",
+				periodStart: pdate(from),
+				periodEnd: pdate(to),
+				currency: CUR,
+				lineCount: inPeriod.length,
+				createdAt: ts(addDays(to, 3)),
+				importedAt: ts(addDays(to, 3)),
+			}),
+		);
+		statementFiles.set(id, {
+			hash: `seed-${id}`,
+			pdf: demoPdf([
+				"TD Every Day Chequing Account",
+				`Statement for ${month}`,
+				"Account 5163878",
+				`${inPeriod.length} transactions`,
+			]),
+			lines: [],
+		});
+	}
 }
 
 seed();

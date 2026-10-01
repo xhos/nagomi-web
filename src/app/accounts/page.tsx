@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { FileUp, Plus } from "lucide-react";
 import { useState } from "react";
 import {
 	AlertDialog,
@@ -36,6 +36,7 @@ import {
 	type AccountFormData,
 } from "./components/AccountDialog";
 import { AccountRow } from "./components/AccountRow";
+import { ImportStatementsDialog } from "./components/ImportStatementsDialog";
 import { MergeAccountDialog } from "./components/MergeAccountDialog";
 
 const friendly = (e: unknown, fallback: string) => {
@@ -56,6 +57,7 @@ export default function AccountsPage() {
 
 	const [expandedId, setExpandedId] = useState<string | null>(null);
 	const [creatingOpen, setCreatingOpen] = useState(false);
+	const [importOpen, setImportOpen] = useState(false);
 	const [editing, setEditing] = useState<Account | null>(null);
 	const [merging, setMerging] = useState<Account | null>(null);
 	const [deletingAccount, setDeletingAccount] = useState<Account | null>(null);
@@ -101,10 +103,16 @@ export default function AccountsPage() {
 				<PageHeaderWithTitle
 					title="accounts"
 					actions={
-						<Button onClick={() => setCreatingOpen(true)} disabled={creating}>
-							<Plus />
-							New
-						</Button>
+						<>
+							<Button variant="outline" onClick={() => setImportOpen(true)}>
+								<FileUp />
+								Import
+							</Button>
+							<Button onClick={() => setCreatingOpen(true)} disabled={creating}>
+								<Plus />
+								New
+							</Button>
+						</>
 					}
 				/>
 
@@ -181,6 +189,12 @@ export default function AccountsPage() {
 					}}
 					account={editing}
 					onSave={save}
+				/>
+
+				<ImportStatementsDialog
+					open={importOpen}
+					onOpenChange={setImportOpen}
+					accounts={accounts}
 				/>
 
 				<MergeAccountDialog
