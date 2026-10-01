@@ -80,6 +80,7 @@ import {
 	GetStatementResponseSchema,
 	ListStatementsResponseSchema,
 	PreviewStatementImportResponseSchema,
+	ReconciliationAction,
 	StatementService,
 } from "@/gen/nagomi/v1/statement_services_pb";
 import {
@@ -1003,9 +1004,15 @@ function previewOf(id: bigint) {
 		statement: s,
 		lines: file.lines,
 		matchedAccountId: match?.id,
-		duplicateCount: match
-			? file.lines.filter((l) => existing.has(lineKey(match.id, l))).length
-			: 0,
+		reconciliation: match && {
+			accountId: match.id,
+			items: file.lines.map((l, i) => ({
+				action: existing.has(lineKey(match.id, l))
+					? ReconciliationAction.ALREADY_IMPORTED
+					: ReconciliationAction.CREATE,
+				lineIndex: i,
+			})),
+		},
 	});
 }
 

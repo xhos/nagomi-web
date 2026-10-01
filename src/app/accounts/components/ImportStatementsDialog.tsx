@@ -16,7 +16,10 @@ import { Input } from "@/components/ui/input";
 import type { Date as ProtoDate } from "@/gen/google/type/date_pb";
 import type { Account } from "@/gen/nagomi/v1/account_pb";
 import { AccountType } from "@/gen/nagomi/v1/enums_pb";
-import type { PreviewStatementImportResponse } from "@/gen/nagomi/v1/statement_services_pb";
+import {
+	type PreviewStatementImportResponse,
+	ReconciliationAction,
+} from "@/gen/nagomi/v1/statement_services_pb";
 import { useUserId } from "@/hooks/useSession";
 import { useInvalidateStatementData } from "@/hooks/useStatements";
 import {
@@ -297,7 +300,10 @@ function StatementItem({
 	const matched =
 		item.preview?.matchedAccountId !== undefined &&
 		item.target === item.preview.matchedAccountId.toString();
-	const duplicates = item.preview?.duplicateCount ?? 0;
+	const duplicates =
+		item.preview?.reconciliation?.items.filter(
+			(i) => i.action === ReconciliationAction.ALREADY_IMPORTED,
+		).length ?? 0;
 	const lineCount = s?.lineCount ?? 0;
 
 	return (

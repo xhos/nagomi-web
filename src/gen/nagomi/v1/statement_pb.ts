@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file nagomi/v1/statement.proto.
  */
 export const file_nagomi_v1_statement: GenFile = /*@__PURE__*/
-  fileDesc("ChluYWdvbWkvdjEvc3RhdGVtZW50LnByb3RvEgluYWdvbWkudjEi9gQKCVN0YXRlbWVudBIKCgJpZBgBIAEoAxIqCgZzdGF0dXMYAiABKA4yGi5uYWdvbWkudjEuU3RhdGVtZW50U3RhdHVzEhcKCmFjY291bnRfaWQYAyABKANIAIgBARIZCgxhY2NvdW50X25hbWUYBCABKAlIAYgBARIRCglmaWxlX25hbWUYBSABKAkSDgoGcGFyc2VyGAYgASgJEgwKBGJhbmsYByABKAkSLAoMYWNjb3VudF90eXBlGAggASgOMhYubmFnb21pLnYxLkFjY291bnRUeXBlEhYKDmFjY291bnRfbnVtYmVyGAkgASgJEicKDHBlcmlvZF9zdGFydBgKIAEoCzIRLmdvb2dsZS50eXBlLkRhdGUSJQoKcGVyaW9kX2VuZBgLIAEoCzIRLmdvb2dsZS50eXBlLkRhdGUSEAoIY3VycmVuY3kYDCABKAkSIgoVb3BlbmluZ19iYWxhbmNlX2NlbnRzGA0gASgDSAKIAQESIgoVY2xvc2luZ19iYWxhbmNlX2NlbnRzGA4gASgDSAOIAQESEgoKbGluZV9jb3VudBgPIAEoBRIuCgpjcmVhdGVkX2F0GBAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI0CgtpbXBvcnRlZF9hdBgRIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIBIgBAUINCgtfYWNjb3VudF9pZEIPCg1fYWNjb3VudF9uYW1lQhgKFl9vcGVuaW5nX2JhbGFuY2VfY2VudHNCGAoWX2Nsb3NpbmdfYmFsYW5jZV9jZW50c0IOCgxfaW1wb3J0ZWRfYXQqcAoPU3RhdGVtZW50U3RhdHVzEiAKHFNUQVRFTUVOVF9TVEFUVVNfVU5TUEVDSUZJRUQQABIcChhTVEFURU1FTlRfU1RBVFVTX1BFTkRJTkcQARIdChlTVEFURU1FTlRfU1RBVFVTX0lNUE9SVEVEEAJiBnByb3RvMw", [file_google_protobuf_timestamp, file_google_type_date, file_nagomi_v1_enums]);
+  fileDesc("ChluYWdvbWkvdjEvc3RhdGVtZW50LnByb3RvEgluYWdvbWkudjEingUKCVN0YXRlbWVudBIKCgJpZBgBIAEoAxIqCgZzdGF0dXMYAiABKA4yGi5uYWdvbWkudjEuU3RhdGVtZW50U3RhdHVzEhcKCmFjY291bnRfaWQYAyABKANIAIgBARIZCgxhY2NvdW50X25hbWUYBCABKAlIAYgBARIRCglmaWxlX25hbWUYBSABKAkSDgoGcGFyc2VyGAYgASgJEgwKBGJhbmsYByABKAkSLAoMYWNjb3VudF90eXBlGAggASgOMhYubmFnb21pLnYxLkFjY291bnRUeXBlEhYKDmFjY291bnRfbnVtYmVyGAkgASgJEicKDHBlcmlvZF9zdGFydBgKIAEoCzIRLmdvb2dsZS50eXBlLkRhdGUSJQoKcGVyaW9kX2VuZBgLIAEoCzIRLmdvb2dsZS50eXBlLkRhdGUSEAoIY3VycmVuY3kYDCABKAkSIgoVb3BlbmluZ19iYWxhbmNlX2NlbnRzGA0gASgDSAKIAQESIgoVY2xvc2luZ19iYWxhbmNlX2NlbnRzGA4gASgDSAOIAQESEgoKbGluZV9jb3VudBgPIAEoBRIuCgpjcmVhdGVkX2F0GBAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI0CgtpbXBvcnRlZF9hdBgRIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIBIgBARIXCgpiYWxhbmNlX29rGBIgASgISAWIAQFCDQoLX2FjY291bnRfaWRCDwoNX2FjY291bnRfbmFtZUIYChZfb3BlbmluZ19iYWxhbmNlX2NlbnRzQhgKFl9jbG9zaW5nX2JhbGFuY2VfY2VudHNCDgoMX2ltcG9ydGVkX2F0Qg0KC19iYWxhbmNlX29rIrsBChdTdGF0ZW1lbnRDb3ZlcmFnZVBlcmlvZBIgCgVzdGFydBgBIAEoCzIRLmdvb2dsZS50eXBlLkRhdGUSHgoDZW5kGAIgASgLMhEuZ29vZ2xlLnR5cGUuRGF0ZRIyCgZzdGF0dXMYAyABKA4yIi5uYWdvbWkudjEuU3RhdGVtZW50Q292ZXJhZ2VTdGF0dXMSGQoMc3RhdGVtZW50X2lkGAQgASgDSACIAQFCDwoNX3N0YXRlbWVudF9pZCpwCg9TdGF0ZW1lbnRTdGF0dXMSIAocU1RBVEVNRU5UX1NUQVRVU19VTlNQRUNJRklFRBAAEhwKGFNUQVRFTUVOVF9TVEFUVVNfUEVORElORxABEh0KGVNUQVRFTUVOVF9TVEFUVVNfSU1QT1JURUQQAirgAQoXU3RhdGVtZW50Q292ZXJhZ2VTdGF0dXMSKQolU1RBVEVNRU5UX0NPVkVSQUdFX1NUQVRVU19VTlNQRUNJRklFRBAAEiYKIlNUQVRFTUVOVF9DT1ZFUkFHRV9TVEFUVVNfSU1QT1JURUQQARIoCiRTVEFURU1FTlRfQ09WRVJBR0VfU1RBVFVTX1VOQkFMQU5DRUQQAhIlCiFTVEFURU1FTlRfQ09WRVJBR0VfU1RBVFVTX01JU1NJTkcQAxIhCh1TVEFURU1FTlRfQ09WRVJBR0VfU1RBVFVTX0RVRRAEYgZwcm90bzM", [file_google_protobuf_timestamp, file_google_type_date, file_nagomi_v1_enums]);
 
 /**
  * @generated from message nagomi.v1.Statement
@@ -106,6 +106,14 @@ export type Statement = Message<"nagomi.v1.Statement"> & {
    * @generated from field: optional google.protobuf.Timestamp imported_at = 17;
    */
   importedAt?: Timestamp;
+
+  /**
+   * opening balance plus the lines equals the closing balance; unset when the
+   * statement's balances couldn't be read
+   *
+   * @generated from field: optional bool balance_ok = 18;
+   */
+  balanceOk?: boolean;
 };
 
 /**
@@ -114,6 +122,43 @@ export type Statement = Message<"nagomi.v1.Statement"> & {
  */
 export const StatementSchema: GenMessage<Statement> = /*@__PURE__*/
   messageDesc(file_nagomi_v1_statement, 0);
+
+/**
+ * one statement period of an account. missing and due periods are guessed as a
+ * month from the neighbouring statement.
+ *
+ * @generated from message nagomi.v1.StatementCoveragePeriod
+ */
+export type StatementCoveragePeriod = Message<"nagomi.v1.StatementCoveragePeriod"> & {
+  /**
+   * @generated from field: google.type.Date start = 1;
+   */
+  start?: Date;
+
+  /**
+   * @generated from field: google.type.Date end = 2;
+   */
+  end?: Date;
+
+  /**
+   * @generated from field: nagomi.v1.StatementCoverageStatus status = 3;
+   */
+  status: StatementCoverageStatus;
+
+  /**
+   * for imported and unbalanced periods
+   *
+   * @generated from field: optional int64 statement_id = 4;
+   */
+  statementId?: bigint;
+};
+
+/**
+ * Describes the message nagomi.v1.StatementCoveragePeriod.
+ * Use `create(StatementCoveragePeriodSchema)` to create a new message.
+ */
+export const StatementCoveragePeriodSchema: GenMessage<StatementCoveragePeriod> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_statement, 1);
 
 /**
  * @generated from enum nagomi.v1.StatementStatus
@@ -140,4 +185,46 @@ export enum StatementStatus {
  */
 export const StatementStatusSchema: GenEnum<StatementStatus> = /*@__PURE__*/
   enumDesc(file_nagomi_v1_statement, 0);
+
+/**
+ * @generated from enum nagomi.v1.StatementCoverageStatus
+ */
+export enum StatementCoverageStatus {
+  /**
+   * @generated from enum value: STATEMENT_COVERAGE_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: STATEMENT_COVERAGE_STATUS_IMPORTED = 1;
+   */
+  IMPORTED = 1,
+
+  /**
+   * imported, but its lines don't add up to its balances
+   *
+   * @generated from enum value: STATEMENT_COVERAGE_STATUS_UNBALANCED = 2;
+   */
+  UNBALANCED = 2,
+
+  /**
+   * a gap before the first statement or between two
+   *
+   * @generated from enum value: STATEMENT_COVERAGE_STATUS_MISSING = 3;
+   */
+  MISSING = 3,
+
+  /**
+   * came out since the latest statement
+   *
+   * @generated from enum value: STATEMENT_COVERAGE_STATUS_DUE = 4;
+   */
+  DUE = 4,
+}
+
+/**
+ * Describes the enum nagomi.v1.StatementCoverageStatus.
+ */
+export const StatementCoverageStatusSchema: GenEnum<StatementCoverageStatus> = /*@__PURE__*/
+  enumDesc(file_nagomi_v1_statement, 1);
 

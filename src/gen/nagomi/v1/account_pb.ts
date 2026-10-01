@@ -11,13 +11,15 @@ import { file_nagomi_v1_enums } from "./enums_pb";
 import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Date } from "../../google/type/date_pb";
+import { file_google_type_date } from "../../google/type/date_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file nagomi/v1/account.proto.
  */
 export const file_nagomi_v1_account: GenFile = /*@__PURE__*/
-  fileDesc("ChduYWdvbWkvdjEvYWNjb3VudC5wcm90bxIJbmFnb21pLnYxIqIECgdBY2NvdW50EgoKAmlkGAEgASgDEhoKCG93bmVyX2lkGAIgASgJQgi6SAVyA7ABARIXCgRuYW1lGAMgASgJQgm6SAZyBBABGGQSFwoEYmFuaxgEIAEoCUIJukgGcgQQARhkEi4KBHR5cGUYBSABKA4yFi5uYWdvbWkudjEuQWNjb3VudFR5cGVCCLpIBYIBAhABEioKDmFuY2hvcl9iYWxhbmNlGAYgASgLMhIuZ29vZ2xlLnR5cGUuTW9uZXkSLwoLYW5jaG9yX2RhdGUYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiUKDWZyaWVuZGx5X25hbWUYCiABKAlCCbpIBnIEEAEYMkgAiAEBEg8KB2FsaWFzZXMYDiADKAkSKwoNbWFpbl9jdXJyZW5jeRgLIAEoCUIUukgRcg8yCl5bQS1aXXszfSSYAQMSNAoGY29sb3JzGAwgAygJQiS6SCGSAR4IAxADIhhyFjIRXiNbMC05YS1mQS1GXXs2fSSYAQcSIwoHYmFsYW5jZRgNIAEoCzISLmdvb2dsZS50eXBlLk1vbmV5QhAKDl9mcmllbmRseV9uYW1lIpcBCg5BY2NvdW50QmFsYW5jZRIKCgJpZBgBIAEoAxIMCgRuYW1lGAIgASgJEiwKDGFjY291bnRfdHlwZRgDIAEoDjIWLm5hZ29taS52MS5BY2NvdW50VHlwZRIrCg9jdXJyZW50X2JhbGFuY2UYBCABKAsyEi5nb29nbGUudHlwZS5Nb25leRIQCghjdXJyZW5jeRgFIAEoCWIGcHJvdG8z", [file_google_type_money, file_nagomi_v1_enums, file_buf_validate_validate, file_google_protobuf_timestamp]);
+  fileDesc("ChduYWdvbWkvdjEvYWNjb3VudC5wcm90bxIJbmFnb21pLnYxIvoFCgdBY2NvdW50EgoKAmlkGAEgASgDEhoKCG93bmVyX2lkGAIgASgJQgi6SAVyA7ABARIXCgRuYW1lGAMgASgJQgm6SAZyBBABGGQSFwoEYmFuaxgEIAEoCUIJukgGcgQQARhkEi4KBHR5cGUYBSABKA4yFi5uYWdvbWkudjEuQWNjb3VudFR5cGVCCLpIBYIBAhABEioKDmFuY2hvcl9iYWxhbmNlGAYgASgLMhIuZ29vZ2xlLnR5cGUuTW9uZXkSLwoLYW5jaG9yX2RhdGUYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiUKDWZyaWVuZGx5X25hbWUYCiABKAlCCbpIBnIEEAEYMkgAiAEBEg8KB2FsaWFzZXMYDiADKAkSKwoNbWFpbl9jdXJyZW5jeRgLIAEoCUIUukgRcg8yCl5bQS1aXXszfSSYAQMSNAoGY29sb3JzGAwgAygJQiS6SCGSAR4IAxADIhhyFjIRXiNbMC05YS1mQS1GXXs2fSSYAQcSIwoHYmFsYW5jZRgNIAEoCzISLmdvb2dsZS50eXBlLk1vbmV5EhgKEHN0YXRlbWVudF9kcml2ZW4YDyABKAgSMAoQc3RhdGVtZW50c19zdGFydBgQIAEoCzIRLmdvb2dsZS50eXBlLkRhdGVIAYgBARIiChVzdGF0ZW1lbnRfcmVsZWFzZV9kYXkYESABKAVIAogBARIpCgljbG9zZWRfYXQYEiABKAsyES5nb29nbGUudHlwZS5EYXRlSAOIAQFCEAoOX2ZyaWVuZGx5X25hbWVCEwoRX3N0YXRlbWVudHNfc3RhcnRCGAoWX3N0YXRlbWVudF9yZWxlYXNlX2RheUIMCgpfY2xvc2VkX2F0IpcBCg5BY2NvdW50QmFsYW5jZRIKCgJpZBgBIAEoAxIMCgRuYW1lGAIgASgJEiwKDGFjY291bnRfdHlwZRgDIAEoDjIWLm5hZ29taS52MS5BY2NvdW50VHlwZRIrCg9jdXJyZW50X2JhbGFuY2UYBCABKAsyEi5nb29nbGUudHlwZS5Nb25leRIQCghjdXJyZW5jeRgFIAEoCWIGcHJvdG8z", [file_google_type_money, file_nagomi_v1_enums, file_buf_validate_validate, file_google_protobuf_timestamp, file_google_type_date]);
 
 /**
  * @generated from message nagomi.v1.Account
@@ -92,6 +94,35 @@ export type Account = Message<"nagomi.v1.Account"> & {
    * @generated from field: google.type.Money balance = 13;
    */
   balance?: Money;
+
+  /**
+   * balance comes from imported bank statements, which reconcile the
+   * provisional email and connector transactions. only these accept statements
+   *
+   * @generated from field: bool statement_driven = 15;
+   */
+  statementDriven: boolean;
+
+  /**
+   * the first statement the bank has; earlier periods aren't expected
+   *
+   * @generated from field: optional google.type.Date statements_start = 16;
+   */
+  statementsStart?: Date;
+
+  /**
+   * day of the month new statements come out; inferred from past statements when unset
+   *
+   * @generated from field: optional int32 statement_release_day = 17;
+   */
+  statementReleaseDay?: number;
+
+  /**
+   * no statements are expected after this
+   *
+   * @generated from field: optional google.type.Date closed_at = 18;
+   */
+  closedAt?: Date;
 };
 
 /**

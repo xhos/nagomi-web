@@ -2,20 +2,22 @@
 // @generated from file nagomi/v1/statement_services.proto (package nagomi.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
-import type { Statement, StatementStatus } from "./statement_pb";
+import type { Statement, StatementCoveragePeriod, StatementStatus } from "./statement_pb";
 import { file_nagomi_v1_statement } from "./statement_pb";
 import type { ParsedStatementLine } from "./statement_parser_pb";
 import { file_nagomi_v1_statement_parser } from "./statement_parser_pb";
+import type { Transaction } from "./transaction_pb";
+import { file_nagomi_v1_transaction } from "./transaction_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file nagomi/v1/statement_services.proto.
  */
 export const file_nagomi_v1_statement_services: GenFile = /*@__PURE__*/
-  fileDesc("CiJuYWdvbWkvdjEvc3RhdGVtZW50X3NlcnZpY2VzLnByb3RvEgluYWdvbWkudjEidwodUHJldmlld1N0YXRlbWVudEltcG9ydFJlcXVlc3QSGQoHdXNlcl9pZBgBIAEoCUIIukgFcgOwAQESHgoIcGRmX2RhdGEYAiABKAxCDLpICXoHEAEYgICAChIbCglmaWxlX25hbWUYAyABKAlCCLpIBXIDGP8BIskBCh5QcmV2aWV3U3RhdGVtZW50SW1wb3J0UmVzcG9uc2USJwoJc3RhdGVtZW50GAEgASgLMhQubmFnb21pLnYxLlN0YXRlbWVudBItCgVsaW5lcxgCIAMoCzIeLm5hZ29taS52MS5QYXJzZWRTdGF0ZW1lbnRMaW5lEh8KEm1hdGNoZWRfYWNjb3VudF9pZBgDIAEoA0gAiAEBEhcKD2R1cGxpY2F0ZV9jb3VudBgEIAEoBUIVChNfbWF0Y2hlZF9hY2NvdW50X2lkIrABChxDb21taXRTdGF0ZW1lbnRJbXBvcnRSZXF1ZXN0EhkKB3VzZXJfaWQYASABKAlCCLpIBXIDsAEBEh0KDHN0YXRlbWVudF9pZBgCIAEoA0IHukgEIgIgABIdCgphY2NvdW50X2lkGAMgASgDQge6SAQiAiAASAASJQoQbmV3X2FjY291bnRfbmFtZRgEIAEoCUIJukgGcgQQARhkSABCEAoHYWNjb3VudBIFukgCCAEieAodQ29tbWl0U3RhdGVtZW50SW1wb3J0UmVzcG9uc2USJwoJc3RhdGVtZW50GAEgASgLMhQubmFnb21pLnYxLlN0YXRlbWVudBIVCg1jcmVhdGVkX2NvdW50GAIgASgFEhcKD2R1cGxpY2F0ZV9jb3VudBgDIAEoBSKWAQoVTGlzdFN0YXRlbWVudHNSZXF1ZXN0EhkKB3VzZXJfaWQYASABKAlCCLpIBXIDsAEBEhcKCmFjY291bnRfaWQYAiABKANIAIgBARIvCgZzdGF0dXMYAyABKA4yGi5uYWdvbWkudjEuU3RhdGVtZW50U3RhdHVzSAGIAQFCDQoLX2FjY291bnRfaWRCCQoHX3N0YXR1cyJCChZMaXN0U3RhdGVtZW50c1Jlc3BvbnNlEigKCnN0YXRlbWVudHMYASADKAsyFC5uYWdvbWkudjEuU3RhdGVtZW50IkUKE0dldFN0YXRlbWVudFJlcXVlc3QSGQoHdXNlcl9pZBgBIAEoCUIIukgFcgOwAQESEwoCaWQYAiABKANCB7pIBCICIAAiUQoUR2V0U3RhdGVtZW50UmVzcG9uc2USJwoJc3RhdGVtZW50GAEgASgLMhQubmFnb21pLnYxLlN0YXRlbWVudBIQCghwZGZfZGF0YRgCIAEoDCJlChZEZWxldGVTdGF0ZW1lbnRSZXF1ZXN0EhkKB3VzZXJfaWQYASABKAlCCLpIBXIDsAEBEhMKAmlkGAIgASgDQge6SAQiAiAAEhsKE2RlbGV0ZV90cmFuc2FjdGlvbnMYAyABKAgiNwoXRGVsZXRlU3RhdGVtZW50UmVzcG9uc2USHAoUZGVsZXRlZF90cmFuc2FjdGlvbnMYASABKAUy7wMKEFN0YXRlbWVudFNlcnZpY2USbQoWUHJldmlld1N0YXRlbWVudEltcG9ydBIoLm5hZ29taS52MS5QcmV2aWV3U3RhdGVtZW50SW1wb3J0UmVxdWVzdBopLm5hZ29taS52MS5QcmV2aWV3U3RhdGVtZW50SW1wb3J0UmVzcG9uc2USagoVQ29tbWl0U3RhdGVtZW50SW1wb3J0EicubmFnb21pLnYxLkNvbW1pdFN0YXRlbWVudEltcG9ydFJlcXVlc3QaKC5uYWdvbWkudjEuQ29tbWl0U3RhdGVtZW50SW1wb3J0UmVzcG9uc2USVQoOTGlzdFN0YXRlbWVudHMSIC5uYWdvbWkudjEuTGlzdFN0YXRlbWVudHNSZXF1ZXN0GiEubmFnb21pLnYxLkxpc3RTdGF0ZW1lbnRzUmVzcG9uc2USTwoMR2V0U3RhdGVtZW50Eh4ubmFnb21pLnYxLkdldFN0YXRlbWVudFJlcXVlc3QaHy5uYWdvbWkudjEuR2V0U3RhdGVtZW50UmVzcG9uc2USWAoPRGVsZXRlU3RhdGVtZW50EiEubmFnb21pLnYxLkRlbGV0ZVN0YXRlbWVudFJlcXVlc3QaIi5uYWdvbWkudjEuRGVsZXRlU3RhdGVtZW50UmVzcG9uc2ViBnByb3RvMw", [file_buf_validate_validate, file_nagomi_v1_statement, file_nagomi_v1_statement_parser]);
+  fileDesc("CiJuYWdvbWkvdjEvc3RhdGVtZW50X3NlcnZpY2VzLnByb3RvEgluYWdvbWkudjEidwodUHJldmlld1N0YXRlbWVudEltcG9ydFJlcXVlc3QSGQoHdXNlcl9pZBgBIAEoCUIIukgFcgOwAQESHgoIcGRmX2RhdGEYAiABKAxCDLpICXoHEAEYgICAChIbCglmaWxlX25hbWUYAyABKAlCCLpIBXIDGP8BIooCCh5QcmV2aWV3U3RhdGVtZW50SW1wb3J0UmVzcG9uc2USJwoJc3RhdGVtZW50GAEgASgLMhQubmFnb21pLnYxLlN0YXRlbWVudBItCgVsaW5lcxgCIAMoCzIeLm5hZ29taS52MS5QYXJzZWRTdGF0ZW1lbnRMaW5lEh8KEm1hdGNoZWRfYWNjb3VudF9pZBgDIAEoA0gAiAEBEj8KDnJlY29uY2lsaWF0aW9uGAUgASgLMiIubmFnb21pLnYxLlN0YXRlbWVudFJlY29uY2lsaWF0aW9uSAGIAQFCFQoTX21hdGNoZWRfYWNjb3VudF9pZEIRCg9fcmVjb25jaWxpYXRpb25KBAgEEAUicwoaUGxhblN0YXRlbWVudEltcG9ydFJlcXVlc3QSGQoHdXNlcl9pZBgBIAEoCUIIukgFcgOwAQESHQoMc3RhdGVtZW50X2lkGAIgASgDQge6SAQiAiAAEhsKCmFjY291bnRfaWQYAyABKANCB7pIBCICIAAiWQobUGxhblN0YXRlbWVudEltcG9ydFJlc3BvbnNlEjoKDnJlY29uY2lsaWF0aW9uGAEgASgLMiIubmFnb21pLnYxLlN0YXRlbWVudFJlY29uY2lsaWF0aW9uIukBChJSZWNvbmNpbGlhdGlvbkl0ZW0SLwoGYWN0aW9uGAEgASgOMh8ubmFnb21pLnYxLlJlY29uY2lsaWF0aW9uQWN0aW9uEhcKCmxpbmVfaW5kZXgYAiABKAVIAIgBARIwCgt0cmFuc2FjdGlvbhgDIAEoCzIWLm5hZ29taS52MS5UcmFuc2FjdGlvbkgBiAEBEjgKC2tlZXBfcmVhc29uGAQgASgOMiMubmFnb21pLnYxLlJlY29uY2lsaWF0aW9uS2VlcFJlYXNvbkINCgtfbGluZV9pbmRleEIOCgxfdHJhbnNhY3Rpb24iWwoXU3RhdGVtZW50UmVjb25jaWxpYXRpb24SEgoKYWNjb3VudF9pZBgBIAEoAxIsCgVpdGVtcxgCIAMoCzIdLm5hZ29taS52MS5SZWNvbmNpbGlhdGlvbkl0ZW0isAEKHENvbW1pdFN0YXRlbWVudEltcG9ydFJlcXVlc3QSGQoHdXNlcl9pZBgBIAEoCUIIukgFcgOwAQESHQoMc3RhdGVtZW50X2lkGAIgASgDQge6SAQiAiAAEh0KCmFjY291bnRfaWQYAyABKANCB7pIBCICIABIABIlChBuZXdfYWNjb3VudF9uYW1lGAQgASgJQgm6SAZyBBABGGRIAEIQCgdhY2NvdW50EgW6SAIIASLTAQodQ29tbWl0U3RhdGVtZW50SW1wb3J0UmVzcG9uc2USJwoJc3RhdGVtZW50GAEgASgLMhQubmFnb21pLnYxLlN0YXRlbWVudBIVCg1jcmVhdGVkX2NvdW50GAIgASgFEhcKD2R1cGxpY2F0ZV9jb3VudBgDIAEoBRIXCg9jb25maXJtZWRfY291bnQYBCABKAUSFQoNdXBkYXRlZF9jb3VudBgFIAEoBRIVCg1kZWxldGVkX2NvdW50GAYgASgFEhIKCmtlcHRfY291bnQYByABKAUilgEKFUxpc3RTdGF0ZW1lbnRzUmVxdWVzdBIZCgd1c2VyX2lkGAEgASgJQgi6SAVyA7ABARIXCgphY2NvdW50X2lkGAIgASgDSACIAQESLwoGc3RhdHVzGAMgASgOMhoubmFnb21pLnYxLlN0YXRlbWVudFN0YXR1c0gBiAEBQg0KC19hY2NvdW50X2lkQgkKB19zdGF0dXMiQgoWTGlzdFN0YXRlbWVudHNSZXNwb25zZRIoCgpzdGF0ZW1lbnRzGAEgAygLMhQubmFnb21pLnYxLlN0YXRlbWVudCJFChNHZXRTdGF0ZW1lbnRSZXF1ZXN0EhkKB3VzZXJfaWQYASABKAlCCLpIBXIDsAEBEhMKAmlkGAIgASgDQge6SAQiAiAAIlEKFEdldFN0YXRlbWVudFJlc3BvbnNlEicKCXN0YXRlbWVudBgBIAEoCzIULm5hZ29taS52MS5TdGF0ZW1lbnQSEAoIcGRmX2RhdGEYAiABKAwiZQoWRGVsZXRlU3RhdGVtZW50UmVxdWVzdBIZCgd1c2VyX2lkGAEgASgJQgi6SAVyA7ABARITCgJpZBgCIAEoA0IHukgEIgIgABIbChNkZWxldGVfdHJhbnNhY3Rpb25zGAMgASgIIjcKF0RlbGV0ZVN0YXRlbWVudFJlc3BvbnNlEhwKFGRlbGV0ZWRfdHJhbnNhY3Rpb25zGAEgASgFIlgKF1JlcGFyc2VTdGF0ZW1lbnRSZXF1ZXN0EhkKB3VzZXJfaWQYASABKAlCCLpIBXIDsAEBEhMKAmlkGAIgASgDQge6SAQiAiAAEg0KBWFwcGx5GAMgASgIIq4BChhSZXBhcnNlU3RhdGVtZW50UmVzcG9uc2USJwoJc3RhdGVtZW50GAEgASgLMhQubmFnb21pLnYxLlN0YXRlbWVudBItCgVsaW5lcxgCIAMoCzIeLm5hZ29taS52MS5QYXJzZWRTdGF0ZW1lbnRMaW5lEjoKDnJlY29uY2lsaWF0aW9uGAMgASgLMiIubmFnb21pLnYxLlN0YXRlbWVudFJlY29uY2lsaWF0aW9uIlUKG0dldFN0YXRlbWVudENvdmVyYWdlUmVxdWVzdBIZCgd1c2VyX2lkGAEgASgJQgi6SAVyA7ABARIbCgphY2NvdW50X2lkGAIgASgDQge6SAQiAiAAIlMKHEdldFN0YXRlbWVudENvdmVyYWdlUmVzcG9uc2USMwoHcGVyaW9kcxgBIAMoCzIiLm5hZ29taS52MS5TdGF0ZW1lbnRDb3ZlcmFnZVBlcmlvZCI3ChpMaXN0U3RhdGVtZW50QWxlcnRzUmVxdWVzdBIZCgd1c2VyX2lkGAEgASgJQgi6SAVyA7ABASJuCg5TdGF0ZW1lbnRBbGVydBISCgphY2NvdW50X2lkGAEgASgDEhQKDGFjY291bnRfbmFtZRgCIAEoCRIyCgZwZXJpb2QYAyABKAsyIi5uYWdvbWkudjEuU3RhdGVtZW50Q292ZXJhZ2VQZXJpb2QiSAobTGlzdFN0YXRlbWVudEFsZXJ0c1Jlc3BvbnNlEikKBmFsZXJ0cxgBIAMoCzIZLm5hZ29taS52MS5TdGF0ZW1lbnRBbGVydCqZAgoUUmVjb25jaWxpYXRpb25BY3Rpb24SJQohUkVDT05DSUxJQVRJT05fQUNUSU9OX1VOU1BFQ0lGSUVEEAASIQodUkVDT05DSUxJQVRJT05fQUNUSU9OX0NPTkZJUk0QARInCiNSRUNPTkNJTElBVElPTl9BQ1RJT05fVVBEQVRFX0FNT1VOVBACEiAKHFJFQ09OQ0lMSUFUSU9OX0FDVElPTl9DUkVBVEUQAxIqCiZSRUNPTkNJTElBVElPTl9BQ1RJT05fQUxSRUFEWV9JTVBPUlRFRBAEEiAKHFJFQ09OQ0lMSUFUSU9OX0FDVElPTl9ERUxFVEUQBRIeChpSRUNPTkNJTElBVElPTl9BQ1RJT05fS0VFUBAGKr0BChhSZWNvbmNpbGlhdGlvbktlZXBSZWFzb24SKgomUkVDT05DSUxJQVRJT05fS0VFUF9SRUFTT05fVU5TUEVDSUZJRUQQABIlCiFSRUNPTkNJTElBVElPTl9LRUVQX1JFQVNPTl9NQU5VQUwQARIoCiRSRUNPTkNJTElBVElPTl9LRUVQX1JFQVNPTl9VU0VSX0RBVEEQAhIkCiBSRUNPTkNJTElBVElPTl9LRUVQX1JFQVNPTl9HUkFDRRADMoEHChBTdGF0ZW1lbnRTZXJ2aWNlEm0KFlByZXZpZXdTdGF0ZW1lbnRJbXBvcnQSKC5uYWdvbWkudjEuUHJldmlld1N0YXRlbWVudEltcG9ydFJlcXVlc3QaKS5uYWdvbWkudjEuUHJldmlld1N0YXRlbWVudEltcG9ydFJlc3BvbnNlEmQKE1BsYW5TdGF0ZW1lbnRJbXBvcnQSJS5uYWdvbWkudjEuUGxhblN0YXRlbWVudEltcG9ydFJlcXVlc3QaJi5uYWdvbWkudjEuUGxhblN0YXRlbWVudEltcG9ydFJlc3BvbnNlEmoKFUNvbW1pdFN0YXRlbWVudEltcG9ydBInLm5hZ29taS52MS5Db21taXRTdGF0ZW1lbnRJbXBvcnRSZXF1ZXN0GigubmFnb21pLnYxLkNvbW1pdFN0YXRlbWVudEltcG9ydFJlc3BvbnNlElUKDkxpc3RTdGF0ZW1lbnRzEiAubmFnb21pLnYxLkxpc3RTdGF0ZW1lbnRzUmVxdWVzdBohLm5hZ29taS52MS5MaXN0U3RhdGVtZW50c1Jlc3BvbnNlEk8KDEdldFN0YXRlbWVudBIeLm5hZ29taS52MS5HZXRTdGF0ZW1lbnRSZXF1ZXN0Gh8ubmFnb21pLnYxLkdldFN0YXRlbWVudFJlc3BvbnNlElgKD0RlbGV0ZVN0YXRlbWVudBIhLm5hZ29taS52MS5EZWxldGVTdGF0ZW1lbnRSZXF1ZXN0GiIubmFnb21pLnYxLkRlbGV0ZVN0YXRlbWVudFJlc3BvbnNlElsKEFJlcGFyc2VTdGF0ZW1lbnQSIi5uYWdvbWkudjEuUmVwYXJzZVN0YXRlbWVudFJlcXVlc3QaIy5uYWdvbWkudjEuUmVwYXJzZVN0YXRlbWVudFJlc3BvbnNlEmcKFEdldFN0YXRlbWVudENvdmVyYWdlEiYubmFnb21pLnYxLkdldFN0YXRlbWVudENvdmVyYWdlUmVxdWVzdBonLm5hZ29taS52MS5HZXRTdGF0ZW1lbnRDb3ZlcmFnZVJlc3BvbnNlEmQKE0xpc3RTdGF0ZW1lbnRBbGVydHMSJS5uYWdvbWkudjEuTGlzdFN0YXRlbWVudEFsZXJ0c1JlcXVlc3QaJi5uYWdvbWkudjEuTGlzdFN0YXRlbWVudEFsZXJ0c1Jlc3BvbnNlYgZwcm90bzM", [file_buf_validate_validate, file_nagomi_v1_statement, file_nagomi_v1_statement_parser, file_nagomi_v1_transaction]);
 
 /**
  * @generated from message nagomi.v1.PreviewStatementImportRequest
@@ -66,11 +68,11 @@ export type PreviewStatementImportResponse = Message<"nagomi.v1.PreviewStatement
   matchedAccountId?: bigint;
 
   /**
-   * lines already present on the matched account (same external_id)
+   * against the matched account, when there is one
    *
-   * @generated from field: int32 duplicate_count = 4;
+   * @generated from field: optional nagomi.v1.StatementReconciliation reconciliation = 5;
    */
-  duplicateCount: number;
+  reconciliation?: StatementReconciliation;
 };
 
 /**
@@ -79,6 +81,108 @@ export type PreviewStatementImportResponse = Message<"nagomi.v1.PreviewStatement
  */
 export const PreviewStatementImportResponseSchema: GenMessage<PreviewStatementImportResponse> = /*@__PURE__*/
   messageDesc(file_nagomi_v1_statement_services, 1);
+
+/**
+ * @generated from message nagomi.v1.PlanStatementImportRequest
+ */
+export type PlanStatementImportRequest = Message<"nagomi.v1.PlanStatementImportRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: int64 statement_id = 2;
+   */
+  statementId: bigint;
+
+  /**
+   * @generated from field: int64 account_id = 3;
+   */
+  accountId: bigint;
+};
+
+/**
+ * Describes the message nagomi.v1.PlanStatementImportRequest.
+ * Use `create(PlanStatementImportRequestSchema)` to create a new message.
+ */
+export const PlanStatementImportRequestSchema: GenMessage<PlanStatementImportRequest> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_statement_services, 2);
+
+/**
+ * @generated from message nagomi.v1.PlanStatementImportResponse
+ */
+export type PlanStatementImportResponse = Message<"nagomi.v1.PlanStatementImportResponse"> & {
+  /**
+   * @generated from field: nagomi.v1.StatementReconciliation reconciliation = 1;
+   */
+  reconciliation?: StatementReconciliation;
+};
+
+/**
+ * Describes the message nagomi.v1.PlanStatementImportResponse.
+ * Use `create(PlanStatementImportResponseSchema)` to create a new message.
+ */
+export const PlanStatementImportResponseSchema: GenMessage<PlanStatementImportResponse> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_statement_services, 3);
+
+/**
+ * @generated from message nagomi.v1.ReconciliationItem
+ */
+export type ReconciliationItem = Message<"nagomi.v1.ReconciliationItem"> & {
+  /**
+   * @generated from field: nagomi.v1.ReconciliationAction action = 1;
+   */
+  action: ReconciliationAction;
+
+  /**
+   * into the preview's lines; set for every action but DELETE and KEEP
+   *
+   * @generated from field: optional int32 line_index = 2;
+   */
+  lineIndex?: number;
+
+  /**
+   * the existing transaction; set for CONFIRM, UPDATE_AMOUNT, DELETE and KEEP
+   *
+   * @generated from field: optional nagomi.v1.Transaction transaction = 3;
+   */
+  transaction?: Transaction;
+
+  /**
+   * @generated from field: nagomi.v1.ReconciliationKeepReason keep_reason = 4;
+   */
+  keepReason: ReconciliationKeepReason;
+};
+
+/**
+ * Describes the message nagomi.v1.ReconciliationItem.
+ * Use `create(ReconciliationItemSchema)` to create a new message.
+ */
+export const ReconciliationItemSchema: GenMessage<ReconciliationItem> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_statement_services, 4);
+
+/**
+ * @generated from message nagomi.v1.StatementReconciliation
+ */
+export type StatementReconciliation = Message<"nagomi.v1.StatementReconciliation"> & {
+  /**
+   * @generated from field: int64 account_id = 1;
+   */
+  accountId: bigint;
+
+  /**
+   * @generated from field: repeated nagomi.v1.ReconciliationItem items = 2;
+   */
+  items: ReconciliationItem[];
+};
+
+/**
+ * Describes the message nagomi.v1.StatementReconciliation.
+ * Use `create(StatementReconciliationSchema)` to create a new message.
+ */
+export const StatementReconciliationSchema: GenMessage<StatementReconciliation> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_statement_services, 5);
 
 /**
  * @generated from message nagomi.v1.CommitStatementImportRequest
@@ -119,7 +223,7 @@ export type CommitStatementImportRequest = Message<"nagomi.v1.CommitStatementImp
  * Use `create(CommitStatementImportRequestSchema)` to create a new message.
  */
 export const CommitStatementImportRequestSchema: GenMessage<CommitStatementImportRequest> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_statement_services, 2);
+  messageDesc(file_nagomi_v1_statement_services, 6);
 
 /**
  * @generated from message nagomi.v1.CommitStatementImportResponse
@@ -139,6 +243,28 @@ export type CommitStatementImportResponse = Message<"nagomi.v1.CommitStatementIm
    * @generated from field: int32 duplicate_count = 3;
    */
   duplicateCount: number;
+
+  /**
+   * @generated from field: int32 confirmed_count = 4;
+   */
+  confirmedCount: number;
+
+  /**
+   * confirmed with the statement's amount
+   *
+   * @generated from field: int32 updated_count = 5;
+   */
+  updatedCount: number;
+
+  /**
+   * @generated from field: int32 deleted_count = 6;
+   */
+  deletedCount: number;
+
+  /**
+   * @generated from field: int32 kept_count = 7;
+   */
+  keptCount: number;
 };
 
 /**
@@ -146,7 +272,7 @@ export type CommitStatementImportResponse = Message<"nagomi.v1.CommitStatementIm
  * Use `create(CommitStatementImportResponseSchema)` to create a new message.
  */
 export const CommitStatementImportResponseSchema: GenMessage<CommitStatementImportResponse> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_statement_services, 3);
+  messageDesc(file_nagomi_v1_statement_services, 7);
 
 /**
  * @generated from message nagomi.v1.ListStatementsRequest
@@ -173,7 +299,7 @@ export type ListStatementsRequest = Message<"nagomi.v1.ListStatementsRequest"> &
  * Use `create(ListStatementsRequestSchema)` to create a new message.
  */
 export const ListStatementsRequestSchema: GenMessage<ListStatementsRequest> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_statement_services, 4);
+  messageDesc(file_nagomi_v1_statement_services, 8);
 
 /**
  * @generated from message nagomi.v1.ListStatementsResponse
@@ -190,7 +316,7 @@ export type ListStatementsResponse = Message<"nagomi.v1.ListStatementsResponse">
  * Use `create(ListStatementsResponseSchema)` to create a new message.
  */
 export const ListStatementsResponseSchema: GenMessage<ListStatementsResponse> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_statement_services, 5);
+  messageDesc(file_nagomi_v1_statement_services, 9);
 
 /**
  * @generated from message nagomi.v1.GetStatementRequest
@@ -212,7 +338,7 @@ export type GetStatementRequest = Message<"nagomi.v1.GetStatementRequest"> & {
  * Use `create(GetStatementRequestSchema)` to create a new message.
  */
 export const GetStatementRequestSchema: GenMessage<GetStatementRequest> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_statement_services, 6);
+  messageDesc(file_nagomi_v1_statement_services, 10);
 
 /**
  * @generated from message nagomi.v1.GetStatementResponse
@@ -234,7 +360,7 @@ export type GetStatementResponse = Message<"nagomi.v1.GetStatementResponse"> & {
  * Use `create(GetStatementResponseSchema)` to create a new message.
  */
 export const GetStatementResponseSchema: GenMessage<GetStatementResponse> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_statement_services, 7);
+  messageDesc(file_nagomi_v1_statement_services, 11);
 
 /**
  * @generated from message nagomi.v1.DeleteStatementRequest
@@ -263,7 +389,7 @@ export type DeleteStatementRequest = Message<"nagomi.v1.DeleteStatementRequest">
  * Use `create(DeleteStatementRequestSchema)` to create a new message.
  */
 export const DeleteStatementRequestSchema: GenMessage<DeleteStatementRequest> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_statement_services, 8);
+  messageDesc(file_nagomi_v1_statement_services, 12);
 
 /**
  * @generated from message nagomi.v1.DeleteStatementResponse
@@ -280,7 +406,261 @@ export type DeleteStatementResponse = Message<"nagomi.v1.DeleteStatementResponse
  * Use `create(DeleteStatementResponseSchema)` to create a new message.
  */
 export const DeleteStatementResponseSchema: GenMessage<DeleteStatementResponse> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_statement_services, 9);
+  messageDesc(file_nagomi_v1_statement_services, 13);
+
+/**
+ * @generated from message nagomi.v1.ReparseStatementRequest
+ */
+export type ReparseStatementRequest = Message<"nagomi.v1.ReparseStatementRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: int64 id = 2;
+   */
+  id: bigint;
+
+  /**
+   * otherwise only returns what re-parsing would change
+   *
+   * @generated from field: bool apply = 3;
+   */
+  apply: boolean;
+};
+
+/**
+ * Describes the message nagomi.v1.ReparseStatementRequest.
+ * Use `create(ReparseStatementRequestSchema)` to create a new message.
+ */
+export const ReparseStatementRequestSchema: GenMessage<ReparseStatementRequest> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_statement_services, 14);
+
+/**
+ * @generated from message nagomi.v1.ReparseStatementResponse
+ */
+export type ReparseStatementResponse = Message<"nagomi.v1.ReparseStatementResponse"> & {
+  /**
+   * with the new parse's values, which are saved only when applied
+   *
+   * @generated from field: nagomi.v1.Statement statement = 1;
+   */
+  statement?: Statement;
+
+  /**
+   * @generated from field: repeated nagomi.v1.ParsedStatementLine lines = 2;
+   */
+  lines: ParsedStatementLine[];
+
+  /**
+   * @generated from field: nagomi.v1.StatementReconciliation reconciliation = 3;
+   */
+  reconciliation?: StatementReconciliation;
+};
+
+/**
+ * Describes the message nagomi.v1.ReparseStatementResponse.
+ * Use `create(ReparseStatementResponseSchema)` to create a new message.
+ */
+export const ReparseStatementResponseSchema: GenMessage<ReparseStatementResponse> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_statement_services, 15);
+
+/**
+ * @generated from message nagomi.v1.GetStatementCoverageRequest
+ */
+export type GetStatementCoverageRequest = Message<"nagomi.v1.GetStatementCoverageRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: int64 account_id = 2;
+   */
+  accountId: bigint;
+};
+
+/**
+ * Describes the message nagomi.v1.GetStatementCoverageRequest.
+ * Use `create(GetStatementCoverageRequestSchema)` to create a new message.
+ */
+export const GetStatementCoverageRequestSchema: GenMessage<GetStatementCoverageRequest> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_statement_services, 16);
+
+/**
+ * @generated from message nagomi.v1.GetStatementCoverageResponse
+ */
+export type GetStatementCoverageResponse = Message<"nagomi.v1.GetStatementCoverageResponse"> & {
+  /**
+   * @generated from field: repeated nagomi.v1.StatementCoveragePeriod periods = 1;
+   */
+  periods: StatementCoveragePeriod[];
+};
+
+/**
+ * Describes the message nagomi.v1.GetStatementCoverageResponse.
+ * Use `create(GetStatementCoverageResponseSchema)` to create a new message.
+ */
+export const GetStatementCoverageResponseSchema: GenMessage<GetStatementCoverageResponse> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_statement_services, 17);
+
+/**
+ * @generated from message nagomi.v1.ListStatementAlertsRequest
+ */
+export type ListStatementAlertsRequest = Message<"nagomi.v1.ListStatementAlertsRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+};
+
+/**
+ * Describes the message nagomi.v1.ListStatementAlertsRequest.
+ * Use `create(ListStatementAlertsRequestSchema)` to create a new message.
+ */
+export const ListStatementAlertsRequestSchema: GenMessage<ListStatementAlertsRequest> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_statement_services, 18);
+
+/**
+ * @generated from message nagomi.v1.StatementAlert
+ */
+export type StatementAlert = Message<"nagomi.v1.StatementAlert"> & {
+  /**
+   * @generated from field: int64 account_id = 1;
+   */
+  accountId: bigint;
+
+  /**
+   * @generated from field: string account_name = 2;
+   */
+  accountName: string;
+
+  /**
+   * @generated from field: nagomi.v1.StatementCoveragePeriod period = 3;
+   */
+  period?: StatementCoveragePeriod;
+};
+
+/**
+ * Describes the message nagomi.v1.StatementAlert.
+ * Use `create(StatementAlertSchema)` to create a new message.
+ */
+export const StatementAlertSchema: GenMessage<StatementAlert> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_statement_services, 19);
+
+/**
+ * @generated from message nagomi.v1.ListStatementAlertsResponse
+ */
+export type ListStatementAlertsResponse = Message<"nagomi.v1.ListStatementAlertsResponse"> & {
+  /**
+   * @generated from field: repeated nagomi.v1.StatementAlert alerts = 1;
+   */
+  alerts: StatementAlert[];
+};
+
+/**
+ * Describes the message nagomi.v1.ListStatementAlertsResponse.
+ * Use `create(ListStatementAlertsResponseSchema)` to create a new message.
+ */
+export const ListStatementAlertsResponseSchema: GenMessage<ListStatementAlertsResponse> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_statement_services, 20);
+
+/**
+ * @generated from enum nagomi.v1.ReconciliationAction
+ */
+export enum ReconciliationAction {
+  /**
+   * @generated from enum value: RECONCILIATION_ACTION_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * a statement line confirms this transaction
+   *
+   * @generated from enum value: RECONCILIATION_ACTION_CONFIRM = 1;
+   */
+  CONFIRM = 1,
+
+  /**
+   * confirms it, and the statement's amount replaces the provisional one (tips, fx)
+   *
+   * @generated from enum value: RECONCILIATION_ACTION_UPDATE_AMOUNT = 2;
+   */
+  UPDATE_AMOUNT = 2,
+
+  /**
+   * a statement line with nothing to confirm; becomes a new transaction
+   *
+   * @generated from enum value: RECONCILIATION_ACTION_CREATE = 3;
+   */
+  CREATE = 3,
+
+  /**
+   * a line this or an overlapping statement already imported
+   *
+   * @generated from enum value: RECONCILIATION_ACTION_ALREADY_IMPORTED = 4;
+   */
+  ALREADY_IMPORTED = 4,
+
+  /**
+   * a provisional transaction in the period the statement doesn't contain, or,
+   * when re-parsing, one of the statement's own that it no longer lists
+   *
+   * @generated from enum value: RECONCILIATION_ACTION_DELETE = 5;
+   */
+  DELETE = 5,
+
+  /**
+   * not on the statement either, but left alone; see keep_reason
+   *
+   * @generated from enum value: RECONCILIATION_ACTION_KEEP = 6;
+   */
+  KEEP = 6,
+}
+
+/**
+ * Describes the enum nagomi.v1.ReconciliationAction.
+ */
+export const ReconciliationActionSchema: GenEnum<ReconciliationAction> = /*@__PURE__*/
+  enumDesc(file_nagomi_v1_statement_services, 0);
+
+/**
+ * @generated from enum nagomi.v1.ReconciliationKeepReason
+ */
+export enum ReconciliationKeepReason {
+  /**
+   * @generated from enum value: RECONCILIATION_KEEP_REASON_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * entered by hand, or from a statement since deleted
+   *
+   * @generated from enum value: RECONCILIATION_KEEP_REASON_MANUAL = 1;
+   */
+  MANUAL = 1,
+
+  /**
+   * has notes, a receipt or splits
+   *
+   * @generated from enum value: RECONCILIATION_KEEP_REASON_USER_DATA = 2;
+   */
+  USER_DATA = 2,
+
+  /**
+   * near the period end, so it may post on the next statement
+   *
+   * @generated from enum value: RECONCILIATION_KEEP_REASON_GRACE = 3;
+   */
+  GRACE = 3,
+}
+
+/**
+ * Describes the enum nagomi.v1.ReconciliationKeepReason.
+ */
+export const ReconciliationKeepReasonSchema: GenEnum<ReconciliationKeepReason> = /*@__PURE__*/
+  enumDesc(file_nagomi_v1_statement_services, 1);
 
 /**
  * @generated from service nagomi.v1.StatementService
@@ -298,6 +678,20 @@ export const StatementService: GenService<{
     output: typeof PreviewStatementImportResponseSchema;
   },
   /**
+   * what committing a pending statement into this account would do, for when the
+   * user picks an account other than the matched one
+   *
+   * @generated from rpc nagomi.v1.StatementService.PlanStatementImport
+   */
+  planStatementImport: {
+    methodKind: "unary";
+    input: typeof PlanStatementImportRequestSchema;
+    output: typeof PlanStatementImportResponseSchema;
+  },
+  /**
+   * reconciles the account against the statement: confirms matched transactions,
+   * creates the missing ones and deletes provisional ones it doesn't contain
+   *
    * @generated from rpc nagomi.v1.StatementService.CommitStatementImport
    */
   commitStatementImport: {
@@ -328,6 +722,39 @@ export const StatementService: GenService<{
     methodKind: "unary";
     input: typeof DeleteStatementRequestSchema;
     output: typeof DeleteStatementResponseSchema;
+  },
+  /**
+   * runs an imported statement's stored file through the parser again, after a
+   * parser fix, and reconciles its account against the new lines. its own
+   * transactions the statement no longer lists are deleted, unless they carry
+   * notes, a receipt or splits.
+   *
+   * @generated from rpc nagomi.v1.StatementService.ReparseStatement
+   */
+  reparseStatement: {
+    methodKind: "unary";
+    input: typeof ReparseStatementRequestSchema;
+    output: typeof ReparseStatementResponseSchema;
+  },
+  /**
+   * a statement-driven account's periods, oldest first: imported, missing and due
+   *
+   * @generated from rpc nagomi.v1.StatementService.GetStatementCoverage
+   */
+  getStatementCoverage: {
+    methodKind: "unary";
+    input: typeof GetStatementCoverageRequestSchema;
+    output: typeof GetStatementCoverageResponseSchema;
+  },
+  /**
+   * missing, due and unbalanced periods across the user's statement-driven accounts
+   *
+   * @generated from rpc nagomi.v1.StatementService.ListStatementAlerts
+   */
+  listStatementAlerts: {
+    methodKind: "unary";
+    input: typeof ListStatementAlertsRequestSchema;
+    output: typeof ListStatementAlertsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_nagomi_v1_statement_services, 0);
