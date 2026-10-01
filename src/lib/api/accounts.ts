@@ -1,4 +1,5 @@
 import { create } from "@bufbuild/protobuf";
+import type { Date as ProtoDate } from "@/gen/google/type/date_pb";
 import {
 	AddAccountAliasRequestSchema,
 	CreateAccountRequestSchema,
@@ -26,6 +27,14 @@ export interface CreateAccountInput {
 	};
 	mainCurrency?: string;
 	colors?: string[];
+	statementDriven?: boolean;
+}
+
+// unset clears the setting
+export interface StatementSettings {
+	statementsStart?: ProtoDate;
+	statementReleaseDay?: number;
+	closedAt?: ProtoDate;
 }
 
 export interface UpdateAccountInput {
@@ -37,6 +46,9 @@ export interface UpdateAccountInput {
 	friendlyName?: string;
 	mainCurrency?: string;
 	colors?: string[];
+	statementDriven?: boolean;
+	// left out, the settings stay as they are
+	statementSettings?: StatementSettings;
 }
 
 export interface SetAnchorBalanceInput {
@@ -71,6 +83,7 @@ export const accountsApi = {
 				: undefined,
 			mainCurrency: data.mainCurrency,
 			colors: data.colors,
+			statementDriven: data.statementDriven,
 		});
 		const response = await accountClient.createAccount(request);
 		return response.account;
@@ -85,6 +98,10 @@ export const accountsApi = {
 			"colors",
 		];
 		if (data.mainCurrency !== undefined) maskPaths.push("main_currency");
+		if (data.statementDriven !== undefined) maskPaths.push("statement_driven");
+		// masked and unset clears them
+		if (data.statementSettings)
+			maskPaths.push("statements_start", "statement_release_day", "closed_at");
 		const request = create(UpdateAccountRequestSchema, {
 			userId: data.userId,
 			id: data.id,
@@ -95,6 +112,8 @@ export const accountsApi = {
 			friendlyName: data.friendlyName,
 			mainCurrency: data.mainCurrency,
 			colors: data.colors,
+			statementDriven: data.statementDriven,
+			...data.statementSettings,
 		});
 		await accountClient.updateAccount(request);
 	},

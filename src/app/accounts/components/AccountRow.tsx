@@ -244,7 +244,9 @@ export function AccountRow({
 									</DetailRow>
 								</div>
 							</div>
-							<AccountStatements accountId={account.id} />
+							{account.statementDriven && (
+								<AccountStatements accountId={account.id} />
+							)}
 							<div className="mt-3 flex flex-wrap gap-2">
 								<Button variant="outline" size="sm" onClick={onEdit}>
 									Edit

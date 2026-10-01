@@ -196,6 +196,7 @@ export const accountClient = fake(AccountService, {
 			friendlyName: req.friendlyName,
 			mainCurrency: req.mainCurrency || "CAD",
 			colors: req.colors ?? [],
+			statementDriven: req.statementDriven,
 			anchorBalance: money(cents(req.anchorBalance), req.mainCurrency || "CAD"),
 			anchorDate: now(),
 			createdAt: now(),
@@ -208,6 +209,12 @@ export const accountClient = fake(AccountService, {
 	async updateAccount(req) {
 		const a = account(req.id);
 		if (!a) throw new Error("account not found");
+		const day = req.statementReleaseDay;
+		if (day !== undefined && (day < 1 || day > 31))
+			throw new ConnectError(
+				`AccountService.Update: statement release day must be 1-31, got ${day}: validation failed`,
+				Code.InvalidArgument,
+			);
 		for (const p of req.updateMask?.paths ?? []) {
 			if (p === "name" && req.name !== undefined) a.name = req.name;
 			if (p === "bank" && req.bank !== undefined) a.bank = req.bank;
@@ -220,6 +227,12 @@ export const accountClient = fake(AccountService, {
 			if (p === "anchor_balance" && req.anchorBalance)
 				a.anchorBalance = money(cents(req.anchorBalance), a.mainCurrency);
 			if (p === "anchor_date" && req.anchorDate) a.anchorDate = req.anchorDate;
+			if (p === "statement_driven" && req.statementDriven !== undefined)
+				a.statementDriven = req.statementDriven;
+			// like core: masked and unset clears these three
+			if (p === "statements_start") a.statementsStart = req.statementsStart;
+			if (p === "statement_release_day") a.statementReleaseDay = day;
+			if (p === "closed_at") a.closedAt = req.closedAt;
 		}
 		a.updatedAt = now();
 		syncBalances(a.id);
@@ -1092,6 +1105,7 @@ export const statementClient = fake(StatementService, {
 				type: s.accountType,
 				mainCurrency: s.currency,
 				colors: ["#1f2937", "#3b82f6", "#10b981"],
+				statementDriven: true,
 				anchorBalance: money(0, s.currency),
 				anchorDate: now(),
 				createdAt: now(),
@@ -1100,6 +1114,11 @@ export const statementClient = fake(StatementService, {
 			db.accounts.push(acc);
 		}
 		if (!acc) throw new Error("account not found");
+		if (!acc.statementDriven)
+			throw new ConnectError(
+				`StatementService.Commit: account "${acc.name}" isn't statement-driven: validation failed`,
+				Code.InvalidArgument,
+			);
 		if (!acc.aliases.includes(s.accountNumber))
 			acc.aliases.push(s.accountNumber);
 

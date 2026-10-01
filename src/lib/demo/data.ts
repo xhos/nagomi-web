@@ -851,6 +851,7 @@ function seed() {
 
 	// monthly statements for the chequing account, one month missing
 	chequing.aliases.push("5163878");
+	chequing.statementDriven = true;
 	for (let back = 11; back >= 1; back--) {
 		if (back === 4) continue;
 		const from = new Date(today.getFullYear(), today.getMonth() - back, 1);

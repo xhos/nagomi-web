@@ -73,9 +73,23 @@ export default function AccountsPage() {
 				friendlyName: data.friendlyName,
 				mainCurrency: data.mainCurrency,
 				colors: data.colors,
+				statementDriven: data.statementDriven,
+				statementSettings: data.statementSettings,
 			});
 		} else {
-			await createAccountAsync(data);
+			const created = await createAccountAsync(data);
+			// create takes only the toggle; the settings need an update
+			const s = data.statementSettings;
+			if (created && s && Object.values(s).some((v) => v !== undefined))
+				await updateAccountAsync({
+					id: created.id,
+					name: created.name,
+					bank: created.bank,
+					accountType: created.type,
+					friendlyName: created.friendlyName,
+					colors: created.colors,
+					statementSettings: s,
+				});
 		}
 	};
 

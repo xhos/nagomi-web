@@ -15,7 +15,6 @@ import { FormError, NativeSelect } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
 import type { Date as ProtoDate } from "@/gen/google/type/date_pb";
 import type { Account } from "@/gen/nagomi/v1/account_pb";
-import { AccountType } from "@/gen/nagomi/v1/enums_pb";
 import {
 	type PreviewStatementImportResponse,
 	ReconciliationAction,
@@ -80,7 +79,8 @@ export function ImportStatementsDialog({
 	const [error, setError] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	const targets = accounts.filter((a) => a.type !== AccountType.ACCOUNT_FRIEND);
+	// core only imports into statement-driven accounts
+	const targets = accounts.filter((a) => a.statementDriven);
 
 	const update = (key: string, patch: Partial<Item>) =>
 		setItems((xs) => xs.map((x) => (x.key === key ? { ...x, ...patch } : x)));
@@ -94,10 +94,11 @@ export function ImportStatementsDialog({
 				item.file.name,
 			);
 			const s = preview.statement;
+			const matched = targets.find((a) => a.id === preview.matchedAccountId);
 			update(item.key, {
 				status: "ready",
 				preview,
-				target: preview.matchedAccountId?.toString() ?? "",
+				target: matched?.id.toString() ?? "",
 				newName: s ? `${s.bank} ${accountTypeName(s.accountType)}` : "",
 			});
 		} catch (e) {

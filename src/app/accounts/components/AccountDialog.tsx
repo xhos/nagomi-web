@@ -21,7 +21,9 @@ import {
 	useRemoveAccountAlias,
 } from "@/hooks/useAccounts";
 import { useCurrencies } from "@/hooks/useCurrencies";
+import type { StatementSettings } from "@/lib/api/accounts";
 import { ACCOUNT_TYPES } from "@/lib/utils/account";
+import { inputToProtoDate, protoDateToInput } from "@/lib/utils/date";
 
 export interface AccountFormData {
 	name: string;
@@ -31,6 +33,9 @@ export interface AccountFormData {
 	anchorBalance?: { currencyCode: string; units: string; nanos: number };
 	mainCurrency?: string;
 	colors?: string[];
+	statementDriven: boolean;
+	// only for statement-driven accounts
+	statementSettings?: StatementSettings;
 }
 
 interface AccountDialogProps {
@@ -64,6 +69,10 @@ export function AccountDialog({
 	const [initialBalance, setInitialBalance] = useState("0");
 	const [aliases, setAliases] = useState<string[]>([]);
 	const [newAlias, setNewAlias] = useState("");
+	const [statementDriven, setStatementDriven] = useState(false);
+	const [statementsStart, setStatementsStart] = useState("");
+	const [releaseDay, setReleaseDay] = useState("");
+	const [closedAt, setClosedAt] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -78,8 +87,14 @@ export function AccountDialog({
 		setInitialBalance("0");
 		setAliases(account?.aliases.filter((a) => a !== account.name) ?? []);
 		setNewAlias("");
+		setStatementDriven(account?.statementDriven ?? false);
+		setStatementsStart(protoDateToInput(account?.statementsStart));
+		setReleaseDay(account?.statementReleaseDay?.toString() ?? "");
+		setClosedAt(protoDateToInput(account?.closedAt));
 		setError(null);
 	}, [account, open]);
+
+	const isFriend = type === AccountType.ACCOUNT_FRIEND;
 
 	const addAlias = async () => {
 		const alias = newAlias.trim();
@@ -100,6 +115,14 @@ export function AccountDialog({
 			setError("Name and bank are required.");
 			return;
 		}
+		const day = releaseDay ? Number(releaseDay) : undefined;
+		if (
+			day !== undefined &&
+			!(Number.isInteger(day) && day >= 1 && day <= 31)
+		) {
+			setError("Release day must be a day of the month, 1 to 31.");
+			return;
+		}
 		setSaving(true);
 		setError(null);
 		try {
@@ -113,6 +136,15 @@ export function AccountDialog({
 						? undefined
 						: mainCurrency,
 				colors,
+				statementDriven: statementDriven && !isFriend,
+				statementSettings:
+					statementDriven && !isFriend
+						? {
+								statementsStart: inputToProtoDate(statementsStart),
+								statementReleaseDay: day,
+								closedAt: inputToProtoDate(closedAt),
+							}
+						: undefined,
 			};
 			if (!account) {
 				const n = Number(initialBalance || "0");
@@ -233,6 +265,70 @@ export function AccountDialog({
 							</Field>
 						)}
 					</div>
+
+					{!isFriend && (
+						<div className="space-y-4">
+							<label className="flex items-start gap-2">
+								<input
+									type="checkbox"
+									checked={statementDriven}
+									onChange={(e) => setStatementDriven(e.target.checked)}
+									className="mt-1 size-3.5 accent-[var(--accent)]"
+								/>
+								<span>
+									<span className="block text-sm">Statement-driven</span>
+									<span className="block text-sm text-muted-foreground">
+										Imported bank statements set the balance and confirm or
+										correct transactions from emails.
+									</span>
+								</span>
+							</label>
+							{statementDriven && (
+								<div className="grid gap-4 sm:grid-cols-3">
+									<Field
+										label="First statement"
+										htmlFor="acct-statements-start"
+										hint="Earlier periods aren't expected."
+									>
+										<Input
+											id="acct-statements-start"
+											type="date"
+											value={statementsStart}
+											onChange={(e) => setStatementsStart(e.target.value)}
+										/>
+									</Field>
+									<Field
+										label="Release day"
+										htmlFor="acct-release-day"
+										hint="Otherwise 3 days after a period ends."
+									>
+										<Input
+											id="acct-release-day"
+											type="number"
+											min={1}
+											max={31}
+											step={1}
+											value={releaseDay}
+											onChange={(e) => setReleaseDay(e.target.value)}
+											placeholder="Day of month"
+										/>
+									</Field>
+									<Field
+										label="Closed on"
+										htmlFor="acct-closed-at"
+										hint="No statements expected after."
+									>
+										<Input
+											id="acct-closed-at"
+											type="date"
+											value={closedAt}
+											onChange={(e) => setClosedAt(e.target.value)}
+										/>
+									</Field>
+								</div>
+							)}
+						</div>
+					)}
 
 					{account && (
 						<Field
