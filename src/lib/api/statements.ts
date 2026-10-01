@@ -3,7 +3,9 @@ import { Code, ConnectError } from "@connectrpc/connect";
 import {
 	CommitStatementImportRequestSchema,
 	DeleteStatementRequestSchema,
+	GetStatementCoverageRequestSchema,
 	GetStatementRequestSchema,
+	ListStatementAlertsRequestSchema,
 	ListStatementsRequestSchema,
 	PlanStatementImportRequestSchema,
 	PreviewStatementImportRequestSchema,
@@ -57,6 +59,23 @@ export const statementsApi = {
 	async get(userId: string, id: bigint) {
 		const request = create(GetStatementRequestSchema, { userId, id });
 		return statementClient.getStatement(request);
+	},
+
+	// a statement-driven account's periods, oldest first
+	async coverage(userId: string, accountId: bigint) {
+		const request = create(GetStatementCoverageRequestSchema, {
+			userId,
+			accountId,
+		});
+		const response = await statementClient.getStatementCoverage(request);
+		return response.periods;
+	},
+
+	// missing, due and unbalanced periods across statement-driven accounts
+	async alerts(userId: string) {
+		const request = create(ListStatementAlertsRequestSchema, { userId });
+		const response = await statementClient.listStatementAlerts(request);
+		return response.alerts;
 	},
 
 	async delete(userId: string, id: bigint, deleteTransactions: boolean) {

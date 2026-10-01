@@ -13,18 +13,50 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Statement } from "@/gen/nagomi/v1/statement_pb";
+import {
+	type Statement,
+	type StatementCoveragePeriod,
+	StatementCoverageStatus,
+} from "@/gen/nagomi/v1/statement_pb";
+import { useAccounts } from "@/hooks/useAccounts";
 import { useUserId } from "@/hooks/useSession";
-import { useDeleteStatement, useStatements } from "@/hooks/useStatements";
+import {
+	useDeleteStatement,
+	useStatementCoverage,
+	useStatements,
+} from "@/hooks/useStatements";
 import { statementsApi } from "@/lib/api/statements";
 import { periodLabel as period } from "@/lib/utils/statement";
+
+import { ImportStatementsDialog } from "./ImportStatementsDialog";
 
 const periodLabel = (s: Statement) =>
 	period(s.periodStart, s.periodEnd) ?? s.fileName;
 
+const S = StatementCoverageStatus;
+
+// "1 missing, 1 due, 1 doesn't add up"
+function coverageNote(periods: StatementCoveragePeriod[]) {
+	const count = (status: StatementCoverageStatus) =>
+		periods.filter((p) => p.status === status).length;
+	return [
+		[count(S.MISSING), "missing"],
+		[count(S.DUE), "due"],
+		[count(S.UNBALANCED), "doesn't add up"],
+	]
+		.filter(([n]) => (n as number) > 0)
+		.map(([n, label]) => `${n} ${label}`)
+		.join(", ");
+}
+
 export function AccountStatements({ accountId }: { accountId: bigint }) {
 	const userId = useUserId();
-	const { data: statements, isLoading } = useStatements(accountId);
+	const { data: statements, isLoading: loadingStatements } =
+		useStatements(accountId);
+	const { data: coverage, isLoading: loadingCoverage } =
+		useStatementCoverage(accountId);
+	const { accounts } = useAccounts();
+	const [uploading, setUploading] = useState(false);
 	const { mutateAsync: deleteStatement, isPending: deleting } =
 		useDeleteStatement();
 	const [confirming, setConfirming] = useState<Statement | null>(null);
@@ -60,12 +92,17 @@ export function AccountStatements({ accountId }: { accountId: bigint }) {
 		}
 	};
 
-	const imported = statements?.filter((s) => s.accountId === accountId) ?? [];
+	const byId = new Map(statements?.map((x) => [x.id, x]));
+	// newest first, like the statements list it replaces
+	const periods = [...(coverage ?? [])].reverse();
+	const note = coverageNote(periods);
+	const isLoading = loadingStatements || loadingCoverage;
 
 	return (
 		<div className="mt-4">
-			<div className="border-b pb-2 text-sm text-muted-foreground">
-				statements
+			<div className="flex items-baseline justify-between gap-3 border-b pb-2 text-sm text-muted-foreground">
+				<span>statements</span>
+				{note && <span>{note}</span>}
 			</div>
 
 			{isLoading ? (
@@ -73,42 +110,71 @@ export function AccountStatements({ accountId }: { accountId: bigint }) {
 					<Skeleton className="h-4 w-48" />
 					<Skeleton className="h-4 w-40" />
 				</div>
-			) : imported.length === 0 ? (
+			) : periods.length === 0 ? (
 				<p className="py-2 text-sm text-muted-foreground">
 					No statements imported for this account.
 				</p>
 			) : (
 				<ul>
-					{imported.map((s) => (
-						<li
-							key={s.id.toString()}
-							className="flex items-center gap-3 border-b py-2.5 last:border-b-0"
-						>
-							<div className="min-w-0 flex-1">
-								<span>{periodLabel(s)}</span>
-								<span className="ml-2 text-sm text-muted-foreground tabular-nums">
-									{s.lineCount}{" "}
-									{s.lineCount === 1 ? "transaction" : "transactions"}
-								</span>
-							</div>
-							<Button
-								variant="link"
-								size="sm"
-								className="h-auto p-0 text-muted-foreground hover:text-foreground"
-								onClick={() => view(s)}
+					{periods.map((p) => {
+						const s =
+							p.statementId !== undefined ? byId.get(p.statementId) : undefined;
+						const label = period(p.start, p.end);
+						const meta =
+							p.status === S.MISSING
+								? "Missing"
+								: p.status === S.DUE
+									? "Due"
+									: [
+											s &&
+												`${s.lineCount} ${s.lineCount === 1 ? "transaction" : "transactions"}`,
+											p.status === S.UNBALANCED && "Doesn't add up",
+										]
+											.filter(Boolean)
+											.join(" · ");
+						return (
+							<li
+								key={`${label}-${p.statementId ?? ""}`}
+								className="flex items-center gap-3 border-b py-2.5 last:border-b-0"
 							>
-								View
-							</Button>
-							<Button
-								variant="link"
-								size="sm"
-								className="h-auto p-0 text-muted-foreground hover:text-foreground"
-								onClick={() => setConfirming(s)}
-							>
-								Delete
-							</Button>
-						</li>
-					))}
+								<div className="min-w-0 flex-1">
+									<span>{label}</span>
+									<span className="ml-2 text-sm text-muted-foreground tabular-nums">
+										{meta}
+									</span>
+								</div>
+								{s ? (
+									<>
+										<Button
+											variant="link"
+											size="sm"
+											className="h-auto p-0 text-muted-foreground hover:text-foreground"
+											onClick={() => view(s)}
+										>
+											View
+										</Button>
+										<Button
+											variant="link"
+											size="sm"
+											className="h-auto p-0 text-muted-foreground hover:text-foreground"
+											onClick={() => setConfirming(s)}
+										>
+											Delete
+										</Button>
+									</>
+								) : (
+									<Button
+										variant="link"
+										size="sm"
+										className="h-auto p-0 text-muted-foreground hover:text-foreground"
+										onClick={() => setUploading(true)}
+									>
+										Upload
+									</Button>
+								)}
+							</li>
+						);
+					})}
 				</ul>
 			)}
 
@@ -143,6 +209,12 @@ export function AccountStatements({ accountId }: { accountId: bigint }) {
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+			<ImportStatementsDialog
+				open={uploading}
+				onOpenChange={setUploading}
+				accounts={accounts}
+			/>
 		</div>
 	);
 }

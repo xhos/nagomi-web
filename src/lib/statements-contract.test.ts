@@ -9,11 +9,19 @@ import {
 	TransactionDirection,
 	TransactionSource,
 } from "@/gen/nagomi/v1/enums_pb";
+import { StatementCoverageStatus } from "@/gen/nagomi/v1/statement_pb";
 import {
 	ReconciliationAction,
 	ReconciliationKeepReason,
 } from "@/gen/nagomi/v1/statement_services_pb";
 import { accountClient, statementClient } from "./demo/clients";
+import {
+	type CoveragePeriod,
+	type CoverageSettings,
+	type CoverageStatement,
+	planCoverage,
+	utcDay,
+} from "./demo/coverage";
 import { db, demoPdf } from "./demo/data";
 import {
 	dayNumber,
@@ -294,4 +302,196 @@ test("a demo statement upload previews and commits a real reconciliation", async
 	assert.equal(r.updatedCount, count(ReconciliationAction.UPDATE_AMOUNT));
 	assert.equal(r.createdCount, count(ReconciliationAction.CREATE));
 	assert.equal(r.deletedCount, count(ReconciliationAction.DELETE));
+});
+
+// core's TestPlanCoverage cases (nagomi-core internal/service/statement_coverage_test.go)
+test("the demo plans statement coverage exactly like core", () => {
+	const day = (m: number, d: number) => utcDay(2026, m, d);
+	const S = StatementCoverageStatus;
+	const stmt = (id: number, start: Date, end: Date, balanceOk?: boolean) => ({
+		id: BigInt(id),
+		start,
+		end,
+		balanceOk,
+	});
+	const imported = (id: number, start: Date, end: Date) => ({
+		start,
+		end,
+		status: S.IMPORTED,
+		statementId: BigInt(id),
+	});
+	const missing = (start: Date, end: Date) => ({
+		start,
+		end,
+		status: S.MISSING,
+	});
+	const due = (start: Date, end: Date) => ({ start, end, status: S.DUE });
+
+	const cases: [
+		string,
+		CoverageStatement[],
+		CoverageSettings,
+		Date,
+		CoveragePeriod[],
+	][] = [
+		["nothing imported and no start", [], {}, day(3, 1), []],
+		[
+			"nothing imported: one stretch from the start",
+			[],
+			{ statementsStart: day(1, 1) },
+			day(3, 1),
+			[missing(day(1, 1), day(3, 1))],
+		],
+		[
+			"nothing imported: the stretch stops at closing",
+			[],
+			{ statementsStart: day(1, 1), closedAt: day(2, 1) },
+			day(3, 1),
+			[missing(day(1, 1), day(2, 1))],
+		],
+		[
+			"next period isn't due until it has ended and come out",
+			[stmt(1, day(1, 15), day(2, 14))],
+			{},
+			day(3, 16),
+			[imported(1, day(1, 15), day(2, 14))],
+		],
+		[
+			"due a few days after the period ends",
+			[stmt(1, day(1, 15), day(2, 14))],
+			{},
+			day(3, 17),
+			[imported(1, day(1, 15), day(2, 14)), due(day(2, 15), day(3, 14))],
+		],
+		[
+			"several periods due",
+			[stmt(1, day(1, 15), day(2, 14))],
+			{},
+			day(4, 20),
+			[
+				imported(1, day(1, 15), day(2, 14)),
+				due(day(2, 15), day(3, 14)),
+				due(day(3, 15), day(4, 14)),
+			],
+		],
+		[
+			"release day later in the month",
+			[stmt(1, day(1, 15), day(2, 14))],
+			{ releaseDay: 20 },
+			day(3, 19),
+			[imported(1, day(1, 15), day(2, 14))],
+		],
+		[
+			"release day before the period end falls in the next month",
+			[stmt(1, day(1, 15), day(2, 14))],
+			{ releaseDay: 10 },
+			day(4, 10),
+			[imported(1, day(1, 15), day(2, 14)), due(day(2, 15), day(3, 14))],
+		],
+		[
+			"nothing due after closing",
+			[stmt(1, day(1, 15), day(2, 14))],
+			{ closedAt: day(3, 1) },
+			day(6, 1),
+			[imported(1, day(1, 15), day(2, 14)), due(day(2, 15), day(3, 14))],
+		],
+		[
+			"gap between statements, a period per month",
+			[stmt(1, day(1, 15), day(2, 14)), stmt(2, day(4, 15), day(5, 14))],
+			{},
+			day(5, 15),
+			[
+				imported(1, day(1, 15), day(2, 14)),
+				missing(day(2, 15), day(3, 14)),
+				missing(day(3, 15), day(4, 14)),
+				imported(2, day(4, 15), day(5, 14)),
+			],
+		],
+		[
+			"gap shorter than a month at its end",
+			[stmt(1, day(1, 15), day(2, 14)), stmt(2, day(3, 20), day(4, 19))],
+			{},
+			day(4, 20),
+			[
+				imported(1, day(1, 15), day(2, 14)),
+				missing(day(2, 15), day(3, 14)),
+				missing(day(3, 15), day(3, 19)),
+				imported(2, day(3, 20), day(4, 19)),
+			],
+		],
+		[
+			"overlapping statements leave no gap",
+			[stmt(1, day(1, 15), day(2, 14)), stmt(2, day(2, 1), day(2, 28))],
+			{},
+			day(3, 1),
+			[imported(1, day(1, 15), day(2, 14)), imported(2, day(2, 1), day(2, 28))],
+		],
+		[
+			"missing before the first statement, back to the start",
+			[stmt(1, day(3, 15), day(4, 14))],
+			{ statementsStart: day(1, 15) },
+			day(4, 15),
+			[
+				missing(day(1, 15), day(2, 14)),
+				missing(day(2, 15), day(3, 14)),
+				imported(1, day(3, 15), day(4, 14)),
+			],
+		],
+		[
+			"a start inside the previous period doesn't expect it",
+			[stmt(1, day(3, 15), day(4, 14))],
+			{ statementsStart: day(2, 20) },
+			day(4, 15),
+			[imported(1, day(3, 15), day(4, 14))],
+		],
+		[
+			"statement that doesn't add up",
+			[stmt(1, day(1, 15), day(2, 14), false)],
+			{},
+			day(2, 15),
+			[
+				{
+					start: day(1, 15),
+					end: day(2, 14),
+					status: S.UNBALANCED,
+					statementId: BigInt(1),
+				},
+			],
+		],
+		[
+			"month-end cycle keeps ending on the last day",
+			[stmt(1, day(1, 1), day(1, 31))],
+			{},
+			day(4, 5),
+			[
+				imported(1, day(1, 1), day(1, 31)),
+				due(day(2, 1), day(2, 28)),
+				due(day(3, 1), day(3, 31)),
+			],
+		],
+	];
+
+	for (const [name, statements, settings, today, want] of cases)
+		assert.deepEqual(planCoverage(statements, settings, today), want, name);
+});
+
+test("the demo account's coverage shows its missing month and the misread statement", async () => {
+	const chequing = db.accounts.find((a) => a.aliases.includes("5163878"));
+	assert.ok(chequing);
+	// earlier tests may have imported the missing month; count what's left
+	const { periods } = await statementClient.getStatementCoverage({
+		userId: "demo",
+		accountId: chequing.id,
+	});
+	const statuses = periods.map((p) => p.status);
+	assert.ok(statuses.includes(StatementCoverageStatus.UNBALANCED));
+	assert.ok(periods.every((p) => p.start && p.end));
+
+	const { alerts } = await statementClient.listStatementAlerts({
+		userId: "demo",
+	});
+	assert.ok(
+		alerts.every((a) => a.period?.status !== StatementCoverageStatus.IMPORTED),
+	);
+	assert.ok(alerts.some((a) => a.accountId === chequing.id));
 });

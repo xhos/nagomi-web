@@ -6,7 +6,8 @@ import {
 	type MessageShape,
 } from "@bufbuild/protobuf";
 import { type Client, Code, ConnectError } from "@connectrpc/connect";
-import { AccountSchema } from "@/gen/nagomi/v1/account_pb";
+import { DateSchema, type Date as ProtoDate } from "@/gen/google/type/date_pb";
+import { type Account, AccountSchema } from "@/gen/nagomi/v1/account_pb";
 import {
 	AccountService,
 	AddAccountAliasResponseSchema,
@@ -75,13 +76,17 @@ import {
 } from "@/gen/nagomi/v1/statement_parser_pb";
 import {
 	type Statement,
+	StatementCoveragePeriodSchema,
+	StatementCoverageStatus,
 	StatementSchema,
 	StatementStatus,
 } from "@/gen/nagomi/v1/statement_pb";
 import {
 	CommitStatementImportResponseSchema,
 	DeleteStatementResponseSchema,
+	GetStatementCoverageResponseSchema,
 	GetStatementResponseSchema,
+	ListStatementAlertsResponseSchema,
 	ListStatementsResponseSchema,
 	PlanStatementImportResponseSchema,
 	PreviewStatementImportResponseSchema,
@@ -101,6 +106,7 @@ import {
 	TransactionService,
 	UpdateTransactionResponseSchema,
 } from "@/gen/nagomi/v1/transaction_services_pb";
+import { planCoverage, utcDay } from "./coverage";
 import {
 	cents,
 	DEMO_HOLD,
@@ -1102,6 +1108,51 @@ function previewOf(id: bigint) {
 	});
 }
 
+const fromUtc = (d: Date) =>
+	create(DateSchema, {
+		year: d.getUTCFullYear(),
+		month: d.getUTCMonth() + 1,
+		day: d.getUTCDate(),
+	});
+const toUtc = (d?: ProtoDate) =>
+	d ? utcDay(d.year, d.month, d.day) : undefined;
+
+// core's GetStatementCoverage for one account, as the demo's periods
+function coverageOf(acc: Account) {
+	const statements = db.statements
+		.filter(
+			(s) => s.accountId === acc.id && s.status === StatementStatus.IMPORTED,
+		)
+		.sort(
+			(a, b) =>
+				(toUtc(a.periodStart)?.getTime() ?? 0) -
+					(toUtc(b.periodStart)?.getTime() ?? 0) || Number(a.id - b.id),
+		)
+		.map((s) => ({
+			id: s.id,
+			start: toUtc(s.periodStart) ?? new Date(0),
+			end: toUtc(s.periodEnd) ?? new Date(0),
+			balanceOk: s.balanceOk,
+		}));
+	const today = new Date();
+	return planCoverage(
+		statements,
+		{
+			statementsStart: toUtc(acc.statementsStart),
+			releaseDay: acc.statementReleaseDay,
+			closedAt: toUtc(acc.closedAt),
+		},
+		utcDay(today.getFullYear(), today.getMonth() + 1, today.getDate()),
+	).map((p) =>
+		create(StatementCoveragePeriodSchema, {
+			start: fromUtc(p.start),
+			end: fromUtc(p.end),
+			status: p.status,
+			statementId: p.statementId,
+		}),
+	);
+}
+
 const pendingOnly = (s: Statement, op: string) => {
 	if (s.status !== StatementStatus.PENDING)
 		throw new ConnectError(
@@ -1263,6 +1314,34 @@ export const statementClient = fake(StatementService, {
 		return create(GetStatementResponseSchema, {
 			statement: s,
 			pdfData: file.pdf.length ? file.pdf : demoPdf([s.fileName]),
+		});
+	},
+	async getStatementCoverage(r) {
+		const acc = account(r.accountId);
+		if (!acc) throw new Error("account not found");
+		if (!acc.statementDriven)
+			throw new ConnectError(
+				`StatementService.Coverage: account "${acc.name}" isn't statement-driven: validation failed`,
+				Code.InvalidArgument,
+			);
+		return create(GetStatementCoverageResponseSchema, {
+			periods: coverageOf(acc),
+		});
+	},
+	async listStatementAlerts() {
+		const accounts = db.accounts
+			.filter((a) => a.statementDriven)
+			.sort((a, b) => a.name.localeCompare(b.name) || Number(a.id - b.id));
+		return create(ListStatementAlertsResponseSchema, {
+			alerts: accounts.flatMap((acc) =>
+				coverageOf(acc)
+					.filter((p) => p.status !== StatementCoverageStatus.IMPORTED)
+					.map((period) => ({
+						accountId: acc.id,
+						accountName: acc.name,
+						period,
+					})),
+			),
 		});
 	},
 	async deleteStatement(r) {

@@ -130,6 +130,8 @@ export function useUpdateAccount() {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["accounts"] });
+			// statement settings move missing and due periods
+			queryClient.invalidateQueries({ queryKey: ["statements"] });
 			queryClient.invalidateQueries({ queryKey: ["transactions"] });
 			queryClient.invalidateQueries({ queryKey: ["accountBalance"] });
 		},
