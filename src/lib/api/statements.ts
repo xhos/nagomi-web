@@ -5,6 +5,7 @@ import {
 	DeleteStatementRequestSchema,
 	GetStatementRequestSchema,
 	ListStatementsRequestSchema,
+	PlanStatementImportRequestSchema,
 	PreviewStatementImportRequestSchema,
 } from "@/gen/nagomi/v1/statement_services_pb";
 import { statementClient } from "@/lib/grpc-client";
@@ -21,6 +22,18 @@ export const statementsApi = {
 			fileName,
 		});
 		return statementClient.previewStatementImport(request);
+	},
+
+	// what committing into an account other than the matched one would do
+	async plan(userId: string, statementId: bigint, accountId: bigint) {
+		const request = create(PlanStatementImportRequestSchema, {
+			userId,
+			statementId,
+			accountId,
+		});
+		const response = await statementClient.planStatementImport(request);
+		if (!response.reconciliation) throw new Error("no reconciliation");
+		return response.reconciliation;
 	},
 
 	async commit(userId: string, statementId: bigint, target: StatementTarget) {

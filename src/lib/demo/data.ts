@@ -8,14 +8,21 @@ import {
 	type Connection,
 	ConnectionSchema,
 } from "@/gen/nagomi/v1/connection_services_pb";
-import { AccountType, TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
+import {
+	AccountType,
+	TransactionDirection,
+	TransactionSource,
+} from "@/gen/nagomi/v1/enums_pb";
 import {
 	type Receipt,
 	ReceiptSchema,
 	ReceiptStatus,
 } from "@/gen/nagomi/v1/receipt_pb";
 import { type Rule, RuleSchema } from "@/gen/nagomi/v1/rule_pb";
-import type { ParsedStatementLine } from "@/gen/nagomi/v1/statement_parser_pb";
+import {
+	type ParsedStatementLine,
+	ParsedStatementLineSchema,
+} from "@/gen/nagomi/v1/statement_parser_pb";
 import {
 	type Statement,
 	StatementSchema,
@@ -88,6 +95,25 @@ export const statementFiles = new Map<
 	bigint,
 	{ hash: string; pdf: Uint8Array; lines: ParsedStatementLine[] }
 >();
+
+// core's line ids: stable per line; identical lines are told apart by the order they appear in
+export function lineExternalIds(lines: ParsedStatementLine[]) {
+	const seen = new Map<string, number>();
+	return lines.map((l) => {
+		const d = l.date;
+		const key = `${d?.year}-${d?.month}-${d?.day}|${l.amountCents}|${l.direction}|${l.description}`;
+		const occurrence = seen.get(key) ?? 0;
+		seen.set(key, occurrence + 1);
+		return `stmt:${key}|${occurrence}`;
+	});
+}
+
+// seeded email transactions a demo statement upload changes
+export const DEMO_TIPPED_CENTS = 14_200;
+export const DEMO_HOLD = "FAIRMONT ROYAL YORK HOLD";
+
+// transaction id -> the statement that confirmed it; core's transactions.statement_id
+export const statementLinks = new Map<bigint, bigint>();
 
 // a one-page pdf with a few lines of text, so "view statement" opens something real
 export function demoPdf(lines: string[]): Uint8Array {
@@ -849,19 +875,88 @@ function seed() {
 		}),
 	);
 
-	// monthly statements for the chequing account, one month missing
+	// monthly statements for the chequing account, one month missing. its
+	// transactions arrive by email and each statement confirms its month's
 	chequing.aliases.push("5163878");
 	chequing.statementDriven = true;
+	// in the missing month: a dinner whose email shows the bill before the tip, and a
+	// hotel hold that was released and never posts. a demo upload of that month's
+	// statement corrects the one and drops the other (see linesFromTransactions)
+	const missing = new Date(today.getFullYear(), today.getMonth() - 4, 1);
+	addTx({
+		account: chequing,
+		date: addDays(missing, 7),
+		amount: DEMO_TIPPED_CENTS,
+		direction: OUT,
+		merchant: "Bar Isabel",
+		description: "BAR ISABEL TORONTO",
+		category: "food.dining",
+	});
+	addTx({
+		account: chequing,
+		date: addDays(missing, 9),
+		amount: 30_000,
+		direction: OUT,
+		merchant: "Fairmont Royal York",
+		description: DEMO_HOLD,
+		category: "travel",
+	});
+	syncBalances(chequing.id);
+	for (const t of db.transactions)
+		if (t.accountId === chequing.id) t.source = TransactionSource.EMAIL;
 	for (let back = 11; back >= 1; back--) {
 		if (back === 4) continue;
 		const from = new Date(today.getFullYear(), today.getMonth() - back, 1);
 		const to = new Date(today.getFullYear(), today.getMonth() - back + 1, 0);
 		if (from < start) continue;
-		const inPeriod = db.transactions.filter((t) => {
-			const d = tsDate(t.txDate);
-			return t.accountId === chequing.id && d >= from && d <= addDays(to, 1);
-		});
+		const inPeriod = db.transactions
+			.filter((t) => {
+				const d = tsDate(t.txDate);
+				return (
+					t.accountId === chequing.id &&
+					!t.splitFromId &&
+					d >= from &&
+					d < addDays(to, 1)
+				);
+			})
+			.sort(
+				(a, b) =>
+					Number(a.txDate?.seconds ?? 0) - Number(b.txDate?.seconds ?? 0) ||
+					Number(a.id - b.id),
+			);
+		const lines = inPeriod.map((t) =>
+			create(ParsedStatementLineSchema, {
+				date: pdate(tsDate(t.txDate)),
+				postingDate: pdate(tsDate(t.txDate)),
+				amountCents: BigInt(cents(t.txAmount)),
+				direction: t.direction,
+				description: t.description ?? "",
+			}),
+		);
 		const id = nextId();
+		const ids = lineExternalIds(lines);
+		inPeriod.forEach((t, i) => {
+			t.externalId = ids[i];
+			t.source = TransactionSource.STATEMENT;
+			statementLinks.set(t.id, id);
+		});
+		const before = db.transactions
+			.filter(
+				(t) =>
+					t.accountId === chequing.id &&
+					tsDate(t.txDate) < from &&
+					t.balanceAfter,
+			)
+			.at(-1);
+		const opening = before
+			? cents(before.balanceAfter)
+			: cents(chequing.anchorBalance);
+		const net = lines.reduce(
+			(sum, l) => sum + (l.direction === IN ? 1 : -1) * Number(l.amountCents),
+			0,
+		);
+		// one statement the parser misread, so a "doesn't add up" month shows
+		const misread = back === 7 ? 1_000 : 0;
 		const month = from.toLocaleString("en", { month: "long", year: "numeric" });
 		db.statements.push(
 			create(StatementSchema, {
@@ -877,7 +972,10 @@ function seed() {
 				periodStart: pdate(from),
 				periodEnd: pdate(to),
 				currency: CUR,
-				lineCount: inPeriod.length,
+				openingBalanceCents: BigInt(opening),
+				closingBalanceCents: BigInt(opening + net + misread),
+				balanceOk: misread === 0,
+				lineCount: lines.length,
 				createdAt: ts(addDays(to, 3)),
 				importedAt: ts(addDays(to, 3)),
 			}),
@@ -890,7 +988,7 @@ function seed() {
 				"Account 5163878",
 				`${inPeriod.length} transactions`,
 			]),
-			lines: [],
+			lines,
 		});
 	}
 }

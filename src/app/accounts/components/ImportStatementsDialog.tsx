@@ -1,6 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
 import { Upload, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -13,11 +12,10 @@ import {
 } from "@/components/ui/dialog";
 import { FormError, NativeSelect } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
-import type { Date as ProtoDate } from "@/gen/google/type/date_pb";
 import type { Account } from "@/gen/nagomi/v1/account_pb";
-import {
-	type PreviewStatementImportResponse,
-	ReconciliationAction,
+import type {
+	PreviewStatementImportResponse,
+	StatementReconciliation,
 } from "@/gen/nagomi/v1/statement_services_pb";
 import { useUserId } from "@/hooks/useSession";
 import { useInvalidateStatementData } from "@/hooks/useStatements";
@@ -28,6 +26,8 @@ import {
 	statementsApi,
 } from "@/lib/api/statements";
 import { accountTypeName } from "@/lib/utils/account";
+import { periodLabel } from "@/lib/utils/statement";
+import { ReconciliationSummary } from "./ReconciliationSummary";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 const NEW_ACCOUNT = "new";
@@ -47,18 +47,41 @@ type Item = {
 	target: string;
 	newName: string;
 	error?: string;
-	result?: { created: number; skipped: number; accountName: string };
+	// what committing into target does; the preview's when target is the matched account
+	plan?: StatementReconciliation;
+	planning?: boolean;
+	result?: string;
 };
 
-const day = (d?: ProtoDate) =>
-	d ? new Date(d.year, d.month - 1, d.day) : null;
+const period = (preview: PreviewStatementImportResponse) =>
+	periodLabel(preview.statement?.periodStart, preview.statement?.periodEnd);
 
-function period(preview: PreviewStatementImportResponse) {
-	const from = day(preview.statement?.periodStart);
-	const to = day(preview.statement?.periodEnd);
-	if (!from || !to) return null;
-	const sameYear = from.getFullYear() === to.getFullYear();
-	return `${format(from, sameYear ? "MMM d" : "MMM d, yyyy")} – ${format(to, "MMM d, yyyy")}`;
+// "14 confirmed, 1 updated, 2 added and 1 deleted in chequing."
+function resultSentence(
+	r: {
+		confirmedCount: number;
+		updatedCount: number;
+		createdCount: number;
+		deletedCount: number;
+		keptCount: number;
+	},
+	accountName: string,
+) {
+	const parts = [
+		[r.confirmedCount, "confirmed"],
+		[r.updatedCount, "updated"],
+		[r.createdCount, "added"],
+		[r.deletedCount, "deleted"],
+		[r.keptCount, "kept"],
+	]
+		.filter(([n]) => (n as number) > 0)
+		.map(([n, label]) => `${n} ${label}`);
+	if (parts.length === 0) return `Nothing changed in ${accountName}.`;
+	const list =
+		parts.length === 1
+			? parts[0]
+			: `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
+	return `${list[0].toUpperCase()}${list.slice(1)} in ${accountName}.`;
 }
 
 interface ImportStatementsDialogProps {
@@ -98,6 +121,7 @@ export function ImportStatementsDialog({
 			update(item.key, {
 				status: "ready",
 				preview,
+				plan: matched ? preview.reconciliation : undefined,
 				target: matched?.id.toString() ?? "",
 				newName: s ? `${s.bank} ${accountTypeName(s.accountType)}` : "",
 			});
@@ -141,6 +165,41 @@ export function ImportStatementsDialog({
 		for (const item of added) read(item);
 	};
 
+	// a different account than the one the preview planned against needs its own plan
+	const choose = async (item: Item, target: string) => {
+		const preview = item.preview;
+		const statementId = preview?.statement?.id;
+		const planned = preview?.reconciliation;
+		if (target === "" || target === NEW_ACCOUNT || !userId || !statementId) {
+			update(item.key, { target, plan: undefined, planning: false });
+			return;
+		}
+		if (planned && planned.accountId.toString() === target) {
+			update(item.key, { target, plan: planned, planning: false });
+			return;
+		}
+		update(item.key, { target, plan: undefined, planning: true });
+		try {
+			const plan = await statementsApi.plan(
+				userId,
+				statementId,
+				BigInt(target),
+			);
+			setItems((xs) =>
+				xs.map((x) =>
+					x.key === item.key && x.target === target
+						? { ...x, plan, planning: false }
+						: x,
+				),
+			);
+		} catch (e) {
+			update(item.key, {
+				planning: false,
+				error: statementErrorMessage(e, "Couldn't plan this import."),
+			});
+		}
+	};
+
 	const ready = items.filter((x) => x.status === "ready");
 	const canImport =
 		!importing &&
@@ -149,6 +208,7 @@ export function ImportStatementsDialog({
 		ready.every(
 			(x) =>
 				x.target !== "" &&
+				!x.planning &&
 				(x.target !== NEW_ACCOUNT || x.newName.trim() !== ""),
 		);
 
@@ -175,11 +235,7 @@ export function ImportStatementsDialog({
 					created.set(name, r.statement.accountId);
 				update(item.key, {
 					status: "imported",
-					result: {
-						created: r.createdCount,
-						skipped: r.duplicateCount,
-						accountName: r.statement?.accountName ?? "",
-					},
+					result: resultSentence(r, r.statement?.accountName ?? "the account"),
 				});
 			} catch (e) {
 				update(item.key, {
@@ -250,6 +306,7 @@ export function ImportStatementsDialog({
 									accounts={targets}
 									busy={importing}
 									onChange={(patch) => update(item.key, patch)}
+									onChoose={(target) => choose(item, target)}
 									onRemove={() =>
 										setItems((xs) => xs.filter((x) => x.key !== item.key))
 									}
@@ -283,12 +340,14 @@ function StatementItem({
 	accounts,
 	busy,
 	onChange,
+	onChoose,
 	onRemove,
 }: {
 	item: Item;
 	accounts: Account[];
 	busy: boolean;
 	onChange: (patch: Partial<Item>) => void;
+	onChoose: (target: string) => void;
 	onRemove: () => void;
 }) {
 	const s = item.preview?.statement;
@@ -298,13 +357,6 @@ function StatementItem({
 				.filter(Boolean)
 				.join(" · ")
 		: null;
-	const matched =
-		item.preview?.matchedAccountId !== undefined &&
-		item.target === item.preview.matchedAccountId.toString();
-	const duplicates =
-		item.preview?.reconciliation?.items.filter(
-			(i) => i.action === ReconciliationAction.ALREADY_IMPORTED,
-		).length ?? 0;
 	const lineCount = s?.lineCount ?? 0;
 
 	return (
@@ -350,12 +402,7 @@ function StatementItem({
 				<p className="mt-1 text-sm text-muted-foreground">Importing…</p>
 			)}
 			{item.status === "imported" && item.result && (
-				<p className="mt-1 text-sm text-muted-foreground">
-					Added {item.result.created} to {item.result.accountName}
-					{item.result.skipped > 0 &&
-						`, ${item.result.skipped} were already there`}
-					.
-				</p>
+				<p className="mt-1 text-sm text-muted-foreground">{item.result}</p>
 			)}
 
 			{item.status === "ready" && (
@@ -364,7 +411,7 @@ function StatementItem({
 						<NativeSelect
 							aria-label="Account"
 							value={item.target}
-							onChange={(e) => onChange({ target: e.target.value })}
+							onChange={(e) => onChoose(e.target.value)}
 							disabled={busy}
 							className="sm:flex-1"
 						>
@@ -388,11 +435,27 @@ function StatementItem({
 							/>
 						)}
 					</div>
-					{matched && duplicates > 0 && (
+					{s?.balanceOk === false && (
+						<p className="text-sm">
+							Its lines don't add up to the statement's balances, so some may
+							have been misread.
+						</p>
+					)}
+					{item.planning && (
+						<p className="text-sm text-muted-foreground">Checking…</p>
+					)}
+					{item.plan && item.preview && (
+						<ReconciliationSummary
+							reconciliation={item.plan}
+							lines={item.preview.lines}
+							currency={s?.currency ?? "CAD"}
+						/>
+					)}
+					{item.target === NEW_ACCOUNT && (
 						<p className="text-sm text-muted-foreground">
-							{duplicates === lineCount
-								? "All of these are already in this account."
-								: `${duplicates} of these are already in this account.`}
+							{lineCount === 1
+								? "Its 1 transaction is added."
+								: `All ${lineCount} transactions are added.`}
 						</p>
 					)}
 					{item.error && (

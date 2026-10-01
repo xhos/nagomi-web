@@ -1,6 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
 import { useState } from "react";
 import {
 	AlertDialog,
@@ -14,22 +13,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Date as ProtoDate } from "@/gen/google/type/date_pb";
 import type { Statement } from "@/gen/nagomi/v1/statement_pb";
 import { useUserId } from "@/hooks/useSession";
 import { useDeleteStatement, useStatements } from "@/hooks/useStatements";
 import { statementsApi } from "@/lib/api/statements";
+import { periodLabel as period } from "@/lib/utils/statement";
 
-const day = (d?: ProtoDate) =>
-	d ? new Date(d.year, d.month - 1, d.day) : null;
-
-function periodLabel(s: Statement) {
-	const from = day(s.periodStart);
-	const to = day(s.periodEnd);
-	if (!from || !to) return s.fileName;
-	const sameYear = from.getFullYear() === to.getFullYear();
-	return `${format(from, sameYear ? "MMM d" : "MMM d, yyyy")} – ${format(to, "MMM d, yyyy")}`;
-}
+const periodLabel = (s: Statement) =>
+	period(s.periodStart, s.periodEnd) ?? s.fileName;
 
 export function AccountStatements({ accountId }: { accountId: bigint }) {
 	const userId = useUserId();
