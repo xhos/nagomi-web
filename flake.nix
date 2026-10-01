@@ -35,7 +35,11 @@
             enable = true;
             excludes = ["bun\\.nix"];
           };
-          biome.enable = true;
+          biome = {
+            enable = true;
+            # biome.json ignores generated code; a batch of only those files fails the hook
+            excludes = ["^src/gen/"];
+          };
 
           typecheck = {
             enable = true;
