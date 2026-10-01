@@ -36,12 +36,15 @@ export default function TransactionsPage() {
 	const [searchInput, setSearchInput] = useState("");
 	const [searchQuery, setSearchQuery] = useState("");
 	const [filtersOpen, setFiltersOpen] = useState(false);
-	const [filters, setFilters] = useState<TransactionFilters>(() =>
-		typeof window !== "undefined" &&
-		new URLSearchParams(window.location.search).get("uncategorized") === "1"
-			? { uncategorized: true }
-			: {},
-	);
+	const [filters, setFilters] = useState<TransactionFilters>({});
+	// ?uncategorized=1, from the overview. read after mount: during render a
+	// client-side navigation hasn't updated the url yet, and the server never sees it
+	useEffect(() => {
+		if (
+			new URLSearchParams(window.location.search).get("uncategorized") === "1"
+		)
+			setFilters({ uncategorized: true });
+	}, []);
 	const [rulePrefill, setRulePrefill] = useState<{
 		ruleName: string;
 		condition: UICondition;
