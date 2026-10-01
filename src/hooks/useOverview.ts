@@ -11,6 +11,8 @@ import {
 } from "date-fns";
 import type { Account } from "@/gen/nagomi/v1/account_pb";
 import { AccountType, TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
+import { StatementCoverageStatus } from "@/gen/nagomi/v1/statement_pb";
+import type { StatementAlert } from "@/gen/nagomi/v1/statement_services_pb";
 import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { dashboardApi } from "@/lib/api/dashboard";
 import { transactionsApi } from "@/lib/api/transactions";
@@ -24,6 +26,7 @@ import { useConnections } from "./useConnections";
 import { useUnlinkedReceiptCount } from "./useReceipts";
 import { useUserId } from "./useSession";
 import { useFriendBalances } from "./useSplits";
+import { useStatementAlerts } from "./useStatements";
 import { useUncategorizedCount } from "./useTransactionsQuery";
 
 const { DIRECTION_INCOMING: IN, DIRECTION_OUTGOING: OUT } =
@@ -61,12 +64,49 @@ export interface AccountRow {
 	reportingBalance?: number;
 }
 export interface Attention {
-	kind: "uncategorized" | "receipts" | "friend" | "sync" | "rates";
+	kind:
+		| "uncategorized"
+		| "receipts"
+		| "friend"
+		| "sync"
+		| "rates"
+		| "statements";
 	text: string;
 	href: string;
 	amount?: number;
 	originalAmount?: number;
 	originalCurrency?: string;
+}
+
+const STATEMENT_ALERT_TEXT: [StatementCoverageStatus, string, string][] = [
+	[StatementCoverageStatus.MISSING, "statement missing", "statements missing"],
+	[StatementCoverageStatus.DUE, "statement due", "statements due"],
+	[
+		StatementCoverageStatus.UNBALANCED,
+		"statement doesn't add up",
+		"statements don't add up",
+	],
+];
+
+// one item per account and kind of problem: "chequing: 2 statements due"
+function statementAttention(
+	alerts: StatementAlert[],
+	accounts: Account[],
+): Attention[] {
+	const items: Attention[] = [];
+	for (const account of accounts) {
+		const mine = alerts.filter((a) => a.accountId === account.id);
+		for (const [status, one, many] of STATEMENT_ALERT_TEXT) {
+			const n = mine.filter((a) => a.period?.status === status).length;
+			if (!n) continue;
+			items.push({
+				kind: "statements",
+				text: `${account.friendlyName || account.name}: ${n} ${n === 1 ? one : many}`,
+				href: `/accounts?account=${account.id}`,
+			});
+		}
+	}
+	return items;
 }
 
 const txDate = (t: Transaction) =>
@@ -109,6 +149,7 @@ export function useOverview(month: Date) {
 	const receipts = useUnlinkedReceiptCount();
 	const friends = useFriendBalances();
 	const uncategorized = useUncategorizedCount();
+	const statementAlerts = useStatementAlerts();
 
 	const txQuery = useQuery({
 		queryKey: [
@@ -152,6 +193,7 @@ export function useOverview(month: Date) {
 			receipts,
 			friends,
 			uncategorized,
+			statementAlerts,
 			txQuery,
 		].some((q) => q.isLoading);
 	const error =
@@ -161,6 +203,7 @@ export function useOverview(month: Date) {
 		receipts.error ??
 		friends.error ??
 		uncategorized.error ??
+		statementAlerts.error ??
 		txQuery.error ??
 		ratesQuery.error;
 	const rates = ratesQuery.data ?? {};
@@ -407,6 +450,7 @@ export function useOverview(month: Date) {
 			originalCurrency: f.balance?.currencyCode,
 		});
 	}
+	attention.push(...statementAttention(statementAlerts.data ?? [], accounts));
 	if (unconverted.length)
 		attention.push({
 			kind: "rates",

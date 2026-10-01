@@ -1,7 +1,7 @@
 "use client";
 
 import { FileUp, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -56,6 +56,12 @@ export default function AccountsPage() {
 	const { mergeAccountsAsync } = useMergeAccounts();
 
 	const [expandedId, setExpandedId] = useState<string | null>(null);
+	// ?account=<id> opens that account, e.g. from an overview alert. read after
+	// mount: on a client-side navigation the url isn't updated during render
+	useEffect(() => {
+		const id = new URLSearchParams(window.location.search).get("account");
+		if (id) setExpandedId(id);
+	}, []);
 	const [creatingOpen, setCreatingOpen] = useState(false);
 	const [importOpen, setImportOpen] = useState(false);
 	const [editing, setEditing] = useState<Account | null>(null);
