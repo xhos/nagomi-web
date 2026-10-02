@@ -48,31 +48,18 @@ test("statement settings are set, kept, and cleared through the update mask like
 		);
 
 	await update({
-		updateMask: { paths: ["statements_start", "statement_release_day"] },
+		updateMask: { paths: ["statements_start"] },
 		statementsStart: create(DateSchema, { year: 2025, month: 1, day: 1 }),
-		statementReleaseDay: 16,
 	});
 	assert.equal(acct.statementsStart?.year, 2025);
-	assert.equal(acct.statementReleaseDay, 16);
 
 	// not masked: left alone
 	await update({ updateMask: { paths: ["name"] }, name: acct.name });
-	assert.equal(acct.statementReleaseDay, 16);
+	assert.equal(acct.statementsStart?.year, 2025);
 
 	// masked and unset: cleared
-	await update({
-		updateMask: { paths: ["statements_start", "statement_release_day"] },
-	});
+	await update({ updateMask: { paths: ["statements_start"] } });
 	assert.equal(acct.statementsStart, undefined);
-	assert.equal(acct.statementReleaseDay, undefined);
-
-	await assert.rejects(
-		update({
-			updateMask: { paths: ["statement_release_day"] },
-			statementReleaseDay: 32,
-		}),
-		(e) => ConnectError.from(e).code === Code.InvalidArgument,
-	);
 });
 
 test("statements import only into statement-driven accounts, and new ones are statement-driven", async () => {
@@ -350,17 +337,17 @@ test("the demo plans statement coverage exactly like core", () => {
 			[missing(day(1, 1), day(2, 1))],
 		],
 		[
-			"next period isn't due until it has ended and come out",
+			"next period isn't due on its last day",
 			[stmt(1, day(1, 15), day(2, 14))],
 			{},
-			day(3, 16),
+			day(3, 14),
 			[imported(1, day(1, 15), day(2, 14))],
 		],
 		[
-			"due a few days after the period ends",
+			"due the day after the period ends",
 			[stmt(1, day(1, 15), day(2, 14))],
 			{},
-			day(3, 17),
+			day(3, 15),
 			[imported(1, day(1, 15), day(2, 14)), due(day(2, 15), day(3, 14))],
 		],
 		[
@@ -373,20 +360,6 @@ test("the demo plans statement coverage exactly like core", () => {
 				due(day(2, 15), day(3, 14)),
 				due(day(3, 15), day(4, 14)),
 			],
-		],
-		[
-			"release day later in the month",
-			[stmt(1, day(1, 15), day(2, 14))],
-			{ releaseDay: 20 },
-			day(3, 19),
-			[imported(1, day(1, 15), day(2, 14))],
-		],
-		[
-			"release day before the period end falls in the next month",
-			[stmt(1, day(1, 15), day(2, 14))],
-			{ releaseDay: 10 },
-			day(4, 10),
-			[imported(1, day(1, 15), day(2, 14)), due(day(2, 15), day(3, 14))],
 		],
 		[
 			"nothing due after closing",

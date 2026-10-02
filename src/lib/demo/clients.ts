@@ -233,12 +233,6 @@ export const accountClient = fake(AccountService, {
 	async updateAccount(req) {
 		const a = account(req.id);
 		if (!a) throw new Error("account not found");
-		const day = req.statementReleaseDay;
-		if (day !== undefined && (day < 1 || day > 31))
-			throw new ConnectError(
-				`AccountService.Update: statement release day must be 1-31, got ${day}: validation failed`,
-				Code.InvalidArgument,
-			);
 		for (const p of req.updateMask?.paths ?? []) {
 			if (p === "name" && req.name !== undefined) a.name = req.name;
 			if (p === "bank" && req.bank !== undefined) a.bank = req.bank;
@@ -253,9 +247,8 @@ export const accountClient = fake(AccountService, {
 			if (p === "anchor_date" && req.anchorDate) a.anchorDate = req.anchorDate;
 			if (p === "statement_driven" && req.statementDriven !== undefined)
 				a.statementDriven = req.statementDriven;
-			// like core: masked and unset clears these three
+			// like core: masked and unset clears these two
 			if (p === "statements_start") a.statementsStart = req.statementsStart;
-			if (p === "statement_release_day") a.statementReleaseDay = day;
 			if (p === "closed_at") a.closedAt = req.closedAt;
 		}
 		a.updatedAt = now();
@@ -1140,7 +1133,6 @@ function coverageOf(acc: Account) {
 		statements,
 		{
 			statementsStart: toUtc(acc.statementsStart),
-			releaseDay: acc.statementReleaseDay,
 			closedAt: toUtc(acc.closedAt),
 		},
 		utcDay(today.getFullYear(), today.getMonth() + 1, today.getDate()),

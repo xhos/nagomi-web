@@ -3,8 +3,6 @@
 // planCoverage mirrors core's planCoverage; keep them in step.
 import { StatementCoverageStatus } from "@/gen/nagomi/v1/statement_pb";
 
-// without a release day, a statement is due this many days after its period ends
-const RELEASE_LAG_DAYS = 3;
 // bounds the periods generated around a statement, in case of a decades-old one
 const MAX_PERIODS = 600;
 
@@ -38,7 +36,6 @@ export interface CoverageStatement {
 export interface CoverageSettings {
 	// periods starting before this aren't expected
 	statementsStart?: Date;
-	releaseDay?: number;
 	// periods starting after this aren't expected
 	closedAt?: Date;
 }
@@ -48,22 +45,6 @@ export interface CoveragePeriod {
 	end: Date;
 	status: StatementCoverageStatus;
 	statementId?: bigint;
-}
-
-function releaseDate(end: Date, releaseDay?: number) {
-	if (releaseDay === undefined) return addDays(end, RELEASE_LAG_DAYS);
-	let release = dayInMonth(
-		end.getUTCFullYear(),
-		end.getUTCMonth() + 1,
-		releaseDay,
-	);
-	if (release <= end)
-		release = dayInMonth(
-			end.getUTCFullYear(),
-			end.getUTCMonth() + 2,
-			releaseDay,
-		);
-	return release;
 }
 
 function monthlyPeriods(from: Date, to: Date, status: StatementCoverageStatus) {
@@ -136,7 +117,8 @@ export function planCoverage(
 		const start = addDays(addMonthsClamped(covered, i - 1), 1);
 		const end = addMonthsClamped(covered, i);
 		if (settings.closedAt && start > settings.closedAt) break;
-		if (releaseDate(end, settings.releaseDay) > today) break;
+		// due the day after it ends; the bank may take a day or two to release it
+		if (end >= today) break;
 		out.push({ start, end, status: StatementCoverageStatus.DUE });
 	}
 

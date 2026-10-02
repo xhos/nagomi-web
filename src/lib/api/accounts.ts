@@ -33,7 +33,6 @@ export interface CreateAccountInput {
 // unset clears the setting
 export interface StatementSettings {
 	statementsStart?: ProtoDate;
-	statementReleaseDay?: number;
 	closedAt?: ProtoDate;
 }
 
@@ -100,8 +99,7 @@ export const accountsApi = {
 		if (data.mainCurrency !== undefined) maskPaths.push("main_currency");
 		if (data.statementDriven !== undefined) maskPaths.push("statement_driven");
 		// masked and unset clears them
-		if (data.statementSettings)
-			maskPaths.push("statements_start", "statement_release_day", "closed_at");
+		if (data.statementSettings) maskPaths.push("statements_start", "closed_at");
 		const request = create(UpdateAccountRequestSchema, {
 			userId: data.userId,
 			id: data.id,

@@ -71,7 +71,6 @@ export function AccountDialog({
 	const [newAlias, setNewAlias] = useState("");
 	const [statementDriven, setStatementDriven] = useState(false);
 	const [statementsStart, setStatementsStart] = useState("");
-	const [releaseDay, setReleaseDay] = useState("");
 	const [closedAt, setClosedAt] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -89,7 +88,6 @@ export function AccountDialog({
 		setNewAlias("");
 		setStatementDriven(account?.statementDriven ?? false);
 		setStatementsStart(protoDateToInput(account?.statementsStart));
-		setReleaseDay(account?.statementReleaseDay?.toString() ?? "");
 		setClosedAt(protoDateToInput(account?.closedAt));
 		setError(null);
 	}, [account, open]);
@@ -115,14 +113,6 @@ export function AccountDialog({
 			setError("Name and bank are required.");
 			return;
 		}
-		const day = releaseDay ? Number(releaseDay) : undefined;
-		if (
-			day !== undefined &&
-			!(Number.isInteger(day) && day >= 1 && day <= 31)
-		) {
-			setError("Release day must be a day of the month, 1 to 31.");
-			return;
-		}
 		setSaving(true);
 		setError(null);
 		try {
@@ -141,7 +131,6 @@ export function AccountDialog({
 					statementDriven && !isFriend
 						? {
 								statementsStart: inputToProtoDate(statementsStart),
-								statementReleaseDay: day,
 								closedAt: inputToProtoDate(closedAt),
 							}
 						: undefined,
@@ -276,7 +265,7 @@ export function AccountDialog({
 								</span>
 							</label>
 							{statementDriven && (
-								<div className="grid gap-4 sm:grid-cols-3">
+								<div className="grid gap-4 sm:grid-cols-2">
 									<Field
 										label="First statement"
 										htmlFor="acct-statements-start"
@@ -287,22 +276,6 @@ export function AccountDialog({
 											type="date"
 											value={statementsStart}
 											onChange={(e) => setStatementsStart(e.target.value)}
-										/>
-									</Field>
-									<Field
-										label="Release day"
-										htmlFor="acct-release-day"
-										hint="Otherwise 3 days after a period ends."
-									>
-										<Input
-											id="acct-release-day"
-											type="number"
-											min={1}
-											max={31}
-											step={1}
-											value={releaseDay}
-											onChange={(e) => setReleaseDay(e.target.value)}
-											placeholder="Day of month"
 										/>
 									</Field>
 									<Field
