@@ -15,14 +15,15 @@ export interface CreateConnectionInput {
 }
 
 export const connectionsApi = {
-	async list() {
-		const request = create(ListConnectionsRequestSchema, {});
+	async list(userId: string) {
+		const request = create(ListConnectionsRequestSchema, { userId });
 		const response = await connectionsClient.listConnections(request);
 		return response.connections;
 	},
 
-	async create(data: CreateConnectionInput) {
+	async create(userId: string, data: CreateConnectionInput) {
 		const request = create(CreateConnectionRequestSchema, {
+			userId,
 			provider: data.provider,
 			credentials: data.credentials,
 			syncIntervalMinutes: data.syncIntervalMinutes,
@@ -31,8 +32,8 @@ export const connectionsApi = {
 		return response.id;
 	},
 
-	async delete(id: bigint) {
-		const request = create(DeleteConnectionRequestSchema, { id });
+	async delete(userId: string, id: bigint) {
+		const request = create(DeleteConnectionRequestSchema, { userId, id });
 		await connectionsClient.deleteConnection(request);
 	},
 

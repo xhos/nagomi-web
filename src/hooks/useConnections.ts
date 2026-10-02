@@ -17,7 +17,7 @@ export function useConnections() {
 		error,
 	} = useQuery({
 		queryKey: ["connections", userId],
-		queryFn: () => connectionsApi.list(),
+		queryFn: () => connectionsApi.list(userId as string),
 		enabled: !!userId,
 		staleTime: 60 * 1000,
 		refetchInterval: (query) =>
@@ -55,10 +55,14 @@ export function useConnections() {
 }
 
 export function useCreateConnection() {
+	const userId = useUserId();
 	const queryClient = useQueryClient();
 
 	const mutation = useMutation({
-		mutationFn: (data: CreateConnectionInput) => connectionsApi.create(data),
+		mutationFn: async (data: CreateConnectionInput) => {
+			if (!userId) throw new Error("User not authenticated");
+			return connectionsApi.create(userId, data);
+		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["connections"] });
 		},
@@ -74,10 +78,14 @@ export function useCreateConnection() {
 }
 
 export function useDeleteConnection() {
+	const userId = useUserId();
 	const queryClient = useQueryClient();
 
 	const mutation = useMutation({
-		mutationFn: (id: bigint) => connectionsApi.delete(id),
+		mutationFn: async (id: bigint) => {
+			if (!userId) throw new Error("User not authenticated");
+			return connectionsApi.delete(userId, id);
+		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["connections"] });
 		},
