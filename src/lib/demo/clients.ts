@@ -219,7 +219,7 @@ export const accountClient = fake(AccountService, {
 			type: req.type,
 			friendlyName: req.friendlyName,
 			mainCurrency: req.mainCurrency || "CAD",
-			colors: req.colors ?? [],
+			color: req.color ?? "#3b82f6",
 			statementDriven: req.statementDriven,
 			anchorBalance: money(cents(req.anchorBalance), req.mainCurrency || "CAD"),
 			anchorDate: now(),
@@ -247,7 +247,7 @@ export const accountClient = fake(AccountService, {
 			if (p === "friendly_name") a.friendlyName = req.friendlyName;
 			if (p === "main_currency" && req.mainCurrency)
 				a.mainCurrency = req.mainCurrency;
-			if (p === "colors" && req.colors.length) a.colors = req.colors;
+			if (p === "color" && req.color) a.color = req.color;
 			if (p === "anchor_balance" && req.anchorBalance)
 				a.anchorBalance = money(cents(req.anchorBalance), a.mainCurrency);
 			if (p === "anchor_date" && req.anchorDate) a.anchorDate = req.anchorDate;
@@ -1250,7 +1250,7 @@ export const statementClient = fake(StatementService, {
 				bank: s.bank,
 				type: s.accountType,
 				mainCurrency: s.currency,
-				colors: ["#1f2937", "#3b82f6", "#10b981"],
+				color: "#3b82f6",
 				statementDriven: true,
 				anchorBalance: money(0, s.currency),
 				anchorDate: now(),

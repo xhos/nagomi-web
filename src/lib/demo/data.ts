@@ -213,7 +213,7 @@ function addAccount(
 	type: AccountType,
 	anchor: number,
 	anchorDate: Date,
-	colors: string[],
+	color: string,
 	friendlyName?: string,
 	currency = CUR,
 ) {
@@ -225,7 +225,7 @@ function addAccount(
 		type,
 		friendlyName,
 		mainCurrency: currency,
-		colors,
+		color,
 		anchorBalance: money(anchor, currency),
 		anchorDate: ts(anchorDate),
 		createdAt: ts(anchorDate),
@@ -303,7 +303,7 @@ function seed() {
 		AccountType.ACCOUNT_CHEQUING,
 		318_240,
 		start,
-		["#064e3b", "#10b981", "#a7f3d0"],
+		"#10b981",
 		"chequing",
 	);
 	const savings = addAccount(
@@ -312,7 +312,7 @@ function seed() {
 		AccountType.ACCOUNT_SAVINGS,
 		1_240_000,
 		start,
-		["#7c2d12", "#f97316", "#fed7aa"],
+		"#f97316",
 		"savings",
 	);
 	const credit = addAccount(
@@ -321,7 +321,7 @@ function seed() {
 		AccountType.ACCOUNT_CREDIT_CARD,
 		-42_310,
 		start,
-		["#1e1b4b", "#6366f1", "#c7d2fe"],
+		"#6366f1",
 		"cobalt",
 	);
 	const tfsa = addAccount(
@@ -330,7 +330,7 @@ function seed() {
 		AccountType.ACCOUNT_INVESTMENT,
 		1_860_000,
 		start,
-		["#0c4a6e", "#0ea5e9", "#bae6fd"],
+		"#0ea5e9",
 		"tfsa",
 	);
 	addAccount(
@@ -339,16 +339,12 @@ function seed() {
 		AccountType.ACCOUNT_SAVINGS,
 		250_000,
 		start,
-		["#64748b"],
+		"#64748b",
 		"US dollars",
 		"USD",
 	);
 	const friends = ["alex", "sam", "jordan"].map((n) =>
-		addAccount(n, "friend", AccountType.ACCOUNT_FRIEND, 0, start, [
-			"#1f2937",
-			"#3b82f6",
-			"#10b981",
-		]),
+		addAccount(n, "friend", AccountType.ACCOUNT_FRIEND, 0, start, "#3b82f6"),
 	);
 
 	// biweekly salary

@@ -78,7 +78,7 @@ export default function AccountsPage() {
 				accountType: data.type,
 				friendlyName: data.friendlyName,
 				mainCurrency: data.mainCurrency,
-				colors: data.colors,
+				color: data.color,
 				statementDriven: data.statementDriven,
 				statementSettings: data.statementSettings,
 			});
@@ -93,7 +93,6 @@ export default function AccountsPage() {
 					bank: created.bank,
 					accountType: created.type,
 					friendlyName: created.friendlyName,
-					colors: created.colors,
 					statementSettings: s,
 				});
 		}

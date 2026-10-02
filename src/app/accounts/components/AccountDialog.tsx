@@ -32,7 +32,7 @@ export interface AccountFormData {
 	friendlyName?: string;
 	anchorBalance?: { currencyCode: string; units: string; nanos: number };
 	mainCurrency?: string;
-	colors?: string[];
+	color?: string;
 	statementDriven: boolean;
 	// only for statement-driven accounts
 	statementSettings?: StatementSettings;
@@ -45,7 +45,7 @@ interface AccountDialogProps {
 	onSave: (data: AccountFormData) => Promise<void>;
 }
 
-const DEFAULT_COLORS = ["#1f2937", "#3b82f6", "#10b981"];
+const DEFAULT_COLOR = "#3b82f6";
 
 export function AccountDialog({
 	open,
@@ -65,7 +65,7 @@ export function AccountDialog({
 	const [bank, setBank] = useState("");
 	const [type, setType] = useState<AccountType>(AccountType.ACCOUNT_CHEQUING);
 	const [mainCurrency, setMainCurrency] = useState("USD");
-	const [colors, setColors] = useState(DEFAULT_COLORS);
+	const [color, setColor] = useState(DEFAULT_COLOR);
 	const [initialBalance, setInitialBalance] = useState("0");
 	const [aliases, setAliases] = useState<string[]>([]);
 	const [newAlias, setNewAlias] = useState("");
@@ -83,7 +83,7 @@ export function AccountDialog({
 		setBank(account?.bank ?? "");
 		setType(account?.type ?? AccountType.ACCOUNT_CHEQUING);
 		setMainCurrency(account?.mainCurrency || "USD");
-		setColors(account?.colors.length ? account.colors : DEFAULT_COLORS);
+		setColor(account?.color || DEFAULT_COLOR);
 		setInitialBalance("0");
 		setAliases(account?.aliases.filter((a) => a !== account.name) ?? []);
 		setNewAlias("");
@@ -135,7 +135,7 @@ export function AccountDialog({
 					account && mainCurrency === account.mainCurrency
 						? undefined
 						: mainCurrency,
-				colors,
+				color,
 				statementDriven: statementDriven && !isFriend,
 				statementSettings:
 					statementDriven && !isFriend
@@ -240,17 +240,9 @@ export function AccountDialog({
 								placeholder="Optional"
 							/>
 						</Field>
-						<Field label="Colors">
-							<div className="flex h-9 items-center gap-2">
-								{colors.map((color, i) => (
-									<ColorSwatch
-										key={`${i}-${color}`}
-										color={color}
-										onChange={(c) =>
-											setColors((cs) => cs.map((x, j) => (j === i ? c : x)))
-										}
-									/>
-								))}
+						<Field label="Color">
+							<div className="flex h-9 items-center">
+								<ColorSwatch color={color} onChange={setColor} />
 							</div>
 						</Field>
 						{!account && (

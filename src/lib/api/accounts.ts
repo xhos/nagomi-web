@@ -26,7 +26,7 @@ export interface CreateAccountInput {
 		nanos: number;
 	};
 	mainCurrency?: string;
-	colors?: string[];
+	color?: string;
 	statementDriven?: boolean;
 }
 
@@ -45,7 +45,7 @@ export interface UpdateAccountInput {
 	accountType: AccountType;
 	friendlyName?: string;
 	mainCurrency?: string;
-	colors?: string[];
+	color?: string;
 	statementDriven?: boolean;
 	// left out, the settings stay as they are
 	statementSettings?: StatementSettings;
@@ -82,7 +82,7 @@ export const accountsApi = {
 					}
 				: undefined,
 			mainCurrency: data.mainCurrency,
-			colors: data.colors,
+			color: data.color,
 			statementDriven: data.statementDriven,
 		});
 		const response = await accountClient.createAccount(request);
@@ -95,7 +95,7 @@ export const accountsApi = {
 			"bank",
 			"account_type",
 			"friendly_name",
-			"colors",
+			"color",
 		];
 		if (data.mainCurrency !== undefined) maskPaths.push("main_currency");
 		if (data.statementDriven !== undefined) maskPaths.push("statement_driven");
@@ -111,7 +111,7 @@ export const accountsApi = {
 			accountType: data.accountType,
 			friendlyName: data.friendlyName,
 			mainCurrency: data.mainCurrency,
-			colors: data.colors,
+			color: data.color,
 			statementDriven: data.statementDriven,
 			...data.statementSettings,
 		});

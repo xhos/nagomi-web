@@ -228,16 +228,11 @@ export function AccountRow({
 											</>
 										)}
 									</DetailRow>
-									<DetailRow label="Colors">
-										<span className="flex gap-1.5">
-											{account.colors.map((c, i) => (
-												<span
-													key={`${c}-${i}`}
-													className="size-4 rounded-full border"
-													style={{ backgroundColor: c }}
-												/>
-											))}
-										</span>
+									<DetailRow label="Color">
+										<span
+											className="block size-4 rounded-full border"
+											style={{ backgroundColor: account.color }}
+										/>
 									</DetailRow>
 									<DetailRow label="Created">
 										{stamp(account.createdAt) ?? "—"}
