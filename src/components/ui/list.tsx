@@ -49,7 +49,7 @@ export function ListRow({
 			}}
 			className={cn(
 				"group relative isolate cursor-pointer py-2 outline-none",
-				"before:absolute before:inset-y-0 before:-inset-x-3 before:-z-10 before:rounded-md before:transition-colors",
+				"before:absolute before:inset-y-1 before:-inset-x-3 before:-z-10 before:rounded-md before:transition-colors",
 				"hover:before:bg-muted/60 focus-visible:before:bg-muted/60 data-expanded:before:bg-muted/40",
 				"data-selected:before:bg-accent/10 data-selected:hover:before:bg-accent/15",
 				className,

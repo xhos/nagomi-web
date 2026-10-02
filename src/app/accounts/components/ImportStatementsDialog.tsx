@@ -266,7 +266,7 @@ export function ImportStatementsDialog({
 					<DialogTitle>import statements</DialogTitle>
 				</DialogHeader>
 
-				<div className="space-y-4">
+				<div className="min-w-0 space-y-4">
 					<button
 						type="button"
 						onDrop={(e) => {
