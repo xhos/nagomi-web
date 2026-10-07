@@ -47,6 +47,12 @@ import {
 	GetNetWorthHistoryResponseSchema,
 } from "@/gen/nagomi/v1/dashboard_services_pb";
 import {
+	EmailOutcome,
+	EmailService,
+	ListRecentEmailsResponseSchema,
+	ReceivedEmailSchema,
+} from "@/gen/nagomi/v1/email_services_pb";
+import {
 	AccountType,
 	Granularity,
 	PeriodType,
@@ -1395,5 +1401,55 @@ export const statementClient = fake(StatementService, {
 		return create(DeleteStatementResponseSchema, {
 			deletedTransactions: deleted,
 		});
+	},
+});
+
+// core keeps the last three emails per user; the demo starts with a forwarding
+// confirmation still waiting to be clicked
+const minutesAgo = (m: number) => ts(new Date(Date.now() - m * 60_000));
+const recentEmails = [
+	create(ReceivedEmailSchema, {
+		id: nextId(),
+		receivedAt: minutesAgo(2),
+		from: "Gmail Team <forwarding-noreply@google.com>",
+		subject:
+			"(#482913570) Gmail Forwarding Confirmation - Receive Mail from demo@nagomi.app",
+		outcome: EmailOutcome.UNRECOGNIZED,
+		body: [
+			"demo@nagomi.app has requested to automatically forward mail to your email",
+			"address 00000000-0000-4000-8000-000000000001@mail.nagomi.example.",
+			"",
+			"Confirmation code: 482913570",
+			"",
+			"To allow demo@nagomi.app to automatically forward mail to your address,",
+			"please click the link below to confirm the request:",
+			"",
+			"https://mail.google.com/mail/vf-%5BANGjdJ8demo%5D-confirm",
+			"",
+			"If you click the link and it appears to be broken, please copy and paste it",
+			"into a new browser window.",
+		].join("\n"),
+	}),
+	create(ReceivedEmailSchema, {
+		id: nextId(),
+		receivedAt: minutesAgo(95),
+		from: "RBC Royal Bank <notification@rbc.com>",
+		subject: "Payment Made",
+		outcome: EmailOutcome.IMPORTED,
+	}),
+	create(ReceivedEmailSchema, {
+		id: nextId(),
+		receivedAt: minutesAgo(60 * 26),
+		from: "RBC Royal Bank <notification@rbc.com>",
+		subject: "Deposit Notice",
+		outcome: EmailOutcome.FAILED,
+		error: "no account number in the email",
+		body: "RBC Royal Bank\n\nA deposit of $1,250.00 was made on October 5, 2026.",
+	}),
+];
+
+export const emailClient = fake(EmailService, {
+	async listRecentEmails() {
+		return create(ListRecentEmailsResponseSchema, { emails: recentEmails });
 	},
 });

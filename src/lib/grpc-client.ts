@@ -4,6 +4,7 @@ import { AccountService } from "@/gen/nagomi/v1/account_services_pb";
 import { CategoryService } from "@/gen/nagomi/v1/category_services_pb";
 import { ConnectionsService } from "@/gen/nagomi/v1/connection_services_pb";
 import { DashboardService } from "@/gen/nagomi/v1/dashboard_services_pb";
+import { EmailService } from "@/gen/nagomi/v1/email_services_pb";
 import { ReceiptService } from "@/gen/nagomi/v1/receipt_services_pb";
 import { RuleService } from "@/gen/nagomi/v1/rule_services_pb";
 import { StatementService } from "@/gen/nagomi/v1/statement_services_pb";
@@ -46,3 +47,6 @@ export const connectionsClient = DEMO
 export const statementClient = DEMO
 	? demo.statementClient
 	: createClient(StatementService, transport as Transport);
+export const emailClient = DEMO
+	? demo.emailClient
+	: createClient(EmailService, transport as Transport);

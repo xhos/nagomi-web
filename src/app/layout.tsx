@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { DEMO } from "@/lib/demo";
 import { gatewayUrl } from "@/lib/gateway-url";
+import { mailDomain } from "@/lib/mail-domain";
 import { QueryProvider } from "@/lib/query-client";
 
 // the gateway URL is read from the environment per request, never at build time
@@ -28,6 +29,7 @@ export default function RootLayout({
 			lang="en"
 			suppressHydrationWarning
 			data-gateway-url={DEMO ? undefined : gatewayUrl()}
+			data-mail-domain={mailDomain()}
 		>
 			<body className={`${satoshi.variable} antialiased`}>
 				<QueryProvider>

@@ -15,7 +15,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file nagomi/v1/rule_services.proto.
  */
 export const file_nagomi_v1_rule_services: GenFile = /*@__PURE__*/
-  fileDesc("Ch1uYWdvbWkvdjEvcnVsZV9zZXJ2aWNlcy5wcm90bxIJbmFnb21pLnYxIi0KEExpc3RSdWxlc1JlcXVlc3QSGQoHdXNlcl9pZBgBIAEoCUIIukgFcgOwAQEiMwoRTGlzdFJ1bGVzUmVzcG9uc2USHgoFcnVsZXMYASADKAsyDy5uYWdvbWkudjEuUnVsZSJGCg5HZXRSdWxlUmVxdWVzdBIZCgdydWxlX2lkGAEgASgJQgi6SAVyA7ABARIZCgd1c2VyX2lkGAIgASgJQgi6SAVyA7ABASIwCg9HZXRSdWxlUmVzcG9uc2USHQoEcnVsZRgBIAEoCzIPLm5hZ29taS52MS5SdWxlIv4BChFDcmVhdGVSdWxlUmVxdWVzdBIZCgd1c2VyX2lkGAEgASgJQgi6SAVyA7ABARIdCglydWxlX25hbWUYAiABKAlCCrpIB3IFEAEY/wESGAoLY2F0ZWdvcnlfaWQYAyABKANIAIgBARIrCgpjb25kaXRpb25zGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIeChFhcHBseV90b19leGlzdGluZxgFIAEoCEgBiAEBEhUKCG1lcmNoYW50GAYgASgJSAKIAQFCDgoMX2NhdGVnb3J5X2lkQhQKEl9hcHBseV90b19leGlzdGluZ0ILCglfbWVyY2hhbnQiMwoSQ3JlYXRlUnVsZVJlc3BvbnNlEh0KBHJ1bGUYASABKAsyDy5uYWdvbWkudjEuUnVsZSK7AwoRVXBkYXRlUnVsZVJlcXVlc3QSGQoHcnVsZV9pZBgBIAEoCUIIukgFcgOwAQESGQoHdXNlcl9pZBgCIAEoCUIIukgFcgOwAQESLwoLdXBkYXRlX21hc2sYAyABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrEhYKCXJ1bGVfbmFtZRgEIAEoCUgAiAEBEhgKC2NhdGVnb3J5X2lkGAUgASgDSAGIAQESMAoKY29uZGl0aW9ucxgGIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RIAogBARIWCglpc19hY3RpdmUYByABKAhIA4gBARIbCg5wcmlvcml0eV9vcmRlchgIIAEoBUgEiAEBEhUKCG1lcmNoYW50GAkgASgJSAWIAQESHgoRYXBwbHlfdG9fZXhpc3RpbmcYCiABKAhIBogBAUIMCgpfcnVsZV9uYW1lQg4KDF9jYXRlZ29yeV9pZEINCgtfY29uZGl0aW9uc0IMCgpfaXNfYWN0aXZlQhEKD19wcmlvcml0eV9vcmRlckILCglfbWVyY2hhbnRCFAoSX2FwcGx5X3RvX2V4aXN0aW5nIhQKElVwZGF0ZVJ1bGVSZXNwb25zZSJJChFEZWxldGVSdWxlUmVxdWVzdBIZCgdydWxlX2lkGAEgASgJQgi6SAVyA7ABARIZCgd1c2VyX2lkGAIgASgJQgi6SAVyA7ABASIrChJEZWxldGVSdWxlUmVzcG9uc2USFQoNYWZmZWN0ZWRfcm93cxgBIAEoAyJCChNWYWxpZGF0ZVJ1bGVSZXF1ZXN0EisKCmNvbmRpdGlvbnMYASABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Ij8KD1ZhbGlkYXRpb25FcnJvchINCgVmaWVsZBgBIAEoCRIPCgdtZXNzYWdlGAIgASgJEgwKBGNvZGUYAyABKAkiiQEKFFZhbGlkYXRlUnVsZVJlc3BvbnNlEg0KBXZhbGlkGAEgASgIEioKBmVycm9ycxgCIAMoCzIaLm5hZ29taS52MS5WYWxpZGF0aW9uRXJyb3ISNgoVbm9ybWFsaXplZF9jb25kaXRpb25zGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdDLJAwoLUnVsZVNlcnZpY2USRgoJTGlzdFJ1bGVzEhsubmFnb21pLnYxLkxpc3RSdWxlc1JlcXVlc3QaHC5uYWdvbWkudjEuTGlzdFJ1bGVzUmVzcG9uc2USQAoHR2V0UnVsZRIZLm5hZ29taS52MS5HZXRSdWxlUmVxdWVzdBoaLm5hZ29taS52MS5HZXRSdWxlUmVzcG9uc2USSQoKQ3JlYXRlUnVsZRIcLm5hZ29taS52MS5DcmVhdGVSdWxlUmVxdWVzdBodLm5hZ29taS52MS5DcmVhdGVSdWxlUmVzcG9uc2USSQoKVXBkYXRlUnVsZRIcLm5hZ29taS52MS5VcGRhdGVSdWxlUmVxdWVzdBodLm5hZ29taS52MS5VcGRhdGVSdWxlUmVzcG9uc2USSQoKRGVsZXRlUnVsZRIcLm5hZ29taS52MS5EZWxldGVSdWxlUmVxdWVzdBodLm5hZ29taS52MS5EZWxldGVSdWxlUmVzcG9uc2USTwoMVmFsaWRhdGVSdWxlEh4ubmFnb21pLnYxLlZhbGlkYXRlUnVsZVJlcXVlc3QaHy5uYWdvbWkudjEuVmFsaWRhdGVSdWxlUmVzcG9uc2ViBnByb3RvMw", [file_nagomi_v1_rule, file_buf_validate_validate, file_google_protobuf_field_mask, file_google_protobuf_struct]);
+  fileDesc("Ch1uYWdvbWkvdjEvcnVsZV9zZXJ2aWNlcy5wcm90bxIJbmFnb21pLnYxIi0KEExpc3RSdWxlc1JlcXVlc3QSGQoHdXNlcl9pZBgBIAEoCUIIukgFcgOwAQEiMwoRTGlzdFJ1bGVzUmVzcG9uc2USHgoFcnVsZXMYASADKAsyDy5uYWdvbWkudjEuUnVsZSJGCg5HZXRSdWxlUmVxdWVzdBIZCgdydWxlX2lkGAEgASgJQgi6SAVyA7ABARIZCgd1c2VyX2lkGAIgASgJQgi6SAVyA7ABASIwCg9HZXRSdWxlUmVzcG9uc2USHQoEcnVsZRgBIAEoCzIPLm5hZ29taS52MS5SdWxlIugCChFDcmVhdGVSdWxlUmVxdWVzdBIZCgd1c2VyX2lkGAEgASgJQgi6SAVyA7ABARIdCglydWxlX25hbWUYAiABKAlCCrpIB3IFEAEY/wESGAoLY2F0ZWdvcnlfaWQYAyABKANIAIgBARIrCgpjb25kaXRpb25zGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIeChFhcHBseV90b19leGlzdGluZxgFIAEoCEgBiAEBEhUKCG1lcmNoYW50GAYgASgJSAKIAQE6aLpIZRpjCg9hY3Rpb25fcmVxdWlyZWQSI2NhdGVnb3J5X2lkIG9yIG1lcmNoYW50IGlzIHJlcXVpcmVkGitoYXModGhpcy5jYXRlZ29yeV9pZCkgfHwgaGFzKHRoaXMubWVyY2hhbnQpQg4KDF9jYXRlZ29yeV9pZEIUChJfYXBwbHlfdG9fZXhpc3RpbmdCCwoJX21lcmNoYW50IjMKEkNyZWF0ZVJ1bGVSZXNwb25zZRIdCgRydWxlGAEgASgLMg8ubmFnb21pLnYxLlJ1bGUiuwMKEVVwZGF0ZVJ1bGVSZXF1ZXN0EhkKB3J1bGVfaWQYASABKAlCCLpIBXIDsAEBEhkKB3VzZXJfaWQYAiABKAlCCLpIBXIDsAEBEi8KC3VwZGF0ZV9tYXNrGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFzaxIWCglydWxlX25hbWUYBCABKAlIAIgBARIYCgtjYXRlZ29yeV9pZBgFIAEoA0gBiAEBEjAKCmNvbmRpdGlvbnMYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0SAKIAQESFgoJaXNfYWN0aXZlGAcgASgISAOIAQESGwoOcHJpb3JpdHlfb3JkZXIYCCABKAVIBIgBARIVCghtZXJjaGFudBgJIAEoCUgFiAEBEh4KEWFwcGx5X3RvX2V4aXN0aW5nGAogASgISAaIAQFCDAoKX3J1bGVfbmFtZUIOCgxfY2F0ZWdvcnlfaWRCDQoLX2NvbmRpdGlvbnNCDAoKX2lzX2FjdGl2ZUIRCg9fcHJpb3JpdHlfb3JkZXJCCwoJX21lcmNoYW50QhQKEl9hcHBseV90b19leGlzdGluZyIUChJVcGRhdGVSdWxlUmVzcG9uc2UiSQoRRGVsZXRlUnVsZVJlcXVlc3QSGQoHcnVsZV9pZBgBIAEoCUIIukgFcgOwAQESGQoHdXNlcl9pZBgCIAEoCUIIukgFcgOwAQEiKwoSRGVsZXRlUnVsZVJlc3BvbnNlEhUKDWFmZmVjdGVkX3Jvd3MYASABKAMy+AIKC1J1bGVTZXJ2aWNlEkYKCUxpc3RSdWxlcxIbLm5hZ29taS52MS5MaXN0UnVsZXNSZXF1ZXN0GhwubmFnb21pLnYxLkxpc3RSdWxlc1Jlc3BvbnNlEkAKB0dldFJ1bGUSGS5uYWdvbWkudjEuR2V0UnVsZVJlcXVlc3QaGi5uYWdvbWkudjEuR2V0UnVsZVJlc3BvbnNlEkkKCkNyZWF0ZVJ1bGUSHC5uYWdvbWkudjEuQ3JlYXRlUnVsZVJlcXVlc3QaHS5uYWdvbWkudjEuQ3JlYXRlUnVsZVJlc3BvbnNlEkkKClVwZGF0ZVJ1bGUSHC5uYWdvbWkudjEuVXBkYXRlUnVsZVJlcXVlc3QaHS5uYWdvbWkudjEuVXBkYXRlUnVsZVJlc3BvbnNlEkkKCkRlbGV0ZVJ1bGUSHC5uYWdvbWkudjEuRGVsZXRlUnVsZVJlcXVlc3QaHS5uYWdvbWkudjEuRGVsZXRlUnVsZVJlc3BvbnNlYgZwcm90bzM", [file_nagomi_v1_rule, file_buf_validate_validate, file_google_protobuf_field_mask, file_google_protobuf_struct]);
 
 /**
  * @generated from message nagomi.v1.ListRulesRequest
@@ -264,77 +264,6 @@ export const DeleteRuleResponseSchema: GenMessage<DeleteRuleResponse> = /*@__PUR
   messageDesc(file_nagomi_v1_rule_services, 9);
 
 /**
- * @generated from message nagomi.v1.ValidateRuleRequest
- */
-export type ValidateRuleRequest = Message<"nagomi.v1.ValidateRuleRequest"> & {
-  /**
-   * @generated from field: google.protobuf.Struct conditions = 1;
-   */
-  conditions?: JsonObject;
-};
-
-/**
- * Describes the message nagomi.v1.ValidateRuleRequest.
- * Use `create(ValidateRuleRequestSchema)` to create a new message.
- */
-export const ValidateRuleRequestSchema: GenMessage<ValidateRuleRequest> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_rule_services, 10);
-
-/**
- * @generated from message nagomi.v1.ValidationError
- */
-export type ValidationError = Message<"nagomi.v1.ValidationError"> & {
-  /**
-   * @generated from field: string field = 1;
-   */
-  field: string;
-
-  /**
-   * @generated from field: string message = 2;
-   */
-  message: string;
-
-  /**
-   * @generated from field: string code = 3;
-   */
-  code: string;
-};
-
-/**
- * Describes the message nagomi.v1.ValidationError.
- * Use `create(ValidationErrorSchema)` to create a new message.
- */
-export const ValidationErrorSchema: GenMessage<ValidationError> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_rule_services, 11);
-
-/**
- * @generated from message nagomi.v1.ValidateRuleResponse
- */
-export type ValidateRuleResponse = Message<"nagomi.v1.ValidateRuleResponse"> & {
-  /**
-   * @generated from field: bool valid = 1;
-   */
-  valid: boolean;
-
-  /**
-   * @generated from field: repeated nagomi.v1.ValidationError errors = 2;
-   */
-  errors: ValidationError[];
-
-  /**
-   * @generated from field: google.protobuf.Struct normalized_conditions = 3;
-   */
-  normalizedConditions?: JsonObject;
-};
-
-/**
- * Describes the message nagomi.v1.ValidateRuleResponse.
- * Use `create(ValidateRuleResponseSchema)` to create a new message.
- */
-export const ValidateRuleResponseSchema: GenMessage<ValidateRuleResponse> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_rule_services, 12);
-
-/**
  * @generated from service nagomi.v1.RuleService
  */
 export const RuleService: GenService<{
@@ -377,14 +306,6 @@ export const RuleService: GenService<{
     methodKind: "unary";
     input: typeof DeleteRuleRequestSchema;
     output: typeof DeleteRuleResponseSchema;
-  },
-  /**
-   * @generated from rpc nagomi.v1.RuleService.ValidateRule
-   */
-  validateRule: {
-    methodKind: "unary";
-    input: typeof ValidateRuleRequestSchema;
-    output: typeof ValidateRuleResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_nagomi_v1_rule_services, 0);

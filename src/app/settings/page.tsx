@@ -3,7 +3,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/forms";
 import {
@@ -11,11 +11,18 @@ import {
 	PageContent,
 	PageHeaderWithTitle,
 } from "@/components/ui/layout";
+import { ListGroup, ListRow } from "@/components/ui/list";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Connection } from "@/gen/nagomi/v1/connection_services_pb";
+import {
+	EmailOutcome,
+	type ReceivedEmail,
+} from "@/gen/nagomi/v1/email_services_pb";
 import { useConnections } from "@/hooks/useConnections";
+import { useRecentEmails } from "@/hooks/useRecentEmails";
 import { useSession, useUserId } from "@/hooks/useSession";
 import { authClient } from "@/lib/auth-client";
+import { mailDomain } from "@/lib/mail-domain";
 import { cn } from "@/lib/utils";
 import { ConnectProviderDialog } from "./components/ConnectProviderDialog";
 import { ManageConnectionDialog } from "./components/ManageConnectionDialog";
@@ -70,6 +77,15 @@ export default function SettingsPage() {
 					<Section title="appearance" description="Theme used on this device.">
 						<AppearanceSection />
 					</Section>
+
+					{mailDomain() && (
+						<Section
+							title="email import"
+							description="Forward bank alert emails to record transactions as they happen."
+						>
+							<EmailImportSection />
+						</Section>
+					)}
 
 					<Section
 						title="connections"
@@ -188,6 +204,186 @@ function AppearanceSection() {
 				<option value="system">System</option>
 			</NativeSelect>
 		</div>
+	);
+}
+
+const EMAIL_STEPS = [
+	"Turn on transaction alerts in your bank's app, sent to your usual inbox.",
+	"In your inbox, add the address above as a forwarding address and create a filter that forwards those alerts to it. If your provider sends a confirmation email, it shows up under recent emails below.",
+	"Alerts are matched to accounts by bank and the last digits of the card or account. Add those digits as an account alias, or a new account is created on the first alert.",
+];
+
+function EmailImportSection() {
+	const userId = useUserId();
+	const [copied, setCopied] = useState(false);
+
+	useEffect(() => {
+		if (!copied) return;
+		const timer = setTimeout(() => setCopied(false), 2000);
+		return () => clearTimeout(timer);
+	}, [copied]);
+
+	if (!userId) return <Skeleton className="h-4 w-72" />;
+
+	const address = `${userId}@${mailDomain()}`;
+
+	const onCopy = async () => {
+		await navigator.clipboard.writeText(address);
+		setCopied(true);
+	};
+
+	return (
+		<div className="space-y-4 text-sm">
+			<div className="flex items-center justify-between gap-4">
+				<div className="min-w-0">
+					<div className="text-muted-foreground">Forwarding address</div>
+					<div className="break-all">{address}</div>
+				</div>
+				<Button variant="outline" size="sm" onClick={onCopy}>
+					{copied ? "Copied" : "Copy"}
+				</Button>
+			</div>
+			<ol className="list-decimal space-y-2 pl-4 text-muted-foreground">
+				{EMAIL_STEPS.map((step) => (
+					<li key={step}>{step}</li>
+				))}
+			</ol>
+			<p className="text-muted-foreground">
+				Supported alerts: RBC purchases, payments, deposits, withdrawals and
+				credits; Wise card spending.
+			</p>
+			<RecentEmails />
+		</div>
+	);
+}
+
+const OUTCOME_LABELS: Record<EmailOutcome, string> = {
+	[EmailOutcome.UNSPECIFIED]: "Received",
+	[EmailOutcome.IMPORTED]: "Imported",
+	[EmailOutcome.UNRECOGNIZED]: "Not a bank alert",
+	[EmailOutcome.FAILED]: "Not imported",
+};
+
+function RecentEmails() {
+	const { emails, isLoading, error } = useRecentEmails();
+	const [expandedId, setExpandedId] = useState<bigint | null>(null);
+
+	return (
+		<ListGroup title="recent emails" note="Last 3 kept" className="pt-4">
+			{isLoading ? (
+				<div className="space-y-2 py-2">
+					<Skeleton className="h-4 w-56" />
+					<Skeleton className="h-4 w-40" />
+				</div>
+			) : error ? (
+				<p className="py-2 text-destructive">
+					Couldn't load recent emails: {String(error)}
+				</p>
+			) : emails.length === 0 ? (
+				<p className="py-2 text-muted-foreground">
+					Nothing received yet. Forwarded emails appear here.
+				</p>
+			) : (
+				emails.map((e) => (
+					<EmailRow
+						key={String(e.id)}
+						email={e}
+						expanded={expandedId === e.id}
+						onToggle={() => setExpandedId(expandedId === e.id ? null : e.id)}
+					/>
+				))
+			)}
+		</ListGroup>
+	);
+}
+
+function EmailRow({
+	email,
+	expanded,
+	onToggle,
+}: {
+	email: ReceivedEmail;
+	expanded: boolean;
+	onToggle: () => void;
+}) {
+	const receivedAt = timestampToDate(email.receivedAt);
+	const hasDetails = !!(email.body || email.error);
+
+	const meta = (
+		<div className="truncate text-muted-foreground">
+			{senderName(email.from)} ·{" "}
+			<span
+				className={cn(
+					email.outcome === EmailOutcome.FAILED && "text-destructive",
+				)}
+			>
+				{OUTCOME_LABELS[email.outcome]}
+			</span>
+			{receivedAt &&
+				` · ${formatDistanceToNow(receivedAt, { addSuffix: true })}`}
+		</div>
+	);
+	const title = (
+		<div className="truncate font-medium">
+			{email.subject || "(no subject)"}
+		</div>
+	);
+
+	if (!hasDetails) {
+		return (
+			<div className="py-2">
+				{title}
+				{meta}
+			</div>
+		);
+	}
+
+	return (
+		<ListRow expanded={expanded} onClick={onToggle}>
+			{title}
+			{meta}
+			{expanded && (
+				<div
+					className="mt-2 space-y-2 cursor-auto"
+					onClick={(e) => e.stopPropagation()}
+				>
+					{email.error && <p className="text-destructive">{email.error}</p>}
+					{email.body && (
+						<div className="max-h-80 overflow-auto whitespace-pre-wrap break-words border-t pt-2 text-muted-foreground">
+							<Linkified text={email.body} />
+						</div>
+					)}
+				</div>
+			)}
+		</ListRow>
+	);
+}
+
+// "Gmail Team <forwarding-noreply@google.com>" -> "Gmail Team"
+function senderName(from: string) {
+	const match = from.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
+	if (!match) return from;
+	return match[1] || match[2];
+}
+
+const URL_PATTERN = /(https?:\/\/[^\s<>"]+)/g;
+
+// email bodies are plain text; only http(s) links become anchors
+function Linkified({ text }: { text: string }) {
+	return text.split(URL_PATTERN).map((part, i) =>
+		i % 2 === 1 ? (
+			<a
+				key={i}
+				href={part}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="break-all text-foreground underline underline-offset-2"
+			>
+				{part}
+			</a>
+		) : (
+			part
+		),
 	);
 }
 
