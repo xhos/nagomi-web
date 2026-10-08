@@ -8,6 +8,7 @@ import {
 	subDays,
 	subMonths,
 } from "date-fns";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
@@ -58,14 +59,18 @@ const chip = (on: boolean) =>
 function DateButton({
 	value,
 	placeholder,
+	open,
+	onOpenChange,
 	onChange,
 }: {
 	value?: Date;
 	placeholder: string;
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
 	onChange: (d?: Date) => void;
 }) {
 	return (
-		<Popover>
+		<Popover open={open} onOpenChange={onOpenChange}>
 			<PopoverTrigger asChild>
 				<Button
 					variant="outline"
@@ -90,6 +95,8 @@ export function TransactionFiltersPanel({
 	onFiltersChange,
 }: TransactionFiltersPanelProps) {
 	const { categories } = useCategories();
+	const [fromOpen, setFromOpen] = useState(false);
+	const [toOpen, setToOpen] = useState(false);
 	const set = <K extends keyof TransactionFilters>(
 		key: K,
 		value: TransactionFilters[K],
@@ -145,12 +152,22 @@ export function TransactionFiltersPanel({
 				<DateButton
 					value={filters.startDate}
 					placeholder="From"
-					onChange={(d) => set("startDate", d)}
+					open={fromOpen}
+					onOpenChange={setFromOpen}
+					onChange={(d) => {
+						set("startDate", d);
+						if (d) {
+							setFromOpen(false);
+							setToOpen(true);
+						}
+					}}
 				/>
 				<span className="text-muted-foreground">–</span>
 				<DateButton
 					value={filters.endDate}
 					placeholder="To"
+					open={toOpen}
+					onOpenChange={setToOpen}
 					onChange={(d) => set("endDate", d)}
 				/>
 			</div>
