@@ -31,6 +31,8 @@ import { ReconciliationSummary } from "./ReconciliationSummary";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 const NEW_ACCOUNT = "new";
+// a new account another statement above already asked for, by name
+const PENDING = "pending:";
 
 type Item = {
 	key: string;
@@ -51,6 +53,19 @@ type Item = {
 	plan?: StatementReconciliation;
 	planning?: boolean;
 	result?: string;
+};
+
+// same bank, account type and number, so it's the same account
+const sameAccount = (a: Item, b: Item) => {
+	const x = a.preview?.statement;
+	const y = b.preview?.statement;
+	return (
+		!!x &&
+		!!y &&
+		x.bank === y.bank &&
+		x.accountType === y.accountType &&
+		x.accountNumber === y.accountNumber
+	);
 };
 
 const period = (preview: PreviewStatementImportResponse) =>
@@ -299,11 +314,25 @@ export function ImportStatementsDialog({
 
 					{items.length > 0 && (
 						<ul className="max-h-[50vh] overflow-y-auto border-t">
-							{items.map((item) => (
+							{items.map((item, i) => (
 								<StatementItem
 									key={item.key}
 									item={item}
 									accounts={targets}
+									pendingNames={[
+										...new Set(
+											items
+												.slice(0, i)
+												.filter(
+													(x) =>
+														x.status === "ready" &&
+														x.target === NEW_ACCOUNT &&
+														x.newName.trim() !== "" &&
+														sameAccount(x, item),
+												)
+												.map((x) => x.newName.trim()),
+										),
+									]}
 									busy={importing}
 									onChange={(patch) => update(item.key, patch)}
 									onChoose={(target) => choose(item, target)}
@@ -338,6 +367,7 @@ export function ImportStatementsDialog({
 function StatementItem({
 	item,
 	accounts,
+	pendingNames,
 	busy,
 	onChange,
 	onChoose,
@@ -345,6 +375,7 @@ function StatementItem({
 }: {
 	item: Item;
 	accounts: Account[];
+	pendingNames: string[];
 	busy: boolean;
 	onChange: (patch: Partial<Item>) => void;
 	onChoose: (target: string) => void;
@@ -410,8 +441,19 @@ function StatementItem({
 					<div className="flex flex-col gap-2 sm:flex-row">
 						<NativeSelect
 							aria-label="Account"
-							value={item.target}
-							onChange={(e) => onChoose(e.target.value)}
+							value={
+								item.target === NEW_ACCOUNT &&
+								pendingNames.includes(item.newName.trim())
+									? `${PENDING}${item.newName.trim()}`
+									: item.target
+							}
+							onChange={(e) => {
+								const v = e.target.value;
+								if (v.startsWith(PENDING)) {
+									onChange({ newName: v.slice(PENDING.length) });
+									onChoose(NEW_ACCOUNT);
+								} else onChoose(v);
+							}}
 							disabled={busy}
 							className="sm:flex-1"
 						>
@@ -421,6 +463,11 @@ function StatementItem({
 							{accounts.map((a) => (
 								<option key={a.id.toString()} value={a.id.toString()}>
 									{a.friendlyName || a.name}
+								</option>
+							))}
+							{pendingNames.map((n) => (
+								<option key={n} value={`${PENDING}${n}`}>
+									{n} (new)
 								</option>
 							))}
 							<option value={NEW_ACCOUNT}>New account…</option>
