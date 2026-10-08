@@ -1,6 +1,9 @@
 import { create } from "@bufbuild/protobuf";
 import type { Cursor } from "@/gen/nagomi/v1/common_pb";
-import type { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
+import type {
+	TransactionDirection,
+	TransactionSource,
+} from "@/gen/nagomi/v1/enums_pb";
 import {
 	CreateTransactionRequestSchema,
 	DeleteTransactionRequestSchema,
@@ -41,6 +44,7 @@ export interface CreateTransactionInput {
 	merchant?: string;
 	userNotes?: string;
 	categoryId?: bigint;
+	source?: TransactionSource;
 }
 
 export interface UpdateTransactionInput {
@@ -186,6 +190,7 @@ export const transactionsApi = {
 				merchant: tx.merchant,
 				userNotes: tx.userNotes,
 				categoryId: tx.categoryId,
+				source: tx.source,
 			})),
 		});
 		const response = await transactionClient.createTransaction(request);

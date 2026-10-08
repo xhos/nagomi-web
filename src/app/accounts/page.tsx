@@ -1,6 +1,6 @@
 "use client";
 
-import { FileUp, Plus } from "lucide-react";
+import { FileSpreadsheet, FileUp, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
 	AlertDialog,
@@ -36,6 +36,7 @@ import {
 	type AccountFormData,
 } from "./components/AccountDialog";
 import { AccountRow } from "./components/AccountRow";
+import { ImportCsvDialog } from "./components/ImportCsvDialog";
 import { ImportStatementsDialog } from "./components/ImportStatementsDialog";
 import { MergeAccountDialog } from "./components/MergeAccountDialog";
 
@@ -64,6 +65,7 @@ export default function AccountsPage() {
 	}, []);
 	const [creatingOpen, setCreatingOpen] = useState(false);
 	const [importOpen, setImportOpen] = useState(false);
+	const [csvOpen, setCsvOpen] = useState(false);
 	const [editing, setEditing] = useState<Account | null>(null);
 	const [merging, setMerging] = useState<Account | null>(null);
 	const [deletingAccount, setDeletingAccount] = useState<Account | null>(null);
@@ -126,6 +128,10 @@ export default function AccountsPage() {
 							<Button variant="outline" onClick={() => setImportOpen(true)}>
 								<FileUp />
 								Import
+							</Button>
+							<Button variant="outline" onClick={() => setCsvOpen(true)}>
+								<FileSpreadsheet />
+								Import CSV
 							</Button>
 							<Button onClick={() => setCreatingOpen(true)} disabled={creating}>
 								<Plus />
@@ -213,6 +219,12 @@ export default function AccountsPage() {
 				<ImportStatementsDialog
 					open={importOpen}
 					onOpenChange={setImportOpen}
+					accounts={accounts}
+				/>
+
+				<ImportCsvDialog
+					open={csvOpen}
+					onOpenChange={setCsvOpen}
 					accounts={accounts}
 				/>
 
