@@ -37,13 +37,18 @@ export const connectionsApi = {
 		await connectionsClient.deleteConnection(request);
 	},
 
-	async triggerSync(id: bigint) {
-		const request = create(TriggerSyncRequestSchema, { id });
+	async triggerSync(userId: string, id: bigint) {
+		const request = create(TriggerSyncRequestSchema, { userId, id });
 		await connectionsClient.triggerSync(request);
 	},
 
-	async setSyncInterval(id: bigint, syncIntervalMinutes: number | undefined) {
+	async setSyncInterval(
+		userId: string,
+		id: bigint,
+		syncIntervalMinutes: number | undefined,
+	) {
 		const request = create(SetSyncIntervalRequestSchema, {
+			userId,
 			id,
 			syncIntervalMinutes,
 		});

@@ -100,10 +100,14 @@ export function useDeleteConnection() {
 }
 
 export function useTriggerSync() {
+	const userId = useUserId();
 	const queryClient = useQueryClient();
 
 	const mutation = useMutation({
-		mutationFn: (id: bigint) => connectionsApi.triggerSync(id),
+		mutationFn: async (id: bigint) => {
+			if (!userId) throw new Error("User not authenticated");
+			return connectionsApi.triggerSync(userId, id);
+		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["connections"] });
 		},
@@ -118,16 +122,20 @@ export function useTriggerSync() {
 }
 
 export function useSetSyncInterval() {
+	const userId = useUserId();
 	const queryClient = useQueryClient();
 
 	const mutation = useMutation({
-		mutationFn: ({
+		mutationFn: async ({
 			id,
 			syncIntervalMinutes,
 		}: {
 			id: bigint;
 			syncIntervalMinutes: number | undefined;
-		}) => connectionsApi.setSyncInterval(id, syncIntervalMinutes),
+		}) => {
+			if (!userId) throw new Error("User not authenticated");
+			return connectionsApi.setSyncInterval(userId, id, syncIntervalMinutes);
+		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["connections"] });
 		},
