@@ -4,7 +4,7 @@ import {
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type { TransactionFilters } from "@/app/transactions/components/TransactionFiltersPanel";
 import type { Cursor } from "@/gen/nagomi/v1/common_pb";
 import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
@@ -38,7 +38,7 @@ export function useTransactionsQuery({
 			if (!userId) throw new Error("User not authenticated");
 			return transactionsApi.list({
 				userId,
-				limit: 50,
+				limit: 100,
 				accountId,
 				cursor: pageParam,
 				descriptionQuery: searchQuery,
@@ -64,6 +64,12 @@ export function useTransactionsQuery({
 			transactionsQuery.data?.pages.flatMap((page) => page.transactions) ?? []
 		);
 	}, [transactionsQuery.data]);
+
+	const { fetchNextPage } = transactionsQuery;
+	const loadMore = useCallback(
+		() => fetchNextPage({ cancelRefetch: false }),
+		[fetchNextPage],
+	);
 
 	const hasNextPage = transactionsQuery.hasNextPage;
 	const isFetchingNextPage = transactionsQuery.isFetchingNextPage;
@@ -144,7 +150,8 @@ export function useTransactionsQuery({
 		isLoadingMore: isFetchingNextPage,
 
 		// Pagination
-		loadMore: transactionsQuery.fetchNextPage,
+		// never cancel an in-flight page; scroll handlers call this repeatedly
+		loadMore,
 
 		// Mutations
 		deleteTransactions: deleteTransactionsMutation.mutateAsync,

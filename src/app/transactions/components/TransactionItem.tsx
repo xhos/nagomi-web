@@ -11,7 +11,7 @@ import {
 	Split,
 	Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { ReceiptDetailDialog } from "@/app/receipts/components/ReceiptDetailDialog";
 import { Amount } from "@/components/ui/amount";
 import { CategoryPicker } from "@/components/ui/category-picker";
@@ -45,8 +45,8 @@ interface TransactionItemProps {
 	onSelect: (id: bigint, index: number, event: React.MouseEvent) => void;
 	globalIndex: number;
 	expanded: boolean;
-	onToggle: () => void;
-	onSetCategory: (category: Category | null) => void;
+	onToggle: (id: bigint) => void;
+	onSetCategory: (id: bigint, category: Category | null) => void;
 	getAccountDisplayName: (accountId: bigint, accountName?: string) => string;
 	onEdit?: (transaction: Transaction) => void;
 	onDelete?: (transaction: Transaction) => void;
@@ -55,7 +55,8 @@ interface TransactionItemProps {
 	inlineSplits?: Transaction[];
 }
 
-export function TransactionItem({
+// memoized: loading a page must not re-render every row already on screen
+export const TransactionItem = memo(function TransactionItem({
 	transaction,
 	isSelected,
 	onSelect,
@@ -94,7 +95,7 @@ export function TransactionItem({
 			onSelect(transaction.id, globalIndex, event);
 			return;
 		}
-		onToggle();
+		onToggle(transaction.id);
 	};
 
 	const handleCheck = (event: React.MouseEvent) => {
@@ -115,7 +116,7 @@ export function TransactionItem({
 		Separator: typeof ContextMenuSeparator,
 	) => (
 		<>
-			<Item onClick={onToggle}>
+			<Item onClick={() => onToggle(transaction.id)}>
 				<FileText /> {expanded ? "Collapse" : "Details"}
 			</Item>
 			{onEdit && (
@@ -190,7 +191,7 @@ export function TransactionItem({
 									{showMerchant && <span aria-hidden>·</span>}
 									<CategoryPicker
 										value={transaction.categoryId}
-										onChange={onSetCategory}
+										onChange={(c) => onSetCategory(transaction.id, c)}
 									>
 										<button
 											type="button"
@@ -354,4 +355,4 @@ export function TransactionItem({
 			)}
 		</>
 	);
-}
+});

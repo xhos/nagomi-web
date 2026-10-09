@@ -28,11 +28,13 @@ export function CategoryPicker({
 	const [open, setOpen] = useState(false);
 	const [query, setQuery] = useState("");
 
+	// closed pickers render per list row; skip the sort until one opens
 	const matches = useMemo(() => {
+		if (!open) return [];
 		const q = query.trim().toLowerCase();
 		const sorted = [...categories].sort((a, b) => a.slug.localeCompare(b.slug));
 		return q ? sorted.filter((c) => c.slug.toLowerCase().includes(q)) : sorted;
-	}, [categories, query]);
+	}, [categories, query, open]);
 
 	const pick = (c: Category | null) => {
 		onChange(c);
