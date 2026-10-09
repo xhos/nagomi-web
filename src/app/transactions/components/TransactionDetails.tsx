@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { DetailRow as Row } from "@/components/ui/list";
-import { TransactionDirection, TransferMethod } from "@/gen/nagomi/v1/enums_pb";
+import { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
 import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useForgiveTransaction } from "@/hooks/useSplits";
 import { formatAmount } from "@/lib/utils/transaction";
@@ -17,15 +17,7 @@ interface TransactionDetailsProps {
 	onCreateRule?: () => void;
 	onViewReceipt?: () => void;
 	onDelete?: () => void;
-	onUnlinkTransfer?: () => void;
 }
-
-const TRANSFER_METHOD: Record<TransferMethod, string> = {
-	[TransferMethod.UNSPECIFIED]: "",
-	[TransferMethod.REFERENCE]: "paired by the bank's reference",
-	[TransferMethod.MATCHED]: "matched automatically",
-	[TransferMethod.MANUAL]: "linked by you",
-};
 
 const stamp = (t?: { seconds?: bigint }) =>
 	t?.seconds
@@ -43,17 +35,11 @@ export function TransactionDetails({
 	onCreateRule,
 	onViewReceipt,
 	onDelete,
-	onUnlinkTransfer,
 }: TransactionDetailsProps) {
 	const { mutate: forgive, isPending: forgiving } = useForgiveTransaction();
 	const [forgiveError, setForgiveError] = useState<string | null>(null);
 	const tone =
-		tx.direction !== TransactionDirection.DIRECTION_INCOMING
-			? "out"
-			: tx.transfer
-				? "neutral"
-				: "in";
-	const incoming = tx.direction === TransactionDirection.DIRECTION_INCOMING;
+		tx.direction === TransactionDirection.DIRECTION_INCOMING ? "in" : "out";
 
 	return (
 		<div className="mt-3 border-t pt-3 text-sm">
@@ -68,36 +54,14 @@ export function TransactionDetails({
 							</span>
 						)}
 					</Row>
-					{tx.transfer && (
-						<Row label="Transfer">
-							{incoming ? "From " : "To "}
-							{getAccountDisplayName(tx.transfer.counterpartAccountId)}
+					<Row label="Category">
+						{tx.category ? tx.category.slug.split(".").join(" / ") : "—"}
+						{tx.category && (
 							<span className="ml-2 text-muted-foreground">
-								{TRANSFER_METHOD[tx.transfer.method]}
+								{tx.categoryManuallySet ? "set by you" : "by rule"}
 							</span>
-						</Row>
-					)}
-					{tx.transfer?.fee && (
-						<Row label="Fee">
-							<Amount
-								value={formatAmount(tx.transfer.fee)}
-								currency={tx.transfer.fee.currencyCode}
-							/>
-							<span className="ml-2 text-muted-foreground">
-								counted as spending
-							</span>
-						</Row>
-					)}
-					{(tx.category || !tx.transfer) && (
-						<Row label="Category">
-							{tx.category ? tx.category.slug.split(".").join(" / ") : "—"}
-							{tx.category && (
-								<span className="ml-2 text-muted-foreground">
-									{tx.categoryManuallySet ? "set by you" : "by rule"}
-								</span>
-							)}
-						</Row>
-					)}
+						)}
+					</Row>
 					<Row label="Account">
 						{getAccountDisplayName(tx.accountId, tx.accountName)}
 					</Row>
@@ -217,11 +181,6 @@ export function TransactionDetails({
 				{onCreateRule && (
 					<Button variant="outline" size="sm" onClick={onCreateRule}>
 						Create rule
-					</Button>
-				)}
-				{tx.transfer && onUnlinkTransfer && (
-					<Button variant="outline" size="sm" onClick={onUnlinkTransfer}>
-						Not a transfer
 					</Button>
 				)}
 				{onDelete && (

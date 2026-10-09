@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	ArrowLeftRight,
 	BookmarkPlus,
 	Check,
 	Copy,
@@ -53,21 +52,7 @@ interface TransactionItemProps {
 	onDelete?: (transaction: Transaction) => void;
 	onSplit?: (transaction: Transaction) => void;
 	onCreateRule?: (transaction: Transaction) => void;
-	onUnlinkTransfer?: (transaction: Transaction) => void;
 	inlineSplits?: Transaction[];
-}
-
-// "Transfer to savings" from the outgoing side, "Transfer from chequing" from the incoming one
-export function transferLabel(
-	transaction: Transaction,
-	getAccountDisplayName: (accountId: bigint) => string,
-) {
-	const transfer = transaction.transfer;
-	if (!transfer) return undefined;
-	const other = getAccountDisplayName(transfer.counterpartAccountId);
-	return transaction.direction === TransactionDirection.DIRECTION_INCOMING
-		? `Transfer from ${other}`
-		: `Transfer to ${other}`;
 }
 
 // memoized: loading a page must not re-render every row already on screen
@@ -84,7 +69,6 @@ export const TransactionItem = memo(function TransactionItem({
 	onDelete,
 	onSplit,
 	onCreateRule,
-	onUnlinkTransfer,
 	inlineSplits,
 }: TransactionItemProps) {
 	const [receiptOpen, setReceiptOpen] = useState(false);
@@ -92,14 +76,10 @@ export const TransactionItem = memo(function TransactionItem({
 		receiptOpen && transaction.receiptId ? transaction.receiptId : null,
 	);
 
-	// money moving in from another own account isn't income, so it isn't green
-	const transfer = transferLabel(transaction, getAccountDisplayName);
 	const tone =
-		transaction.direction !== TransactionDirection.DIRECTION_INCOMING
-			? "out"
-			: transfer
-				? "neutral"
-				: "in";
+		transaction.direction === TransactionDirection.DIRECTION_INCOMING
+			? "in"
+			: "out";
 	const amount = formatAmount(transaction.txAmount);
 	const time = formatTime(transaction.txDate);
 	const currency = transaction.txAmount?.currencyCode;
@@ -159,11 +139,6 @@ export const TransactionItem = memo(function TransactionItem({
 					<BookmarkPlus /> Create rule
 				</Item>
 			)}
-			{transfer && onUnlinkTransfer && (
-				<Item onClick={() => onUnlinkTransfer(transaction)}>
-					<ArrowLeftRight /> Not a transfer
-				</Item>
-			)}
 			<Item onClick={copyName}>
 				<Copy /> Copy name
 			</Item>
@@ -214,38 +189,34 @@ export const TransactionItem = memo(function TransactionItem({
 										<span className="truncate">{transaction.merchant}</span>
 									)}
 									{showMerchant && <span aria-hidden>·</span>}
-									{transfer ? (
-										<span className="truncate">{transfer}</span>
-									) : (
-										<CategoryPicker
-											value={transaction.categoryId}
-											onChange={(c) => onSetCategory(transaction.id, c)}
+									<CategoryPicker
+										value={transaction.categoryId}
+										onChange={(c) => onSetCategory(transaction.id, c)}
+									>
+										<button
+											type="button"
+											onClick={(e) => e.stopPropagation()}
+											title="Change category"
+											className="-mx-1 flex shrink-0 items-center gap-1.5 rounded-md px-1 hover:bg-muted hover:text-foreground"
 										>
-											<button
-												type="button"
-												onClick={(e) => e.stopPropagation()}
-												title="Change category"
-												className="-mx-1 flex shrink-0 items-center gap-1.5 rounded-md px-1 hover:bg-muted hover:text-foreground"
-											>
-												{transaction.category ? (
-													<>
-														<span
-															className="size-2 rounded-full"
-															style={{
-																backgroundColor: transaction.category.color,
-															}}
-														/>
-														{getCategoryDisplayName(transaction.category.slug)}
-													</>
-												) : (
-													<>
-														<span className="size-2 rounded-full border border-dashed border-current" />
-														Uncategorized
-													</>
-												)}
-											</button>
-										</CategoryPicker>
-									)}
+											{transaction.category ? (
+												<>
+													<span
+														className="size-2 rounded-full"
+														style={{
+															backgroundColor: transaction.category.color,
+														}}
+													/>
+													{getCategoryDisplayName(transaction.category.slug)}
+												</>
+											) : (
+												<>
+													<span className="size-2 rounded-full border border-dashed border-current" />
+													Uncategorized
+												</>
+											)}
+										</button>
+									</CategoryPicker>
 									{transaction.accountId && (
 										<>
 											<span aria-hidden>·</span>
@@ -363,9 +334,6 @@ export const TransactionItem = memo(function TransactionItem({
 											: undefined
 									}
 									onDelete={onDelete && (() => onDelete(transaction))}
-									onUnlinkTransfer={
-										onUnlinkTransfer && (() => onUnlinkTransfer(transaction))
-									}
 								/>
 							</div>
 						)}
