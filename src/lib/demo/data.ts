@@ -12,6 +12,8 @@ import {
 	AccountType,
 	TransactionDirection,
 	TransactionSource,
+	TransferMethod,
+	TransferStatus,
 } from "@/gen/nagomi/v1/enums_pb";
 import {
 	type Receipt,
@@ -88,7 +90,32 @@ export const db = {
 	receipts: [] as Receipt[],
 	connections: [] as Connection[],
 	statements: [] as Statement[],
+	transfers: [] as DemoTransfer[],
 };
+
+// core's transfers table: two transactions that move money between own accounts
+export interface DemoTransfer {
+	id: bigint;
+	outId: bigint;
+	inId: bigint;
+	status: TransferStatus;
+	method: TransferMethod;
+}
+
+export function addTransfer(
+	out: Transaction,
+	into: Transaction,
+	status = TransferStatus.LINKED,
+	method = TransferMethod.MATCHED,
+) {
+	db.transfers.push({
+		id: nextId(),
+		outId: out.id,
+		inId: into.id,
+		status,
+		method,
+	});
+}
 
 // what core keeps next to a statement row: the file and its parsed lines
 export const statementFiles = new Map<
@@ -507,46 +534,45 @@ function seed() {
 				description: "PREAUTHORIZED DEBIT MINTO",
 				category: "housing.rent",
 			});
+		// transfers core pairs on its own, so they carry no category
 		if (on(3) <= today)
-			addTx({
-				account: chequing,
-				date: on(3),
-				amount: 50_000,
-				direction: OUT,
-				merchant: "Tangerine",
-				description: "TRANSFER TO SAVINGS",
-				category: "transfers",
-			});
-		if (on(3) <= today)
-			addTx({
-				account: savings,
-				date: on(3),
-				amount: 50_000,
-				direction: IN,
-				merchant: "TD",
-				description: "TRANSFER FROM CHEQUING",
-				category: "transfers",
-			});
+			addTransfer(
+				addTx({
+					account: chequing,
+					date: on(3),
+					amount: 50_000,
+					direction: OUT,
+					description: "TRANSFER TO SAVINGS",
+				}),
+				addTx({
+					account: savings,
+					date: on(3),
+					amount: 50_000,
+					direction: IN,
+					description: "TRANSFER FROM CHEQUING",
+				}),
+			);
 		if (on(5) <= today)
-			addTx({
-				account: chequing,
-				date: on(5),
-				amount: 40_000,
-				direction: OUT,
-				merchant: "Wealthsimple",
-				description: "WSII CONTRIBUTION",
-				category: "investing",
-			});
-		if (on(5) <= today)
-			addTx({
-				account: tfsa,
-				date: on(5),
-				amount: 40_000,
-				direction: IN,
-				merchant: "Wealthsimple",
-				description: "CONTRIBUTION",
-				category: "investing",
-			});
+			addTransfer(
+				addTx({
+					account: chequing,
+					date: on(5),
+					amount: 40_000,
+					direction: OUT,
+					merchant: "Wealthsimple",
+					description: "WSII CONTRIBUTION",
+					category: "investing",
+				}),
+				addTx({
+					account: tfsa,
+					date: on(5),
+					amount: 40_000,
+					direction: IN,
+					merchant: "Wealthsimple",
+					description: "CONTRIBUTION",
+					category: "investing",
+				}),
+			);
 		if (on(12) <= today)
 			addTx({
 				account: credit,
@@ -603,26 +629,23 @@ function seed() {
 					0,
 				)
 		);
-		if (on(26) <= today && pay > 0) {
-			addTx({
-				account: chequing,
-				date: on(26, 10),
-				amount: pay,
-				direction: OUT,
-				merchant: "American Express",
-				description: "AMEX PAYMENT",
-				category: "transfers",
-			});
-			addTx({
-				account: credit,
-				date: on(26, 10),
-				amount: pay,
-				direction: IN,
-				merchant: "Payment",
-				description: "PAYMENT RECEIVED - THANK YOU",
-				category: "transfers",
-			});
-		}
+		if (on(26) <= today && pay > 0)
+			addTransfer(
+				addTx({
+					account: chequing,
+					date: on(26, 10),
+					amount: pay,
+					direction: OUT,
+					description: "AMEX PAYMENT",
+				}),
+				addTx({
+					account: credit,
+					date: on(26, 10),
+					amount: pay,
+					direction: IN,
+					description: "PAYMENT RECEIVED - THANK YOU",
+				}),
+			);
 		// tfsa drift + occasional dividend
 		if (on(28) <= today) {
 			const drift = between(-45_000, 70_000);
@@ -696,6 +719,25 @@ function seed() {
 			category: "income.other",
 		});
 	}
+	// matching amounts with nothing else in common: core only suggests these
+	addTransfer(
+		addTx({
+			account: chequing,
+			date: at(addDays(today, -6), 18, 12),
+			amount: 30_000,
+			direction: OUT,
+			description: "E-TRANSFER SENT",
+		}),
+		addTx({
+			account: savings,
+			date: at(addDays(today, -5), 9, 30),
+			amount: 30_000,
+			direction: IN,
+			description: "DEPOSIT",
+		}),
+		TransferStatus.SUGGESTED,
+	);
+
 	const samOwes = db.transactions.find(
 		(t) => t.accountId === friends[1].id && t.direction === IN,
 	);

@@ -9,10 +9,12 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useMultiSelect } from "@/hooks/useMultiSelect";
 import { useTransactionsQuery } from "@/hooks/useTransactionsQuery";
+import { useRejectTransfer } from "@/hooks/useTransfers";
 import { groupTransactionsByDay } from "@/lib/utils/transaction";
 import { SelectionBar } from "./SelectionBar";
 import type { TransactionFilters } from "./TransactionFiltersPanel";
 import { TransactionItem } from "./TransactionItem";
+import { TransferSuggestions } from "./TransferSuggestions";
 
 interface TransactionListProps {
 	accountId?: bigint;
@@ -75,6 +77,7 @@ export function TransactionList({
 	const [expandedId, setExpandedId] = useState<string | null>(null);
 	const { getAccountDisplayName } = useAccounts();
 	const { categoryMap } = useCategories();
+	const rejectTransfer = useRejectTransfer();
 	const sentinelRef = useRef<HTMLDivElement>(null);
 
 	// splits whose source is also in the list render under it, not as rows
@@ -119,6 +122,7 @@ export function TransactionList({
 	const latest = useRef({
 		toggleSelection,
 		updateTransaction,
+		unlinkTransfer: rejectTransfer.mutate,
 		onEditTransaction,
 		onDeleteTransaction,
 		onSplitTransaction,
@@ -127,6 +131,7 @@ export function TransactionList({
 	latest.current = {
 		toggleSelection,
 		updateTransaction,
+		unlinkTransfer: rejectTransfer.mutate,
 		onEditTransaction,
 		onDeleteTransaction,
 		onSplitTransaction,
@@ -144,6 +149,8 @@ export function TransactionList({
 			onDelete: (tx: Transaction) => latest.current.onDeleteTransaction?.(tx),
 			onSplit: (tx: Transaction) => latest.current.onSplitTransaction?.(tx),
 			onCreateRule: (tx: Transaction) => latest.current.onCreateRule?.(tx),
+			onUnlinkTransfer: (tx: Transaction) =>
+				latest.current.unlinkTransfer({ transactionId: tx.id }),
 		}),
 		[],
 	);
@@ -198,12 +205,13 @@ export function TransactionList({
 
 	const groups = groupTransactionsByDay(topLevel);
 
+	const filtered =
+		!!searchQuery ||
+		Object.values(filters ?? {}).some((v) =>
+			Array.isArray(v) ? v.length > 0 : v !== undefined,
+		);
+
 	if (groups.length === 0) {
-		const filtered =
-			!!searchQuery ||
-			Object.values(filters ?? {}).some((v) =>
-				Array.isArray(v) ? v.length > 0 : v !== undefined,
-			);
 		return (
 			<EmptyState
 				text={filtered ? "No transactions match." : "No transactions yet."}
@@ -230,6 +238,13 @@ export function TransactionList({
 							: undefined
 					}
 				/>
+			)}
+
+			{!filtered && !accountId && <TransferSuggestions />}
+			{rejectTransfer.error && (
+				<p className="mb-4 text-sm text-destructive">
+					{rejectTransfer.error.message}
+				</p>
 			)}
 
 			<div className="space-y-6">
@@ -263,6 +278,7 @@ export function TransactionList({
 									onDelete={onDeleteTransaction && rowHandlers.onDelete}
 									onSplit={onSplitTransaction && rowHandlers.onSplit}
 									onCreateRule={onCreateRule && rowHandlers.onCreateRule}
+									onUnlinkTransfer={rowHandlers.onUnlinkTransfer}
 									inlineSplits={splitMap.get(tx.id.toString())}
 								/>
 							))}

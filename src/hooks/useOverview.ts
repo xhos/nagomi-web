@@ -28,6 +28,7 @@ import { useUserId } from "./useSession";
 import { useFriendBalances } from "./useSplits";
 import { useStatementAlerts } from "./useStatements";
 import { useUncategorizedCount } from "./useTransactionsQuery";
+import { useTransferSuggestions } from "./useTransfers";
 
 const { DIRECTION_INCOMING: IN, DIRECTION_OUTGOING: OUT } =
 	TransactionDirection;
@@ -66,6 +67,7 @@ export interface AccountRow {
 export interface Attention {
 	kind:
 		| "uncategorized"
+		| "transfers"
 		| "receipts"
 		| "friend"
 		| "sync"
@@ -149,6 +151,7 @@ export function useOverview(month: Date) {
 	const receipts = useUnlinkedReceiptCount();
 	const friends = useFriendBalances();
 	const uncategorized = useUncategorizedCount();
+	const transferSuggestions = useTransferSuggestions();
 	const statementAlerts = useStatementAlerts();
 
 	const txQuery = useQuery({
@@ -193,6 +196,7 @@ export function useOverview(month: Date) {
 			receipts,
 			friends,
 			uncategorized,
+			transferSuggestions,
 			statementAlerts,
 			txQuery,
 		].some((q) => q.isLoading);
@@ -203,6 +207,7 @@ export function useOverview(month: Date) {
 		receipts.error ??
 		friends.error ??
 		uncategorized.error ??
+		transferSuggestions.error ??
 		statementAlerts.error ??
 		txQuery.error ??
 		ratesQuery.error;
@@ -224,7 +229,11 @@ export function useOverview(month: Date) {
 	const currency = REPORTING_CURRENCY;
 	const slugOf = (t: Transaction) =>
 		t.category?.slug ?? categoryMap.get(t.categoryId?.toString() ?? "")?.slug;
-	const isMove = (t: Transaction) => MOVES.has(topSlug(slugOf(t)) ?? "");
+	// a linked transfer only counts the fee its outgoing side lost on the way
+	const counted = (t: Transaction) =>
+		!t.transfer ? t.txAmount : t.direction === OUT ? t.transfer.fee : undefined;
+	const isMove = (t: Transaction) =>
+		MOVES.has(topSlug(slugOf(t)) ?? "") || (!!t.transfer && !counted(t));
 	const spend = (t: Transaction) =>
 		t.direction === OUT && realIds.has(t.accountId) && !isMove(t);
 	const income = (t: Transaction) =>
@@ -232,7 +241,7 @@ export function useOverview(month: Date) {
 
 	const inMonth = (t: Transaction, m: Date) => isSameMonth(txDate(t), m);
 	const sum = (xs: Transaction[]) =>
-		xs.reduce((n, t) => n + converted(t.txAmount), 0);
+		xs.reduce((n, t) => n + converted(counted(t)), 0);
 
 	// cumulative-by-day for one month, padded to `days`
 	const cumulative = (
@@ -244,7 +253,7 @@ export function useOverview(month: Date) {
 		for (const t of txs) {
 			if (!pred(t) || !inMonth(t, m)) continue;
 			const d = txDate(t).getDate() - 1;
-			if (d < days) daily[d] += converted(t.txAmount);
+			if (d < days) daily[d] += converted(counted(t));
 		}
 		let acc = 0;
 		return daily.map((v) => (acc += v));
@@ -297,12 +306,12 @@ export function useOverview(month: Date) {
 	const cutDay = current ? throughDay : 31;
 	for (const t of txs) {
 		if (!spend(t)) continue;
-		const key = topSlug(slugOf(t)) ?? "uncategorized";
+		const key = t.transfer ? "fees" : (topSlug(slugOf(t)) ?? "uncategorized");
 		const d = txDate(t);
 		if (isSameMonth(d, monthStart) && d <= addDays(today, 1))
-			add(key, converted(t.txAmount), false);
+			add(key, converted(counted(t)), false);
 		else if (d.getDate() <= cutDay && prior.some((m) => isSameMonth(d, m)))
-			add(key, converted(t.txAmount), true);
+			add(key, converted(counted(t)), true);
 	}
 	const whereItWent = [...byTop.values()]
 		.filter((c) => c.amount > 0 || c.average > 0)
@@ -311,7 +320,8 @@ export function useOverview(month: Date) {
 	// recurring: same merchant, steady cadence, next occurrence in the next 30 days
 	const groups = new Map<string, Transaction[]>();
 	for (const t of txs) {
-		if (!realIds.has(t.accountId) || isMove(t) || !t.merchant) continue;
+		if (!realIds.has(t.accountId) || isMove(t) || t.transfer || !t.merchant)
+			continue;
 		if (txDate(t) >= addDays(today, 1)) continue;
 		const key = `${t.accountId}:${t.txAmount?.currencyCode}:${t.direction}:${t.merchant}`;
 		groups.set(key, [...(groups.get(key) ?? []), t]);
@@ -430,6 +440,13 @@ export function useOverview(month: Date) {
 			kind: "uncategorized",
 			text: `${uncategorized.data} uncategorized transaction${uncategorized.data === 1 ? "" : "s"}`,
 			href: "/transactions?uncategorized=1",
+		});
+	const possibleTransfers = transferSuggestions.data?.length ?? 0;
+	if (possibleTransfers)
+		attention.push({
+			kind: "transfers",
+			text: `${possibleTransfers} possible transfer${possibleTransfers === 1 ? "" : "s"} to confirm`,
+			href: "/transactions",
 		});
 	const unlinked = receipts.data ?? 0;
 	if (unlinked)

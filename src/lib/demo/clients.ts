@@ -57,6 +57,8 @@ import {
 	Granularity,
 	PeriodType,
 	TransactionDirection,
+	TransferMethod,
+	TransferStatus,
 } from "@/gen/nagomi/v1/enums_pb";
 import { ReceiptSchema, ReceiptStatus } from "@/gen/nagomi/v1/receipt_pb";
 import {
@@ -102,19 +104,24 @@ import {
 import {
 	type Transaction,
 	TransactionSchema,
+	TransferSchema,
 } from "@/gen/nagomi/v1/transaction_pb";
 import {
 	CreateTransactionResponseSchema,
 	DeleteTransactionResponseSchema,
 	ForgiveTransactionResponseSchema,
 	GetFriendBalancesResponseSchema,
+	LinkTransferResponseSchema,
 	ListTransactionsResponseSchema,
+	ListTransferSuggestionsResponseSchema,
 	SplitTransactionResponseSchema,
 	TransactionService,
+	UnlinkTransferResponseSchema,
 	UpdateTransactionResponseSchema,
 } from "@/gen/nagomi/v1/transaction_services_pb";
 import { planCoverage, utcDay } from "./coverage";
 import {
+	addTransfer,
 	cents,
 	DEMO_HOLD,
 	DEMO_TIPPED_CENTS,
@@ -181,10 +188,54 @@ const byDateDesc = (a: Transaction, b: Transaction) =>
 	secs(b.txDate) - secs(a.txDate) || Number(b.id - a.id);
 
 // hydrate joined fields the way core does on read
+function linkedTransfer(id: bigint) {
+	return db.transfers.find(
+		(x) =>
+			x.status === TransferStatus.LINKED && (x.outId === id || x.inId === id),
+	);
+}
+
+// core fills in the other side and, in one currency, what was lost on the way
+function transferView(t: Transaction) {
+	const link = linkedTransfer(t.id);
+	if (!link) return undefined;
+	const other = db.transactions.find(
+		(x) => x.id === (link.outId === t.id ? link.inId : link.outId),
+	);
+	if (!other) return undefined;
+	const out = link.outId === t.id ? t : other;
+	const into = link.outId === t.id ? other : t;
+	const cur = out.txAmount?.currencyCode;
+	const lost = cents(out.txAmount) - cents(into.txAmount);
+	return create(TransferSchema, {
+		id: link.id,
+		counterpartId: other.id,
+		counterpartAccountId: other.accountId,
+		method: link.method,
+		fee:
+			cur === into.txAmount?.currencyCode && lost > 0
+				? money(lost, cur)
+				: undefined,
+	});
+}
+
+// core's transaction_report view: a linked transfer only counts what was
+// lost or gained on the way, and nothing across currencies
+function reportCents(t: Transaction) {
+	const link = linkedTransfer(t.id);
+	if (!link) return cents(t.txAmount);
+	const other = db.transactions.find(
+		(x) => x.id === (link.outId === t.id ? link.inId : link.outId),
+	);
+	if (other?.txAmount?.currencyCode !== t.txAmount?.currencyCode) return 0;
+	return Math.max(cents(t.txAmount) - cents(other?.txAmount), 0);
+}
+
 function view(t: Transaction): Transaction {
 	const v = clone(TransactionSchema, t);
 	const acc = account(t.accountId);
 	v.category = category(t.categoryId);
+	v.transfer = transferView(t);
 	v.accountName = acc?.friendlyName ?? acc?.name;
 	v.splits =
 		t.splitFromId === undefined
@@ -208,6 +259,11 @@ function removeTransactions(ids: bigint[]) {
 		}
 		return !drop;
 	});
+	// core's transfers rows cascade with their transactions
+	const left = new Set(db.transactions.map((t) => String(t.id)));
+	db.transfers = db.transfers.filter(
+		(x) => left.has(String(x.outId)) && left.has(String(x.inId)),
+	);
 	for (const id of touched) syncBalances(id);
 	return touched.size;
 }
@@ -326,7 +382,8 @@ export const transactionClient = fake(TransactionService, {
 				(!mq || (t.merchant ?? "").toLowerCase().includes(mq)) &&
 				(!dq || (t.description ?? "").toLowerCase().includes(dq)) &&
 				(!r.currency || t.txAmount?.currencyCode === r.currency) &&
-				(r.uncategorized !== true || t.categoryId === undefined)
+				(r.uncategorized !== true ||
+					(t.categoryId === undefined && !linkedTransfer(t.id)))
 			);
 		});
 		xs.sort(byDateDesc);
@@ -457,6 +514,67 @@ export const transactionClient = fake(TransactionService, {
 		}
 		return create(ForgiveTransactionResponseSchema, {});
 	},
+	async linkTransfer(r) {
+		const out = db.transactions.find((t) => t.id === r.outgoingId);
+		const into = db.transactions.find((t) => t.id === r.incomingId);
+		if (!out || !into)
+			throw new ConnectError("transaction not found", Code.NotFound);
+		if (out.direction !== OUT || into.direction !== IN)
+			throw new ConnectError(
+				"a transfer goes from an outgoing to an incoming transaction",
+				Code.InvalidArgument,
+			);
+		if (out.accountId === into.accountId)
+			throw new ConnectError(
+				"both sides are on the same account",
+				Code.InvalidArgument,
+			);
+		if (linkedTransfer(out.id) || linkedTransfer(into.id))
+			throw new ConnectError(
+				"a side is already part of a transfer; unlink it first",
+				Code.InvalidArgument,
+			);
+		db.transfers = db.transfers.filter(
+			(x) =>
+				!(
+					x.status === TransferStatus.SUGGESTED &&
+					[out.id, into.id].some((id) => x.outId === id || x.inId === id)
+				) && !(x.outId === out.id && x.inId === into.id),
+		);
+		addTransfer(out, into, TransferStatus.LINKED, TransferMethod.MANUAL);
+		return create(LinkTransferResponseSchema, {});
+	},
+	async unlinkTransfer(r) {
+		const a = r.transactionId;
+		const b = r.counterpartId;
+		const hits = db.transfers.filter((x) =>
+			b === undefined
+				? x.status === TransferStatus.LINKED && (x.outId === a || x.inId === a)
+				: x.status !== TransferStatus.REJECTED &&
+					((x.outId === a && x.inId === b) || (x.outId === b && x.inId === a)),
+		);
+		if (!hits.length)
+			throw new ConnectError(
+				`transaction ${a} isn't part of a transfer`,
+				Code.InvalidArgument,
+			);
+		for (const x of hits) x.status = TransferStatus.REJECTED;
+		return create(UnlinkTransferResponseSchema, {});
+	},
+	async listTransferSuggestions() {
+		const byId = (id: bigint) => db.transactions.find((t) => t.id === id);
+		return create(ListTransferSuggestionsResponseSchema, {
+			suggestions: db.transfers
+				.filter((x) => x.status === TransferStatus.SUGGESTED)
+				.flatMap((x) => {
+					const out = byId(x.outId);
+					const into = byId(x.inId);
+					return out && into
+						? [{ outgoing: view(out), incoming: view(into) }]
+						: [];
+				}),
+		});
+	},
 	async getFriendBalances() {
 		return create(GetFriendBalancesResponseSchema, {
 			balances: db.accounts
@@ -555,7 +673,8 @@ export const ruleClient = fake(RuleService, {
 const SPENDABLE = (t: Transaction) =>
 	t.direction === OUT &&
 	account(t.accountId)?.type !== AccountType.ACCOUNT_FRIEND &&
-	category(t.categoryId)?.slug !== "transfers";
+	category(t.categoryId)?.slug !== "transfers" &&
+	reportCents(t) > 0;
 
 function periodBounds(type: PeriodType, custom?: { s?: Date; e?: Date }) {
 	const end = new Date();
@@ -677,18 +796,19 @@ export const dashboardClient = fake(DashboardService, {
 				totalIncome: money(
 					txs
 						.filter((t) => t.direction === IN)
-						.reduce((n, t) => n + cents(t.txAmount), 0),
+						.reduce((n, t) => n + reportCents(t), 0),
 				),
 				totalExpenses: money(
 					txs
 						.filter((t) => t.direction === OUT)
-						.reduce((n, t) => n + cents(t.txAmount), 0),
+						.reduce((n, t) => n + reportCents(t), 0),
 				),
 				transactionsLast30Days: BigInt(
 					txs.filter((t) => secs(t.txDate) >= cutoff).length,
 				),
 				uncategorizedTransactions: BigInt(
-					txs.filter((t) => t.categoryId === undefined).length,
+					txs.filter((t) => t.categoryId === undefined && !linkedTransfer(t.id))
+						.length,
 				),
 			},
 		});
@@ -707,7 +827,7 @@ export const dashboardClient = fake(DashboardService, {
 				(t) => SPENDABLE(t) && pred(t) && inRange(t, a, b),
 			);
 			return {
-				amount: money(xs.reduce((n, t) => n + cents(t.txAmount), 0)),
+				amount: money(xs.reduce((n, t) => n + reportCents(t), 0)),
 				transactionCount: BigInt(xs.length),
 			};
 		};
