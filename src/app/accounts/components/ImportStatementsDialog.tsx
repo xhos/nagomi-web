@@ -297,7 +297,11 @@ export function ImportStatementsDialog({
 			wasReading.current &&
 			!reading &&
 			first &&
-			!listRef.current?.contains(document.activeElement)
+			// the dialog's own autofocus can land on a row's remove button; only a
+			// field the user is in keeps focus
+			!listRef.current?.contains(
+				document.activeElement?.closest("select, input") ?? null,
+			)
 		)
 			focusRow(first.key, "select");
 		wasReading.current = reading;
@@ -562,6 +566,11 @@ function StatementItem({
 								onChange={(e) => onRename(e.target.value)}
 								onKeyDown={(e) => {
 									if (e.key === "Enter") onNext();
+								}}
+								// done naming once focus leaves for nothing in particular; a click
+								// on another control keeps it, and so does leaving the window
+								onBlur={(e) => {
+									if (!e.relatedTarget && document.hasFocus()) onNext();
 								}}
 								disabled={busy}
 								className="h-9 sm:flex-1"
