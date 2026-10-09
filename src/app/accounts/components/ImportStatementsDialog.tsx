@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { FormError, NativeSelect } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
+import { TruncatedText } from "@/components/ui/tooltip";
 import type { Account } from "@/gen/nagomi/v1/account_pb";
 import type {
 	PreviewStatementImportResponse,
@@ -484,16 +485,11 @@ function StatementItem({
 		<li className="scroll-my-2 border-b py-3" data-key={item.key}>
 			<div className="flex items-start gap-3">
 				<div className="min-w-0 flex-1">
-					<div className="truncate font-medium" title={title}>
-						{title}
-					</div>
+					<TruncatedText className="font-medium">{title}</TruncatedText>
 					{meta && (
-						<div
-							className="truncate text-sm text-muted-foreground"
-							title={meta}
-						>
+						<TruncatedText className="text-sm text-muted-foreground">
 							{meta}
-						</div>
+						</TruncatedText>
 					)}
 				</div>
 				{s && (
