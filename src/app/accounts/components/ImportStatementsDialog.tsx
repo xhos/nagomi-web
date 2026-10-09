@@ -37,6 +37,8 @@ const DRAFT = "draft:";
 
 type Draft = { key: string; name: string };
 
+const CONTROLS = "input, select, textarea, button, a[href]";
+
 type Item = {
 	key: string;
 	file: File;
@@ -567,10 +569,16 @@ function StatementItem({
 								onKeyDown={(e) => {
 									if (e.key === "Enter") onNext();
 								}}
-								// done naming once focus leaves for nothing in particular; a click
-								// on another control keeps it, and so does leaving the window
+								// done naming once focus leaves for anything but another control,
+								// such as the dialog itself when its empty space is clicked; leaving
+								// the window doesn't count
 								onBlur={(e) => {
-									if (!e.relatedTarget && document.hasFocus()) onNext();
+									const to = e.relatedTarget;
+									if (
+										document.hasFocus() &&
+										!(to instanceof Element && to.matches(CONTROLS))
+									)
+										onNext();
 								}}
 								disabled={busy}
 								className="h-9 sm:flex-1"
