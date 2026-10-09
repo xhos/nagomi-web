@@ -211,6 +211,9 @@ function transferView(t: Transaction) {
 		id: link.id,
 		counterpartId: other.id,
 		counterpartAccountId: other.accountId,
+		counterpartAmount: other.txAmount,
+		counterpartDate: other.txDate,
+		counterpartDescription: other.description || other.merchant,
 		method: link.method,
 		fee:
 			cur === into.txAmount?.currencyCode && lost > 0

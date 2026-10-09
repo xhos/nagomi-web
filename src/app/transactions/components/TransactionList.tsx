@@ -14,6 +14,7 @@ import { groupTransactionsByDay } from "@/lib/utils/transaction";
 import { SelectionBar } from "./SelectionBar";
 import type { TransactionFilters } from "./TransactionFiltersPanel";
 import { TransactionItem } from "./TransactionItem";
+import { TransferItem } from "./TransferItem";
 import { TransferSuggestions } from "./TransferSuggestions";
 
 interface TransactionListProps {
@@ -80,7 +81,9 @@ export function TransactionList({
 	const rejectTransfer = useRejectTransfer();
 	const sentinelRef = useRef<HTMLDivElement>(null);
 
-	// splits whose source is also in the list render under it, not as rows
+	// splits whose source is also in the list render under it, not as rows.
+	// a transfer is one row, at whichever side the list reaches first, so a
+	// later page never moves it
 	const { splitMap, topLevel } = useMemo(() => {
 		const ids = new Set(transactions.map((t) => t.id.toString()));
 		const map = new Map<string, Transaction[]>();
@@ -90,11 +93,17 @@ export function TransactionList({
 				map.set(key, [...(map.get(key) ?? []), tx]);
 			}
 		}
+		const shownTransfers = new Set<string>();
 		return {
 			splitMap: map,
-			topLevel: transactions.filter(
-				(tx) => !tx.splitFromId || !ids.has(tx.splitFromId.toString()),
-			),
+			topLevel: transactions.filter((tx) => {
+				if (tx.splitFromId && ids.has(tx.splitFromId.toString())) return false;
+				if (!tx.transfer) return true;
+				const key = tx.transfer.id.toString();
+				if (shownTransfers.has(key)) return false;
+				shownTransfers.add(key);
+				return true;
+			}),
 		};
 	}, [transactions]);
 
@@ -263,25 +272,38 @@ export function TransactionList({
 								toggleItems(group.transactions.map((t) => t.id));
 							}}
 						>
-							{group.transactions.map((tx, i) => (
-								<TransactionItem
-									key={tx.id.toString()}
-									transaction={enrich(tx)}
-									isSelected={isSelected(tx.id)}
-									onSelect={rowHandlers.onSelect}
-									globalIndex={start + i}
-									expanded={expandedId === tx.id.toString()}
-									onToggle={rowHandlers.onToggle}
-									onSetCategory={rowHandlers.onSetCategory}
-									getAccountDisplayName={getAccountDisplayName}
-									onEdit={onEditTransaction && rowHandlers.onEdit}
-									onDelete={onDeleteTransaction && rowHandlers.onDelete}
-									onSplit={onSplitTransaction && rowHandlers.onSplit}
-									onCreateRule={onCreateRule && rowHandlers.onCreateRule}
-									onUnlinkTransfer={rowHandlers.onUnlinkTransfer}
-									inlineSplits={splitMap.get(tx.id.toString())}
-								/>
-							))}
+							{group.transactions.map((tx, i) =>
+								tx.transfer ? (
+									<TransferItem
+										key={tx.id.toString()}
+										transaction={tx}
+										isSelected={isSelected(tx.id)}
+										onSelect={rowHandlers.onSelect}
+										globalIndex={start + i}
+										expanded={expandedId === tx.id.toString()}
+										onToggle={rowHandlers.onToggle}
+										getAccountDisplayName={getAccountDisplayName}
+										onUnlink={rowHandlers.onUnlinkTransfer}
+									/>
+								) : (
+									<TransactionItem
+										key={tx.id.toString()}
+										transaction={enrich(tx)}
+										isSelected={isSelected(tx.id)}
+										onSelect={rowHandlers.onSelect}
+										globalIndex={start + i}
+										expanded={expandedId === tx.id.toString()}
+										onToggle={rowHandlers.onToggle}
+										onSetCategory={rowHandlers.onSetCategory}
+										getAccountDisplayName={getAccountDisplayName}
+										onEdit={onEditTransaction && rowHandlers.onEdit}
+										onDelete={onDeleteTransaction && rowHandlers.onDelete}
+										onSplit={onSplitTransaction && rowHandlers.onSplit}
+										onCreateRule={onCreateRule && rowHandlers.onCreateRule}
+										inlineSplits={splitMap.get(tx.id.toString())}
+									/>
+								),
+							)}
 						</ListGroup>
 					);
 				})}

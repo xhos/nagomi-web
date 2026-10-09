@@ -360,7 +360,7 @@ function seed() {
 		"#0ea5e9",
 		"tfsa",
 	);
-	addAccount(
+	const wiseUsd = addAccount(
 		"Wise USD",
 		"Wise",
 		AccountType.ACCOUNT_SAVINGS,
@@ -719,6 +719,43 @@ function seed() {
 			category: "income.other",
 		});
 	}
+	// a conversion, paired by the importer's reference
+	addTransfer(
+		addTx({
+			account: chequing,
+			date: at(addDays(today, -12), 14, 5),
+			amount: 68_500,
+			direction: OUT,
+			description: "WISE PAYMENTS LTD",
+		}),
+		addTx({
+			account: wiseUsd,
+			date: at(addDays(today, -12), 14, 7),
+			amount: 50_000,
+			direction: IN,
+			description: "Converted 685.00 CAD to 500.00 USD",
+		}),
+		TransferStatus.LINKED,
+		TransferMethod.REFERENCE,
+	);
+	// a transfer that loses a fee on the way
+	addTransfer(
+		addTx({
+			account: chequing,
+			date: at(addDays(today, -9), 20, 41),
+			amount: 20_150,
+			direction: OUT,
+			description: "INTERAC E-TRANSFER TO TANGERINE",
+		}),
+		addTx({
+			account: savings,
+			date: at(addDays(today, -8), 9, 2),
+			amount: 20_000,
+			direction: IN,
+			description: "INTERAC E-TRANSFER DEPOSIT",
+		}),
+	);
+
 	// matching amounts with nothing else in common: core only suggests these
 	addTransfer(
 		addTx({

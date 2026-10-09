@@ -9,6 +9,11 @@ export function useTransactionAnalytics(transactions: Transaction[]) {
 		let totalExpenses = 0;
 
 		transactions.forEach((transaction) => {
+			// a transfer between own accounts only costs its fee
+			if (transaction.transfer) {
+				totalExpenses += formatAmount(transaction.transfer.fee);
+				return;
+			}
 			const amount = formatAmount(transaction.txAmount);
 			const normalizedDirection =
 				typeof transaction.direction === "string"

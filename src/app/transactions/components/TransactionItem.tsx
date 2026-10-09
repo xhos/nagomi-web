@@ -163,24 +163,7 @@ export const TransactionItem = memo(function TransactionItem({
 						onClick={handleRowClick}
 					>
 						<div className="flex items-start gap-3">
-							<span className="relative mt-1 flex size-4 shrink-0 items-center justify-center">
-								<input
-									type="checkbox"
-									aria-label="Select transaction"
-									checked={isSelected}
-									onChange={() => {}}
-									onClick={handleCheck}
-									className={cn(
-										"peer size-4 cursor-pointer appearance-none rounded-md border transition-opacity",
-										"opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [[data-selecting]_&]:opacity-100",
-										"border-input bg-background checked:border-accent checked:bg-accent checked:opacity-100",
-									)}
-								/>
-								<Check
-									className="pointer-events-none absolute size-3 text-accent-foreground opacity-0 peer-checked:opacity-100"
-									strokeWidth={3}
-								/>
-							</span>
+							<RowCheckbox checked={isSelected} onClick={handleCheck} />
 
 							<div className="min-w-0 flex-1">
 								<div className="truncate font-medium">{title}</div>
@@ -356,3 +339,33 @@ export const TransactionItem = memo(function TransactionItem({
 		</>
 	);
 });
+
+// hover checkbox shared by every row in the list
+export function RowCheckbox({
+	checked,
+	onClick,
+}: {
+	checked: boolean;
+	onClick: (event: React.MouseEvent) => void;
+}) {
+	return (
+		<span className="relative mt-1 flex size-4 shrink-0 items-center justify-center">
+			<input
+				type="checkbox"
+				aria-label="Select transaction"
+				checked={checked}
+				onChange={() => {}}
+				onClick={onClick}
+				className={cn(
+					"peer size-4 cursor-pointer appearance-none rounded-md border transition-opacity",
+					"opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [[data-selecting]_&]:opacity-100",
+					"border-input bg-background checked:border-accent checked:bg-accent checked:opacity-100",
+				)}
+			/>
+			<Check
+				className="pointer-events-none absolute size-3 text-accent-foreground opacity-0 peer-checked:opacity-100"
+				strokeWidth={3}
+			/>
+		</span>
+	);
+}
