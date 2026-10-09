@@ -1,8 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Upload } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -91,12 +90,15 @@ interface ImportCsvDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	accounts: Account[];
+	// files chosen before the dialog opened
+	initialFiles?: File[];
 }
 
 export function ImportCsvDialog({
 	open,
 	onOpenChange,
 	accounts,
+	initialFiles,
 }: ImportCsvDialogProps) {
 	const userId = useUserId();
 	const queryClient = useQueryClient();
@@ -105,7 +107,6 @@ export function ImportCsvDialog({
 	const [skipped, setSkipped] = useState(0);
 	const [importing, setImporting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const update = (key: string, patch: Partial<Group>) =>
 		setGroups((xs) => xs.map((x) => (x.key === key ? { ...x, ...patch } : x)));
@@ -191,6 +192,11 @@ export function ImportCsvDialog({
 		}
 	};
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: only new files should trigger a read
+	useEffect(() => {
+		if (initialFiles?.[0]) addFile(initialFiles[0]);
+	}, [initialFiles]);
+
 	const ready = groups.filter(
 		(g) => g.status === "ready" && g.target !== SKIP && g.fresh,
 	);
@@ -261,37 +267,9 @@ export function ImportCsvDialog({
 				</DialogHeader>
 
 				<div className="min-w-0 space-y-4">
-					<button
-						type="button"
-						onDrop={(e) => {
-							e.preventDefault();
-							const file = e.dataTransfer.files[0];
-							if (file) addFile(file);
-						}}
-						onDragOver={(e) => e.preventDefault()}
-						onClick={() => fileInputRef.current?.click()}
-						disabled={importing}
-						className="w-full rounded-md border border-dashed p-6 text-center transition-colors hover:bg-muted/60"
-					>
-						<Upload className="mx-auto mb-2 size-4 text-muted-foreground" />
-						<p className="text-sm">
-							{fileName ?? "Drop a CSV export or click to choose"}
-						</p>
-						<p className="mt-1 text-sm text-muted-foreground">
-							Recent RBC transactions, downloaded from online banking
-						</p>
-						<input
-							ref={fileInputRef}
-							type="file"
-							accept="text/csv,.csv"
-							onChange={(e) => {
-								const file = e.target.files?.[0];
-								if (file) addFile(file);
-								e.target.value = "";
-							}}
-							className="hidden"
-						/>
-					</button>
+					{fileName && (
+						<p className="truncate text-sm text-muted-foreground">{fileName}</p>
+					)}
 
 					<FormError>{error}</FormError>
 

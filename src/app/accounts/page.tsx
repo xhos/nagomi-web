@@ -1,6 +1,6 @@
 "use client";
 
-import { FileSpreadsheet, FileUp, Plus } from "lucide-react";
+import { FileUp, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
 	AlertDialog,
@@ -29,7 +29,9 @@ import {
 	useSetAnchorBalance,
 	useUpdateAccount,
 } from "@/hooks/useAccounts";
+import { useMultiSelect } from "@/hooks/useMultiSelect";
 import { useUserId } from "@/hooks/useSession";
+import { cn } from "@/lib/utils";
 import { ACCOUNT_TYPES } from "@/lib/utils/account";
 import {
 	AccountDialog,
@@ -37,6 +39,7 @@ import {
 } from "./components/AccountDialog";
 import { AccountRow } from "./components/AccountRow";
 import { ImportCsvDialog } from "./components/ImportCsvDialog";
+import { ImportPickerDialog } from "./components/ImportPickerDialog";
 import { ImportStatementsDialog } from "./components/ImportStatementsDialog";
 import { MergeAccountDialog } from "./components/MergeAccountDialog";
 
@@ -66,10 +69,33 @@ export default function AccountsPage() {
 	const [creatingOpen, setCreatingOpen] = useState(false);
 	const [importOpen, setImportOpen] = useState(false);
 	const [csvOpen, setCsvOpen] = useState(false);
+	const [pdfFiles, setPdfFiles] = useState<File[]>([]);
+	const [csvFiles, setCsvFiles] = useState<File[]>([]);
+	const [pickerOpen, setPickerOpen] = useState(false);
+	const [draggingOver, setDraggingOver] = useState(false);
+	// each file goes to the dialog for its type
+	const pickImportFiles = (files: File[]) => {
+		const isCsv = (f: File) => f.name.toLowerCase().endsWith(".csv");
+		const csv = files.filter(isCsv);
+		const pdf = files.filter((f) => !isCsv(f));
+		if (!files.length) return;
+		setPickerOpen(false);
+		if (pdf.length) {
+			setPdfFiles(pdf);
+			setImportOpen(true);
+		}
+		if (csv.length) {
+			setCsvFiles(csv);
+			setCsvOpen(true);
+		}
+	};
 	const [editing, setEditing] = useState<Account | null>(null);
 	const [merging, setMerging] = useState<Account | null>(null);
 	const [deletingAccount, setDeletingAccount] = useState<Account | null>(null);
 	const [error, setError] = useState<string | null>(null);
+
+	const [bulkConfirm, setBulkConfirm] = useState(false);
+	const [bulkDeleting, setBulkDeleting] = useState(false);
 
 	const save = async (data: AccountFormData) => {
 		if (editing) {
@@ -118,6 +144,27 @@ export default function AccountsPage() {
 		accounts: accounts.filter((a) => a.type === type),
 	})).filter((g) => g.accounts.length);
 
+	// selection follows the grouped display order so shift-click ranges match
+	const ordered = groups.flatMap((g) => g.accounts);
+	const { isSelected, toggleSelection, clearSelection, getSelectedItems } =
+		useMultiSelect({ items: ordered, getId: (a) => a.id });
+	const selected = getSelectedItems();
+
+	const confirmBulkDelete = async () => {
+		setBulkDeleting(true);
+		const failed: string[] = [];
+		for (const a of selected) {
+			try {
+				await deleteAccountAsync(a.id);
+			} catch {
+				failed.push(a.friendlyName || a.name);
+			}
+		}
+		setBulkDeleting(false);
+		setBulkConfirm(false);
+		setError(failed.length ? `Couldn't delete: ${failed.join(", ")}` : null);
+	};
+
 	return (
 		<PageContainer>
 			<PageContent>
@@ -125,13 +172,29 @@ export default function AccountsPage() {
 					title="accounts"
 					actions={
 						<>
-							<Button variant="outline" onClick={() => setImportOpen(true)}>
+							<Button
+								variant="outline"
+								onClick={() => setPickerOpen(true)}
+								onDragOver={(e) => {
+									e.preventDefault();
+									setDraggingOver(true);
+								}}
+								onDragLeave={(e) => {
+									if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+										setDraggingOver(false);
+								}}
+								onDrop={(e) => {
+									e.preventDefault();
+									setDraggingOver(false);
+									pickImportFiles(Array.from(e.dataTransfer.files));
+								}}
+								className={cn(
+									draggingOver &&
+										"border-dashed border-primary bg-accent text-accent-foreground ring-[3px] ring-primary/40 dark:border-primary dark:bg-accent",
+								)}
+							>
 								<FileUp />
 								Import
-							</Button>
-							<Button variant="outline" onClick={() => setCsvOpen(true)}>
-								<FileSpreadsheet />
-								Import CSV
 							</Button>
 							<Button onClick={() => setCreatingOpen(true)} disabled={creating}>
 								<Plus />
@@ -162,7 +225,27 @@ export default function AccountsPage() {
 						onAction={() => setCreatingOpen(true)}
 					/>
 				) : (
-					<div className="space-y-8">
+					<div
+						className="space-y-8"
+						data-selecting={selected.length > 0 || undefined}
+					>
+						{selected.length > 0 && (
+							<div className="sticky top-0 z-10 flex items-center gap-x-6 border-b bg-background py-2 text-sm">
+								<span className="font-medium">{selected.length} selected</span>
+								<span className="ml-auto flex gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setBulkConfirm(true)}
+									>
+										Delete
+									</Button>
+									<Button variant="ghost" size="sm" onClick={clearSelection}>
+										Clear
+									</Button>
+								</span>
+							</div>
+						)}
 						{groups.map((g) => (
 							<ListGroup key={g.type} title={g.title}>
 								{g.accounts.map((account) => (
@@ -170,6 +253,14 @@ export default function AccountsPage() {
 										key={account.id.toString()}
 										account={account}
 										expanded={expandedId === account.id.toString()}
+										selected={isSelected(account.id)}
+										onSelect={(e) =>
+											toggleSelection(
+												account.id,
+												ordered.findIndex((a) => a.id === account.id),
+												e,
+											)
+										}
 										onToggle={() =>
 											setExpandedId((cur) =>
 												cur === account.id.toString()
@@ -216,15 +307,23 @@ export default function AccountsPage() {
 					onSave={save}
 				/>
 
+				<ImportPickerDialog
+					open={pickerOpen}
+					onOpenChange={setPickerOpen}
+					onFiles={pickImportFiles}
+				/>
+
 				<ImportStatementsDialog
 					open={importOpen}
 					onOpenChange={setImportOpen}
+					initialFiles={pdfFiles}
 					accounts={accounts}
 				/>
 
 				<ImportCsvDialog
 					open={csvOpen}
 					onOpenChange={setCsvOpen}
+					initialFiles={csvFiles}
 					accounts={accounts}
 				/>
 
@@ -242,6 +341,31 @@ export default function AccountsPage() {
 						return { transactionsMoved: r.transactionsMoved };
 					}}
 				/>
+
+				<AlertDialog open={bulkConfirm} onOpenChange={setBulkConfirm}>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>
+								Delete {selected.length} account
+								{selected.length === 1 ? "" : "s"}?
+							</AlertDialogTitle>
+							<AlertDialogDescription>
+								Their transactions will be deleted too. This can't be undone.
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel disabled={bulkDeleting}>
+								Cancel
+							</AlertDialogCancel>
+							<AlertDialogAction
+								onClick={confirmBulkDelete}
+								disabled={bulkDeleting}
+							>
+								{bulkDeleting ? "Deleting…" : "Delete"}
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 
 				<AlertDialog
 					open={!!deletingAccount}

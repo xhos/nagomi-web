@@ -1,6 +1,6 @@
 "use client";
 
-import { Upload, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -112,12 +112,15 @@ interface ImportStatementsDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	accounts: Account[];
+	// files chosen before the dialog opened
+	initialFiles?: File[];
 }
 
 export function ImportStatementsDialog({
 	open,
 	onOpenChange,
 	accounts,
+	initialFiles,
 }: ImportStatementsDialogProps) {
 	const userId = useUserId();
 	const invalidate = useInvalidateStatementData();
@@ -125,7 +128,6 @@ export function ImportStatementsDialog({
 	const [drafts, setDrafts] = useState<Draft[]>([]);
 	const [importing, setImporting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const fileInputRef = useRef<HTMLInputElement>(null);
 	const listRef = useRef<HTMLUListElement>(null);
 	// latest items for reads that finish after other files were already chosen
 	const itemsRef = useRef(items);
@@ -205,6 +207,11 @@ export function ImportStatementsDialog({
 		setItems((xs) => [...xs, ...added]);
 		for (const item of added) read(item);
 	};
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: only new files should trigger a read
+	useEffect(() => {
+		if (initialFiles?.length) addFiles(initialFiles);
+	}, [initialFiles]);
 
 	// a different account than the one the preview planned against needs its own plan
 	const choose = async (item: Item, target: string) => {
@@ -385,34 +392,6 @@ export function ImportStatementsDialog({
 				</DialogHeader>
 
 				<div className="min-w-0 space-y-4">
-					<button
-						type="button"
-						onDrop={(e) => {
-							e.preventDefault();
-							addFiles(e.dataTransfer.files);
-						}}
-						onDragOver={(e) => e.preventDefault()}
-						onClick={() => fileInputRef.current?.click()}
-						className="w-full rounded-md border border-dashed p-6 text-center transition-colors hover:bg-muted/60"
-					>
-						<Upload className="mx-auto mb-2 size-4 text-muted-foreground" />
-						<p className="text-sm">Drop PDF statements or click to choose</p>
-						<p className="mt-1 text-sm text-muted-foreground">
-							RBC chequing, savings, and Visa
-						</p>
-						<input
-							ref={fileInputRef}
-							type="file"
-							accept="application/pdf,.pdf"
-							multiple
-							onChange={(e) => {
-								if (e.target.files) addFiles(e.target.files);
-								e.target.value = "";
-							}}
-							className="hidden"
-						/>
-					</button>
-
 					<FormError>{error}</FormError>
 
 					{items.length > 0 && (

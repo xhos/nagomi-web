@@ -10,9 +10,9 @@ export default function ConditionalLayout({
 }) {
 	if (usePathname() === "/login") return children;
 	return (
-		<>
+		<div className="flex min-h-screen flex-col">
 			<TopNav />
-			<main>{children}</main>
-		</>
+			<main className="flex flex-1 flex-col">{children}</main>
+		</div>
 	);
 }

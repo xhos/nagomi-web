@@ -5,7 +5,7 @@ export const PageContainer = ({
 	className,
 	...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-	<div className={cn("min-h-screen", className)} {...props}>
+	<div className={cn("flex-1", className)} {...props}>
 		{children}
 	</div>
 );

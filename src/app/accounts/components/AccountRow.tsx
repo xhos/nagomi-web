@@ -29,6 +29,8 @@ import { AccountStatements } from "./AccountStatements";
 interface AccountRowProps {
 	account: Account;
 	expanded: boolean;
+	selected: boolean;
+	onSelect: (event: React.MouseEvent) => void;
 	onToggle: () => void;
 	onEdit: () => void;
 	onMerge?: () => void;
@@ -42,6 +44,8 @@ const stamp = (t?: { seconds?: bigint }) =>
 export function AccountRow({
 	account,
 	expanded,
+	selected,
+	onSelect,
 	onToggle,
 	onEdit,
 	onMerge,
@@ -77,6 +81,15 @@ export function AccountRow({
 		}
 	};
 
+	const handleRowClick = (event: React.MouseEvent) => {
+		if (event.ctrlKey || event.metaKey || event.shiftKey) {
+			event.preventDefault();
+			onSelect(event);
+			return;
+		}
+		onToggle();
+	};
+
 	const actions = (
 		Item: typeof ContextMenuItem,
 		Separator: typeof ContextMenuSeparator,
@@ -100,7 +113,12 @@ export function AccountRow({
 	return (
 		<ContextMenu>
 			<ContextMenuTrigger asChild>
-				<ListRow expanded={expanded} onClick={onToggle}>
+				<ListRow
+					selected={selected}
+					expanded={expanded}
+					onClick={handleRowClick}
+					onMouseDown={(e) => e.shiftKey && e.preventDefault()}
+				>
 					<div className="flex items-start gap-3">
 						<div className="min-w-0 flex-1">
 							<div className="truncate font-medium">{name}</div>
