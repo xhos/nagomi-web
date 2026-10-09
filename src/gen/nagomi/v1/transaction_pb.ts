@@ -8,7 +8,7 @@ import type { Category } from "./category_pb";
 import { file_nagomi_v1_category } from "./category_pb";
 import type { Money } from "../../google/type/money_pb";
 import { file_google_type_money } from "../../google/type/money_pb";
-import type { TransactionDirection, TransactionSource } from "./enums_pb";
+import type { TransactionDirection, TransactionSource, TransferMethod } from "./enums_pb";
 import { file_nagomi_v1_enums } from "./enums_pb";
 import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
@@ -19,7 +19,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file nagomi/v1/transaction.proto.
  */
 export const file_nagomi_v1_transaction: GenFile = /*@__PURE__*/
-  fileDesc("ChtuYWdvbWkvdjEvdHJhbnNhY3Rpb24ucHJvdG8SCW5hZ29taS52MSK0CAoLVHJhbnNhY3Rpb24SCgoCaWQYASABKAMSKwoHdHhfZGF0ZRgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJQoJdHhfYW1vdW50GAMgASgLMhIuZ29vZ2xlLnR5cGUuTW9uZXkSMgoJZGlyZWN0aW9uGAQgASgOMh8ubmFnb21pLnYxLlRyYW5zYWN0aW9uRGlyZWN0aW9uEhIKCmFjY291bnRfaWQYBSABKAMSGAoLZXh0ZXJuYWxfaWQYBiABKAlIAIgBARIiCgtkZXNjcmlwdGlvbhgHIAEoCUIIukgFcgMY9ANIAYgBARIhCgtjYXRlZ29yeV9pZBgIIAEoA0IHukgEIgIgAEgCiAEBEh0KFWNhdGVnb3J5X21hbnVhbGx5X3NldBgJIAEoCBIfCghtZXJjaGFudBgKIAEoCUIIukgFcgMYyAFIA4gBARIdChVtZXJjaGFudF9tYW51YWxseV9zZXQYCyABKAgSIQoKdXNlcl9ub3RlcxgMIAEoCUIIukgFcgMY6AdIBIgBARIuCg1iYWxhbmNlX2FmdGVyGA0gASgLMhIuZ29vZ2xlLnR5cGUuTW9uZXlIBYgBARIvCg5mb3JlaWduX2Ftb3VudBgOIAEoCzISLmdvb2dsZS50eXBlLk1vbmV5SAaIAQESMwoNZXhjaGFuZ2VfcmF0ZRgPIAEoAUIXukgUEhIRAAAAAABAj0AhAAAAAAAAAABIB4gBARIuCgpjcmVhdGVkX2F0GBAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GBEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIqCghjYXRlZ29yeRgSIAEoCzITLm5hZ29taS52MS5DYXRlZ29yeUgIiAEBEhkKDGFjY291bnRfbmFtZRgTIAEoCUgJiAEBEhcKCnJlY2VpcHRfaWQYFCABKANICogBARIaCg1zcGxpdF9mcm9tX2lkGBUgASgDSAuIAQESEAoIZm9yZ2l2ZW4YFiABKAgSJgoGc3BsaXRzGBcgAygLMhYubmFnb21pLnYxLlRyYW5zYWN0aW9uEiwKBnNvdXJjZRgYIAEoDjIcLm5hZ29taS52MS5UcmFuc2FjdGlvblNvdXJjZUIOCgxfZXh0ZXJuYWxfaWRCDgoMX2Rlc2NyaXB0aW9uQg4KDF9jYXRlZ29yeV9pZEILCglfbWVyY2hhbnRCDQoLX3VzZXJfbm90ZXNCEAoOX2JhbGFuY2VfYWZ0ZXJCEQoPX2ZvcmVpZ25fYW1vdW50QhAKDl9leGNoYW5nZV9yYXRlQgsKCV9jYXRlZ29yeUIPCg1fYWNjb3VudF9uYW1lQg0KC19yZWNlaXB0X2lkQhAKDl9zcGxpdF9mcm9tX2lkIlsKFFRyYW5zYWN0aW9uV2l0aFNjb3JlEisKC3RyYW5zYWN0aW9uGAEgASgLMhYubmFnb21pLnYxLlRyYW5zYWN0aW9uEhYKDm1lcmNoYW50X3Njb3JlGAIgASgBImAKGVRyYW5zYWN0aW9uQ291bnRCeUFjY291bnQSEgoKYWNjb3VudF9pZBgBIAEoAxIUCgxhY2NvdW50X25hbWUYAiABKAkSGQoRdHJhbnNhY3Rpb25fY291bnQYAyABKANiBnByb3RvMw", [file_nagomi_v1_category, file_google_type_money, file_nagomi_v1_enums, file_buf_validate_validate, file_google_protobuf_timestamp]);
+  fileDesc("ChtuYWdvbWkvdjEvdHJhbnNhY3Rpb24ucHJvdG8SCW5hZ29taS52MSLtCAoLVHJhbnNhY3Rpb24SCgoCaWQYASABKAMSKwoHdHhfZGF0ZRgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJQoJdHhfYW1vdW50GAMgASgLMhIuZ29vZ2xlLnR5cGUuTW9uZXkSMgoJZGlyZWN0aW9uGAQgASgOMh8ubmFnb21pLnYxLlRyYW5zYWN0aW9uRGlyZWN0aW9uEhIKCmFjY291bnRfaWQYBSABKAMSGAoLZXh0ZXJuYWxfaWQYBiABKAlIAIgBARIiCgtkZXNjcmlwdGlvbhgHIAEoCUIIukgFcgMY9ANIAYgBARIhCgtjYXRlZ29yeV9pZBgIIAEoA0IHukgEIgIgAEgCiAEBEh0KFWNhdGVnb3J5X21hbnVhbGx5X3NldBgJIAEoCBIfCghtZXJjaGFudBgKIAEoCUIIukgFcgMYyAFIA4gBARIdChVtZXJjaGFudF9tYW51YWxseV9zZXQYCyABKAgSIQoKdXNlcl9ub3RlcxgMIAEoCUIIukgFcgMY6AdIBIgBARIuCg1iYWxhbmNlX2FmdGVyGA0gASgLMhIuZ29vZ2xlLnR5cGUuTW9uZXlIBYgBARIvCg5mb3JlaWduX2Ftb3VudBgOIAEoCzISLmdvb2dsZS50eXBlLk1vbmV5SAaIAQESMwoNZXhjaGFuZ2VfcmF0ZRgPIAEoAUIXukgUEhIRAAAAAABAj0AhAAAAAAAAAABIB4gBARIuCgpjcmVhdGVkX2F0GBAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GBEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIqCghjYXRlZ29yeRgSIAEoCzITLm5hZ29taS52MS5DYXRlZ29yeUgIiAEBEhkKDGFjY291bnRfbmFtZRgTIAEoCUgJiAEBEhcKCnJlY2VpcHRfaWQYFCABKANICogBARIaCg1zcGxpdF9mcm9tX2lkGBUgASgDSAuIAQESEAoIZm9yZ2l2ZW4YFiABKAgSJgoGc3BsaXRzGBcgAygLMhYubmFnb21pLnYxLlRyYW5zYWN0aW9uEiwKBnNvdXJjZRgYIAEoDjIcLm5hZ29taS52MS5UcmFuc2FjdGlvblNvdXJjZRIqCgh0cmFuc2ZlchgZIAEoCzITLm5hZ29taS52MS5UcmFuc2ZlckgMiAEBQg4KDF9leHRlcm5hbF9pZEIOCgxfZGVzY3JpcHRpb25CDgoMX2NhdGVnb3J5X2lkQgsKCV9tZXJjaGFudEINCgtfdXNlcl9ub3Rlc0IQCg5fYmFsYW5jZV9hZnRlckIRCg9fZm9yZWlnbl9hbW91bnRCEAoOX2V4Y2hhbmdlX3JhdGVCCwoJX2NhdGVnb3J5Qg8KDV9hY2NvdW50X25hbWVCDQoLX3JlY2VpcHRfaWRCEAoOX3NwbGl0X2Zyb21faWRCCwoJX3RyYW5zZmVyIqcBCghUcmFuc2ZlchIKCgJpZBgBIAEoAxIWCg5jb3VudGVycGFydF9pZBgCIAEoAxIeChZjb3VudGVycGFydF9hY2NvdW50X2lkGAMgASgDEikKBm1ldGhvZBgEIAEoDjIZLm5hZ29taS52MS5UcmFuc2Zlck1ldGhvZBIkCgNmZWUYBSABKAsyEi5nb29nbGUudHlwZS5Nb25leUgAiAEBQgYKBF9mZWUiWwoUVHJhbnNhY3Rpb25XaXRoU2NvcmUSKwoLdHJhbnNhY3Rpb24YASABKAsyFi5uYWdvbWkudjEuVHJhbnNhY3Rpb24SFgoObWVyY2hhbnRfc2NvcmUYAiABKAEiYAoZVHJhbnNhY3Rpb25Db3VudEJ5QWNjb3VudBISCgphY2NvdW50X2lkGAEgASgDEhQKDGFjY291bnRfbmFtZRgCIAEoCRIZChF0cmFuc2FjdGlvbl9jb3VudBgDIAEoA2IGcHJvdG8z", [file_nagomi_v1_category, file_google_type_money, file_nagomi_v1_enums, file_buf_validate_validate, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message nagomi.v1.Transaction
@@ -158,6 +158,13 @@ export type Transaction = Message<"nagomi.v1.Transaction"> & {
    * @generated from field: nagomi.v1.TransactionSource source = 24;
    */
   source: TransactionSource;
+
+  /**
+   * set when this is one side of a move between the user's own accounts
+   *
+   * @generated from field: optional nagomi.v1.Transfer transfer = 25;
+   */
+  transfer?: Transfer;
 };
 
 /**
@@ -166,6 +173,45 @@ export type Transaction = Message<"nagomi.v1.Transaction"> & {
  */
 export const TransactionSchema: GenMessage<Transaction> = /*@__PURE__*/
   messageDesc(file_nagomi_v1_transaction, 0);
+
+/**
+ * @generated from message nagomi.v1.Transfer
+ */
+export type Transfer = Message<"nagomi.v1.Transfer"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+
+  /**
+   * @generated from field: int64 counterpart_id = 2;
+   */
+  counterpartId: bigint;
+
+  /**
+   * @generated from field: int64 counterpart_account_id = 3;
+   */
+  counterpartAccountId: bigint;
+
+  /**
+   * @generated from field: nagomi.v1.TransferMethod method = 4;
+   */
+  method: TransferMethod;
+
+  /**
+   * what was lost on the way, when both sides share a currency
+   *
+   * @generated from field: optional google.type.Money fee = 5;
+   */
+  fee?: Money;
+};
+
+/**
+ * Describes the message nagomi.v1.Transfer.
+ * Use `create(TransferSchema)` to create a new message.
+ */
+export const TransferSchema: GenMessage<Transfer> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_transaction, 1);
 
 /**
  * @generated from message nagomi.v1.TransactionWithScore
@@ -187,7 +233,7 @@ export type TransactionWithScore = Message<"nagomi.v1.TransactionWithScore"> & {
  * Use `create(TransactionWithScoreSchema)` to create a new message.
  */
 export const TransactionWithScoreSchema: GenMessage<TransactionWithScore> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_transaction, 1);
+  messageDesc(file_nagomi_v1_transaction, 2);
 
 /**
  * @generated from message nagomi.v1.TransactionCountByAccount
@@ -214,5 +260,5 @@ export type TransactionCountByAccount = Message<"nagomi.v1.TransactionCountByAcc
  * Use `create(TransactionCountByAccountSchema)` to create a new message.
  */
 export const TransactionCountByAccountSchema: GenMessage<TransactionCountByAccount> = /*@__PURE__*/
-  messageDesc(file_nagomi_v1_transaction, 2);
+  messageDesc(file_nagomi_v1_transaction, 3);
 

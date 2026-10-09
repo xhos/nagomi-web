@@ -9,7 +9,7 @@ import { enumDesc, fileDesc } from "@bufbuild/protobuf/codegenv2";
  * Describes the file nagomi/v1/enums.proto.
  */
 export const file_nagomi_v1_enums: GenFile = /*@__PURE__*/
-  fileDesc("ChVuYWdvbWkvdjEvZW51bXMucHJvdG8SCW5hZ29taS52MSqpAQoLQWNjb3VudFR5cGUSFwoTQUNDT1VOVF9VTlNQRUNJRklFRBAAEhQKEEFDQ09VTlRfQ0hFUVVJTkcQARITCg9BQ0NPVU5UX1NBVklOR1MQAhIXChNBQ0NPVU5UX0NSRURJVF9DQVJEEAMSFgoSQUNDT1VOVF9JTlZFU1RNRU5UEAQSEQoNQUNDT1VOVF9PVEhFUhAFEhIKDkFDQ09VTlRfRlJJRU5EEAYqYQoUVHJhbnNhY3Rpb25EaXJlY3Rpb24SGQoVRElSRUNUSU9OX1VOU1BFQ0lGSUVEEAASFgoSRElSRUNUSU9OX0lOQ09NSU5HEAESFgoSRElSRUNUSU9OX09VVEdPSU5HEAIq1gEKEVRyYW5zYWN0aW9uU291cmNlEiIKHlRSQU5TQUNUSU9OX1NPVVJDRV9VTlNQRUNJRklFRBAAEh0KGVRSQU5TQUNUSU9OX1NPVVJDRV9NQU5VQUwQARIcChhUUkFOU0FDVElPTl9TT1VSQ0VfRU1BSUwQAhIgChxUUkFOU0FDVElPTl9TT1VSQ0VfQ09OTkVDVE9SEAMSIAocVFJBTlNBQ1RJT05fU09VUkNFX1NUQVRFTUVOVBAEEhwKGFRSQU5TQUNUSU9OX1NPVVJDRV9TUExJVBAFKvEBCgpQZXJpb2RUeXBlEhsKF1BFUklPRF9UWVBFX1VOU1BFQ0lGSUVEEAASFgoSUEVSSU9EX1RZUEVfN19EQVlTEAESFwoTUEVSSU9EX1RZUEVfMzBfREFZUxACEhcKE1BFUklPRF9UWVBFXzkwX0RBWVMQAxIWChJQRVJJT0RfVFlQRV9DVVNUT00QBBIYChRQRVJJT0RfVFlQRV8zX01PTlRIUxAFEhgKFFBFUklPRF9UWVBFXzZfTU9OVEhTEAYSFgoSUEVSSU9EX1RZUEVfMV9ZRUFSEAcSGAoUUEVSSU9EX1RZUEVfQUxMX1RJTUUQCCpsCgtHcmFudWxhcml0eRIbChdHUkFOVUxBUklUWV9VTlNQRUNJRklFRBAAEhMKD0dSQU5VTEFSSVRZX0RBWRABEhQKEEdSQU5VTEFSSVRZX1dFRUsQAhIVChFHUkFOVUxBUklUWV9NT05USBADYgZwcm90bzM");
+  fileDesc("ChVuYWdvbWkvdjEvZW51bXMucHJvdG8SCW5hZ29taS52MSqpAQoLQWNjb3VudFR5cGUSFwoTQUNDT1VOVF9VTlNQRUNJRklFRBAAEhQKEEFDQ09VTlRfQ0hFUVVJTkcQARITCg9BQ0NPVU5UX1NBVklOR1MQAhIXChNBQ0NPVU5UX0NSRURJVF9DQVJEEAMSFgoSQUNDT1VOVF9JTlZFU1RNRU5UEAQSEQoNQUNDT1VOVF9PVEhFUhAFEhIKDkFDQ09VTlRfRlJJRU5EEAYqYQoUVHJhbnNhY3Rpb25EaXJlY3Rpb24SGQoVRElSRUNUSU9OX1VOU1BFQ0lGSUVEEAASFgoSRElSRUNUSU9OX0lOQ09NSU5HEAESFgoSRElSRUNUSU9OX09VVEdPSU5HEAIq1gEKEVRyYW5zYWN0aW9uU291cmNlEiIKHlRSQU5TQUNUSU9OX1NPVVJDRV9VTlNQRUNJRklFRBAAEh0KGVRSQU5TQUNUSU9OX1NPVVJDRV9NQU5VQUwQARIcChhUUkFOU0FDVElPTl9TT1VSQ0VfRU1BSUwQAhIgChxUUkFOU0FDVElPTl9TT1VSQ0VfQ09OTkVDVE9SEAMSIAocVFJBTlNBQ1RJT05fU09VUkNFX1NUQVRFTUVOVBAEEhwKGFRSQU5TQUNUSU9OX1NPVVJDRV9TUExJVBAFKooBCg5UcmFuc2ZlclN0YXR1cxIfChtUUkFOU0ZFUl9TVEFUVVNfVU5TUEVDSUZJRUQQABIaChZUUkFOU0ZFUl9TVEFUVVNfTElOS0VEEAESHQoZVFJBTlNGRVJfU1RBVFVTX1NVR0dFU1RFRBACEhwKGFRSQU5TRkVSX1NUQVRVU19SRUpFQ1RFRBADKokBCg5UcmFuc2Zlck1ldGhvZBIfChtUUkFOU0ZFUl9NRVRIT0RfVU5TUEVDSUZJRUQQABIdChlUUkFOU0ZFUl9NRVRIT0RfUkVGRVJFTkNFEAESGwoXVFJBTlNGRVJfTUVUSE9EX01BVENIRUQQAhIaChZUUkFOU0ZFUl9NRVRIT0RfTUFOVUFMEAMq8QEKClBlcmlvZFR5cGUSGwoXUEVSSU9EX1RZUEVfVU5TUEVDSUZJRUQQABIWChJQRVJJT0RfVFlQRV83X0RBWVMQARIXChNQRVJJT0RfVFlQRV8zMF9EQVlTEAISFwoTUEVSSU9EX1RZUEVfOTBfREFZUxADEhYKElBFUklPRF9UWVBFX0NVU1RPTRAEEhgKFFBFUklPRF9UWVBFXzNfTU9OVEhTEAUSGAoUUEVSSU9EX1RZUEVfNl9NT05USFMQBhIWChJQRVJJT0RfVFlQRV8xX1lFQVIQBxIYChRQRVJJT0RfVFlQRV9BTExfVElNRRAIKmwKC0dyYW51bGFyaXR5EhsKF0dSQU5VTEFSSVRZX1VOU1BFQ0lGSUVEEAASEwoPR1JBTlVMQVJJVFlfREFZEAESFAoQR1JBTlVMQVJJVFlfV0VFSxACEhUKEUdSQU5VTEFSSVRZX01PTlRIEANiBnByb3RvMw");
 
 /**
  * @generated from enum nagomi.v1.AccountType
@@ -125,6 +125,78 @@ export const TransactionSourceSchema: GenEnum<TransactionSource> = /*@__PURE__*/
   enumDesc(file_nagomi_v1_enums, 2);
 
 /**
+ * @generated from enum nagomi.v1.TransferStatus
+ */
+export enum TransferStatus {
+  /**
+   * @generated from enum value: TRANSFER_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * counted as a move between own accounts
+   *
+   * @generated from enum value: TRANSFER_STATUS_LINKED = 1;
+   */
+  LINKED = 1,
+
+  /**
+   * a plausible pair the user should confirm
+   *
+   * @generated from enum value: TRANSFER_STATUS_SUGGESTED = 2;
+   */
+  SUGGESTED = 2,
+
+  /**
+   * the user said these are not a transfer; never suggested again
+   *
+   * @generated from enum value: TRANSFER_STATUS_REJECTED = 3;
+   */
+  REJECTED = 3,
+}
+
+/**
+ * Describes the enum nagomi.v1.TransferStatus.
+ */
+export const TransferStatusSchema: GenEnum<TransferStatus> = /*@__PURE__*/
+  enumDesc(file_nagomi_v1_enums, 3);
+
+/**
+ * @generated from enum nagomi.v1.TransferMethod
+ */
+export enum TransferMethod {
+  /**
+   * @generated from enum value: TRANSFER_METHOD_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * both sides carried the same transfer_ref
+   *
+   * @generated from enum value: TRANSFER_METHOD_REFERENCE = 1;
+   */
+  REFERENCE = 1,
+
+  /**
+   * paired by amount, date and description
+   *
+   * @generated from enum value: TRANSFER_METHOD_MATCHED = 2;
+   */
+  MATCHED = 2,
+
+  /**
+   * @generated from enum value: TRANSFER_METHOD_MANUAL = 3;
+   */
+  MANUAL = 3,
+}
+
+/**
+ * Describes the enum nagomi.v1.TransferMethod.
+ */
+export const TransferMethodSchema: GenEnum<TransferMethod> = /*@__PURE__*/
+  enumDesc(file_nagomi_v1_enums, 4);
+
+/**
  * @generated from enum nagomi.v1.PeriodType
  */
 export enum PeriodType {
@@ -178,7 +250,7 @@ export enum PeriodType {
  * Describes the enum nagomi.v1.PeriodType.
  */
 export const PeriodTypeSchema: GenEnum<PeriodType> = /*@__PURE__*/
-  enumDesc(file_nagomi_v1_enums, 3);
+  enumDesc(file_nagomi_v1_enums, 5);
 
 /**
  * @generated from enum nagomi.v1.Granularity
@@ -209,5 +281,5 @@ export enum Granularity {
  * Describes the enum nagomi.v1.Granularity.
  */
 export const GranularitySchema: GenEnum<Granularity> = /*@__PURE__*/
-  enumDesc(file_nagomi_v1_enums, 4);
+  enumDesc(file_nagomi_v1_enums, 6);
 
