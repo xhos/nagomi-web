@@ -110,6 +110,8 @@ export function ImportStatementsDialog({
 	const [importing, setImporting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const listRef = useRef<HTMLUListElement>(null);
+	const lastJumpRef = useRef<string | null>(null);
 	// latest items for reads that finish after other files were already chosen
 	const itemsRef = useRef(items);
 	itemsRef.current = items;
@@ -249,16 +251,31 @@ export function ImportStatementsDialog({
 	};
 
 	const ready = items.filter((x) => x.status === "ready");
+	const unchosen = ready.filter(
+		(x) =>
+			x.target === "" || (x.target === NEW_ACCOUNT && x.newName.trim() === ""),
+	);
 	const canImport =
 		!importing &&
 		ready.length > 0 &&
+		unchosen.length === 0 &&
 		!items.some((x) => x.status === "reading") &&
-		ready.every(
-			(x) =>
-				x.target !== "" &&
-				!x.planning &&
-				(x.target !== NEW_ACCOUNT || x.newName.trim() !== ""),
+		!ready.some((x) => x.planning);
+
+	// the next statement without an account after the last one jumped to, wrapping
+	const jumpToUnchosen = () => {
+		const after = items.findIndex((x) => x.key === lastJumpRef.current);
+		const next = unchosen.find((x) => items.indexOf(x) > after) ?? unchosen[0];
+		if (!next) return;
+		lastJumpRef.current = next.key;
+		const row = listRef.current?.querySelector<HTMLElement>(
+			`[data-key="${CSS.escape(next.key)}"]`,
 		);
+		row?.scrollIntoView({ block: "center", behavior: "smooth" });
+		row
+			?.querySelector<HTMLElement>("select, input")
+			?.focus({ preventScroll: true });
+	};
 
 	const importAll = async () => {
 		if (!userId) return;
@@ -346,7 +363,7 @@ export function ImportStatementsDialog({
 					<FormError>{error}</FormError>
 
 					{items.length > 0 && (
-						<ul className="max-h-[50vh] overflow-y-auto border-t">
+						<ul ref={listRef} className="max-h-[50vh] overflow-y-auto border-t">
 							{items.map((item) => (
 								<StatementItem
 									key={item.key}
@@ -373,6 +390,16 @@ export function ImportStatementsDialog({
 						<Button onClick={close}>Done</Button>
 					) : (
 						<>
+							{unchosen.length > 0 && !importing && (
+								<Button
+									variant="ghost"
+									onClick={jumpToUnchosen}
+									className="text-muted-foreground sm:mr-auto"
+								>
+									{unchosen.length} {unchosen.length === 1 ? "needs" : "need"}{" "}
+									an account
+								</Button>
+							)}
 							<Button variant="outline" onClick={close} disabled={importing}>
 								Cancel
 							</Button>
@@ -412,7 +439,7 @@ function StatementItem({
 	const lineCount = s?.lineCount ?? 0;
 
 	return (
-		<li className="border-b py-3">
+		<li className="scroll-my-2 border-b py-3" data-key={item.key}>
 			<div className="flex items-start gap-3">
 				<div className="min-w-0 flex-1">
 					<div className="truncate font-medium">{title}</div>
