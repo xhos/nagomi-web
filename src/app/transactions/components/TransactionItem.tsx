@@ -80,6 +80,7 @@ export function TransactionItem({
 			? "in"
 			: "out";
 	const amount = formatAmount(transaction.txAmount);
+	const time = formatTime(transaction.txDate);
 	const currency = transaction.txAmount?.currencyCode;
 	const title =
 		transaction.description || transaction.merchant || "Unknown transaction";
@@ -291,9 +292,11 @@ export function TransactionItem({
 										className="block font-medium"
 									/>
 								)}
-								<span className="block text-sm text-muted-foreground">
-									{formatTime(transaction.txDate)}
-								</span>
+								{time && (
+									<span className="block text-sm text-muted-foreground">
+										{time}
+									</span>
+								)}
 							</div>
 
 							<DropdownMenu>

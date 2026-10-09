@@ -139,6 +139,13 @@ export function formatTime(timestamp?: TimestampType | string): string {
 		return "—";
 	}
 
+	if (
+		(date.getHours() === 0 || date.getHours() === 12) &&
+		date.getMinutes() === 0
+	) {
+		return "";
+	}
+
 	return date.toLocaleTimeString("en-US", {
 		hour: "2-digit",
 		minute: "2-digit",
