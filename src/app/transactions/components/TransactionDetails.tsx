@@ -15,6 +15,7 @@ interface TransactionDetailsProps {
 	onEdit?: () => void;
 	onSplit?: () => void;
 	onCreateRule?: () => void;
+	onMarkTransfer?: () => void;
 	onViewReceipt?: () => void;
 	onDelete?: () => void;
 }
@@ -33,6 +34,7 @@ export function TransactionDetails({
 	onEdit,
 	onSplit,
 	onCreateRule,
+	onMarkTransfer,
 	onViewReceipt,
 	onDelete,
 }: TransactionDetailsProps) {
@@ -181,6 +183,11 @@ export function TransactionDetails({
 				{onCreateRule && (
 					<Button variant="outline" size="sm" onClick={onCreateRule}>
 						Create rule
+					</Button>
+				)}
+				{onMarkTransfer && (
+					<Button variant="outline" size="sm" onClick={onMarkTransfer}>
+						Mark as transfer
 					</Button>
 				)}
 				{onDelete && (

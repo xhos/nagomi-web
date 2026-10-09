@@ -27,6 +27,7 @@ interface TransactionListProps {
 	onDeleteTransaction?: (transaction: Transaction) => void;
 	onSplitTransaction?: (transaction: Transaction) => void;
 	onCreateRule?: (transaction: Transaction) => void;
+	onMarkTransfer?: (transaction: Transaction) => void;
 }
 
 function SkeletonGroups({ groups }: { groups: number[] }) {
@@ -65,6 +66,7 @@ export function TransactionList({
 	onDeleteTransaction,
 	onSplitTransaction,
 	onCreateRule,
+	onMarkTransfer,
 }: TransactionListProps) {
 	const {
 		transactions,
@@ -136,6 +138,7 @@ export function TransactionList({
 		onDeleteTransaction,
 		onSplitTransaction,
 		onCreateRule,
+		onMarkTransfer,
 	});
 	latest.current = {
 		toggleSelection,
@@ -145,6 +148,7 @@ export function TransactionList({
 		onDeleteTransaction,
 		onSplitTransaction,
 		onCreateRule,
+		onMarkTransfer,
 	};
 	const rowHandlers = useMemo(
 		() => ({
@@ -158,6 +162,7 @@ export function TransactionList({
 			onDelete: (tx: Transaction) => latest.current.onDeleteTransaction?.(tx),
 			onSplit: (tx: Transaction) => latest.current.onSplitTransaction?.(tx),
 			onCreateRule: (tx: Transaction) => latest.current.onCreateRule?.(tx),
+			onMarkTransfer: (tx: Transaction) => latest.current.onMarkTransfer?.(tx),
 			onUnlinkTransfer: (tx: Transaction) =>
 				latest.current.unlinkTransfer({ transactionId: tx.id }),
 		}),
@@ -300,6 +305,9 @@ export function TransactionList({
 										onDelete={onDeleteTransaction && rowHandlers.onDelete}
 										onSplit={onSplitTransaction && rowHandlers.onSplit}
 										onCreateRule={onCreateRule && rowHandlers.onCreateRule}
+										onMarkTransfer={
+											onMarkTransfer && rowHandlers.onMarkTransfer
+										}
 										inlineSplits={splitMap.get(tx.id.toString())}
 									/>
 								),

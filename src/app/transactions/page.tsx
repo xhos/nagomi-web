@@ -27,12 +27,14 @@ import {
 	TransactionFiltersPanel,
 } from "./components/TransactionFiltersPanel";
 import { TransactionList } from "./components/TransactionList";
+import { TransferDialog } from "./components/TransferDialog";
 import { TransactionDialog } from "./components/transaction-dialog";
 
 export default function TransactionsPage() {
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [editing, setEditing] = useState<Transaction | null>(null);
 	const [splitting, setSplitting] = useState<Transaction | null>(null);
+	const [transferring, setTransferring] = useState<Transaction | null>(null);
 	const [searchInput, setSearchInput] = useState("");
 	const [searchQuery, setSearchQuery] = useState("");
 	const [filtersOpen, setFiltersOpen] = useState(false);
@@ -198,6 +200,7 @@ export default function TransactionsPage() {
 					}}
 					onDeleteTransaction={(tx) => deleteTransactions([tx.id])}
 					onSplitTransaction={setSplitting}
+					onMarkTransfer={setTransferring}
 					onCreateRule={openRuleFor}
 				/>
 
@@ -216,6 +219,12 @@ export default function TransactionsPage() {
 					transaction={splitting}
 					open={!!splitting}
 					onOpenChange={(o) => !o && setSplitting(null)}
+				/>
+
+				<TransferDialog
+					transaction={transferring}
+					open={!!transferring}
+					onOpenChange={(o) => !o && setTransferring(null)}
 				/>
 
 				<RuleDialog

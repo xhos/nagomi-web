@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	ArrowLeftRight,
 	BookmarkPlus,
 	Check,
 	Copy,
@@ -52,6 +53,7 @@ interface TransactionItemProps {
 	onDelete?: (transaction: Transaction) => void;
 	onSplit?: (transaction: Transaction) => void;
 	onCreateRule?: (transaction: Transaction) => void;
+	onMarkTransfer?: (transaction: Transaction) => void;
 	inlineSplits?: Transaction[];
 }
 
@@ -69,6 +71,7 @@ export const TransactionItem = memo(function TransactionItem({
 	onDelete,
 	onSplit,
 	onCreateRule,
+	onMarkTransfer,
 	inlineSplits,
 }: TransactionItemProps) {
 	const [receiptOpen, setReceiptOpen] = useState(false);
@@ -88,6 +91,8 @@ export const TransactionItem = memo(function TransactionItem({
 	const showMerchant =
 		transaction.merchant && transaction.merchant !== transaction.description;
 	const hasSplits = !!inlineSplits?.length;
+	// a split is a share owed by a friend, not money moving between own accounts
+	const markTransfer = !transaction.splitFromId ? onMarkTransfer : undefined;
 
 	const handleRowClick = (event: React.MouseEvent) => {
 		if (event.ctrlKey || event.metaKey || event.shiftKey) {
@@ -127,6 +132,11 @@ export const TransactionItem = memo(function TransactionItem({
 			{onSplit && (
 				<Item onClick={() => onSplit(transaction)}>
 					<Split /> {hasSplits ? "Re-split" : "Split"}
+				</Item>
+			)}
+			{markTransfer && (
+				<Item onClick={() => markTransfer(transaction)}>
+					<ArrowLeftRight /> Mark as transfer
 				</Item>
 			)}
 			{transaction.receiptId && (
@@ -310,6 +320,9 @@ export const TransactionItem = memo(function TransactionItem({
 									onSplit={onSplit && (() => onSplit(transaction))}
 									onCreateRule={
 										onCreateRule && (() => onCreateRule(transaction))
+									}
+									onMarkTransfer={
+										markTransfer && (() => markTransfer(transaction))
 									}
 									onViewReceipt={
 										transaction.receiptId
