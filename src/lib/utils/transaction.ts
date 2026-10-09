@@ -139,6 +139,8 @@ export function formatTime(timestamp?: TimestampType | string): string {
 		return "—";
 	}
 
+	// TODO: midnight and noon are placeholders for an unknown time of day (csv import
+	// uses noon to dodge time zone day shifts); needs broader, better time zone handling
 	if (
 		(date.getHours() === 0 || date.getHours() === 12) &&
 		date.getMinutes() === 0
