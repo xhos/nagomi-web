@@ -1,7 +1,7 @@
 "use client";
 
 import { Upload, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -31,6 +31,10 @@ import { ReconciliationSummary } from "./ReconciliationSummary";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 const NEW_ACCOUNT = "new";
+// an account this import creates; statements choose it as DRAFT + its key
+const DRAFT = "draft:";
+
+type Draft = { key: string; name: string };
 
 type Item = {
 	key: string;
@@ -43,9 +47,8 @@ type Item = {
 		| "importing"
 		| "imported";
 	preview?: PreviewStatementImportResponse;
-	// account id, NEW_ACCOUNT, or "" while unchosen
+	// account id, DRAFT + draft key, or "" while unchosen
 	target: string;
-	newName: string;
 	error?: string;
 	// what committing into target does; the preview's when target is the matched account
 	plan?: StatementReconciliation;
@@ -60,6 +63,15 @@ const accountKey = (preview?: PreviewStatementImportResponse) => {
 	return s?.accountNumber
 		? `${s.bank}|${s.accountType}|${s.accountNumber}`
 		: undefined;
+};
+
+const defaultName = (preview?: PreviewStatementImportResponse) => {
+	const s = preview?.statement;
+	return s
+		? [s.bank, accountTypeName(s.accountType), s.accountNumber.slice(-4)]
+				.filter(Boolean)
+				.join(" ")
+		: "";
 };
 
 const period = (preview: PreviewStatementImportResponse) =>
@@ -107,17 +119,20 @@ export function ImportStatementsDialog({
 	const userId = useUserId();
 	const invalidate = useInvalidateStatementData();
 	const [items, setItems] = useState<Item[]>([]);
+	const [drafts, setDrafts] = useState<Draft[]>([]);
 	const [importing, setImporting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const listRef = useRef<HTMLUListElement>(null);
-	const lastJumpRef = useRef<string | null>(null);
 	// latest items for reads that finish after other files were already chosen
 	const itemsRef = useRef(items);
 	itemsRef.current = items;
 
 	// core only imports into statement-driven accounts
 	const targets = accounts.filter((a) => a.statementDriven);
+
+	const draftOf = (target: string) =>
+		drafts.find((d) => `${DRAFT}${d.key}` === target);
 
 	const update = (key: string, patch: Partial<Item>) =>
 		setItems((xs) => xs.map((x) => (x.key === key ? { ...x, ...patch } : x)));
@@ -130,7 +145,6 @@ export function ImportStatementsDialog({
 				new Uint8Array(await item.file.arrayBuffer()),
 				item.file.name,
 			);
-			const s = preview.statement;
 			const matched = targets.find((a) => a.id === preview.matchedAccountId);
 			const key = accountKey(preview);
 			const sibling = matched
@@ -148,17 +162,6 @@ export function ImportStatementsDialog({
 				preview,
 				plan: matched ? preview.reconciliation : undefined,
 				target: matched?.id.toString() ?? "",
-				newName:
-					sibling?.newName ??
-					(s
-						? [
-								s.bank,
-								accountTypeName(s.accountType),
-								s.accountNumber.slice(-4),
-							]
-								.filter(Boolean)
-								.join(" ")
-						: ""),
 			});
 			if (sibling) choose({ ...item, preview }, sibling.target);
 		} catch (e) {
@@ -194,7 +197,6 @@ export function ImportStatementsDialog({
 				file,
 				status: "reading",
 				target: "",
-				newName: "",
 			});
 		}
 		setItems((xs) => [...xs, ...added]);
@@ -206,7 +208,7 @@ export function ImportStatementsDialog({
 		const preview = item.preview;
 		const statementId = preview?.statement?.id;
 		const planned = preview?.reconciliation;
-		if (target === "" || target === NEW_ACCOUNT || !userId || !statementId) {
+		if (target === "" || target.startsWith(DRAFT) || !userId || !statementId) {
 			update(item.key, { target, plan: undefined, planning: false });
 			return;
 		}
@@ -252,52 +254,95 @@ export function ImportStatementsDialog({
 
 	const ready = items.filter((x) => x.status === "ready");
 	const unchosen = ready.filter(
-		(x) =>
-			x.target === "" || (x.target === NEW_ACCOUNT && x.newName.trim() === ""),
+		(x) => x.target === "" || draftOf(x.target)?.name.trim() === "",
 	);
+	const reading = items.some((x) => x.status === "reading");
 	const canImport =
 		!importing &&
 		ready.length > 0 &&
 		unchosen.length === 0 &&
-		!items.some((x) => x.status === "reading") &&
+		!reading &&
 		!ready.some((x) => x.planning);
+	// drafts no statement points at anymore drop out of the choices
+	const liveDrafts = drafts.filter((d) =>
+		items.some((x) => x.target === `${DRAFT}${d.key}`),
+	);
 
-	// the next statement without an account after the last one jumped to, wrapping
-	const jumpToUnchosen = () => {
-		const after = items.findIndex((x) => x.key === lastJumpRef.current);
-		const next = unchosen.find((x) => items.indexOf(x) > after) ?? unchosen[0];
-		if (!next) return;
-		lastJumpRef.current = next.key;
-		const row = listRef.current?.querySelector<HTMLElement>(
-			`[data-key="${CSS.escape(next.key)}"]`,
-		);
-		row?.scrollIntoView({ block: "center", behavior: "smooth" });
-		row
-			?.querySelector<HTMLElement>("select, input")
-			?.focus({ preventScroll: true });
+	// after the render that shows it, so a new account's name field exists
+	const focusRow = (key: string, field: "select" | "input") =>
+		requestAnimationFrame(() => {
+			const row = listRef.current?.querySelector<HTMLElement>(
+				`[data-key="${CSS.escape(key)}"]`,
+			);
+			row?.scrollIntoView({ block: "center", behavior: "smooth" });
+			row?.querySelector<HTMLElement>(field)?.focus({ preventScroll: true });
+		});
+
+	// on to the next statement still without an account, wrapping around;
+	// `done` are the ones just chosen, which state doesn't reflect yet
+	const advance = (from: Item, done: Item[]) => {
+		const left = unchosen.filter((x) => !done.includes(x));
+		const at = items.indexOf(from);
+		const next = left.find((x) => items.indexOf(x) > at) ?? left[0];
+		if (next) focusRow(next.key, "select");
 	};
+
+	// once files finish reading, start at the first one that needs an account
+	const wasReading = useRef(false);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: runs when reading ends
+	useEffect(() => {
+		const first = unchosen[0];
+		if (
+			wasReading.current &&
+			!reading &&
+			first &&
+			!listRef.current?.contains(document.activeElement)
+		)
+			focusRow(first.key, "select");
+		wasReading.current = reading;
+	}, [reading]);
+
+	const pick = (item: Item, value: string) => {
+		const chosen = group(item);
+		if (value === NEW_ACCOUNT) {
+			const draft = {
+				key: `${Date.now()}-${Math.random()}`,
+				name: defaultName(item.preview),
+			};
+			setDrafts((ds) => [...ds, draft]);
+			for (const x of chosen) choose(x, `${DRAFT}${draft.key}`);
+			focusRow(item.key, "input");
+			return;
+		}
+		for (const x of chosen) choose(x, value);
+		advance(item, chosen);
+	};
+
+	const rename = (target: string, name: string) =>
+		setDrafts((ds) =>
+			ds.map((d) => (`${DRAFT}${d.key}` === target ? { ...d, name } : d)),
+		);
 
 	const importAll = async () => {
 		if (!userId) return;
 		setImporting(true);
-		// several statements for one new account should land in the same account
+		// the first statement of a draft creates its account; the rest join it
 		const created = new Map<string, bigint>();
 		for (const item of ready) {
 			const statementId = item.preview?.statement?.id;
 			if (statementId === undefined) continue;
-			const name = item.newName.trim();
-			const target: StatementTarget =
-				item.target !== NEW_ACCOUNT
-					? { accountId: BigInt(item.target) }
-					: created.has(name)
-						? { accountId: created.get(name) as bigint }
-						: { newAccountName: name };
+			const draft = draftOf(item.target);
+			const target: StatementTarget = !draft
+				? { accountId: BigInt(item.target) }
+				: created.has(draft.key)
+					? { accountId: created.get(draft.key) as bigint }
+					: { newAccountName: draft.name.trim() };
 
 			update(item.key, { status: "importing", error: undefined });
 			try {
 				const r = await statementsApi.commit(userId, statementId, target);
-				if (item.target === NEW_ACCOUNT && r.statement?.accountId)
-					created.set(name, r.statement.accountId);
+				if (draft && r.statement?.accountId)
+					created.set(draft.key, r.statement.accountId);
 				update(item.key, {
 					status: "imported",
 					result: resultSentence(r, r.statement?.accountName ?? "the account"),
@@ -316,6 +361,7 @@ export function ImportStatementsDialog({
 	const close = () => {
 		if (importing) return;
 		setItems([]);
+		setDrafts([]);
 		setError(null);
 		onOpenChange(false);
 	};
@@ -369,13 +415,12 @@ export function ImportStatementsDialog({
 									key={item.key}
 									item={item}
 									accounts={targets}
+									drafts={liveDrafts}
+									draft={draftOf(item.target)}
 									busy={importing}
-									onChange={(patch) => {
-										for (const x of group(item)) update(x.key, patch);
-									}}
-									onChoose={(target) => {
-										for (const x of group(item)) choose(x, target);
-									}}
+									onChoose={(value) => pick(item, value)}
+									onRename={(name) => rename(item.target, name)}
+									onNext={() => advance(item, [item])}
 									onRemove={() =>
 										setItems((xs) => xs.filter((x) => x.key !== item.key))
 									}
@@ -390,16 +435,6 @@ export function ImportStatementsDialog({
 						<Button onClick={close}>Done</Button>
 					) : (
 						<>
-							{unchosen.length > 0 && !importing && (
-								<Button
-									variant="ghost"
-									onClick={jumpToUnchosen}
-									className="text-muted-foreground sm:mr-auto"
-								>
-									{unchosen.length} {unchosen.length === 1 ? "needs" : "need"}{" "}
-									an account
-								</Button>
-							)}
 							<Button variant="outline" onClick={close} disabled={importing}>
 								Cancel
 							</Button>
@@ -417,16 +452,23 @@ export function ImportStatementsDialog({
 function StatementItem({
 	item,
 	accounts,
+	drafts,
+	draft,
 	busy,
-	onChange,
 	onChoose,
+	onRename,
+	onNext,
 	onRemove,
 }: {
 	item: Item;
 	accounts: Account[];
+	drafts: Draft[];
+	// the new account this statement goes into, if it's one
+	draft?: Draft;
 	busy: boolean;
-	onChange: (patch: Partial<Item>) => void;
-	onChoose: (target: string) => void;
+	onChoose: (value: string) => void;
+	onRename: (name: string) => void;
+	onNext: () => void;
 	onRemove: () => void;
 }) {
 	const s = item.preview?.statement;
@@ -502,13 +544,22 @@ function StatementItem({
 									{a.friendlyName || a.name}
 								</option>
 							))}
+							{drafts.map((d) => (
+								<option key={d.key} value={`${DRAFT}${d.key}`}>
+									{d.name.trim() || "Unnamed"} (new)
+								</option>
+							))}
 							<option value={NEW_ACCOUNT}>New account…</option>
 						</NativeSelect>
-						{item.target === NEW_ACCOUNT && (
+						{draft && (
 							<Input
 								aria-label="New account name"
-								value={item.newName}
-								onChange={(e) => onChange({ newName: e.target.value })}
+								placeholder="Account name"
+								value={draft.name}
+								onChange={(e) => onRename(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") onNext();
+								}}
 								disabled={busy}
 								className="h-9 sm:flex-1"
 							/>
@@ -530,7 +581,7 @@ function StatementItem({
 							currency={s?.currency ?? "CAD"}
 						/>
 					)}
-					{item.target === NEW_ACCOUNT && (
+					{draft && (
 						<p className="text-sm text-muted-foreground">
 							{lineCount === 1
 								? "Its 1 transaction is added."
