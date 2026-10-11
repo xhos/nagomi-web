@@ -9,6 +9,7 @@ import {
 	FileText,
 	Pencil,
 	ReceiptText,
+	Search,
 	Split,
 	Trash2,
 } from "lucide-react";
@@ -115,6 +116,14 @@ export const TransactionItem = memo(function TransactionItem({
 	const copyName = () =>
 		navigator.clipboard.writeText(transaction.merchant || title);
 
+	// pages can't read the browser's default search engine, so this uses Google
+	const lookUp = () =>
+		window.open(
+			`https://www.google.com/search?q=${encodeURIComponent(title)}`,
+			"_blank",
+			"noopener,noreferrer",
+		);
+
 	// same items for right-click and the hover menu
 	const actions = (
 		Item: typeof ContextMenuItem,
@@ -151,6 +160,9 @@ export const TransactionItem = memo(function TransactionItem({
 			)}
 			<Item onClick={copyName}>
 				<Copy /> Copy name
+			</Item>
+			<Item onClick={lookUp}>
+				<Search /> Look up online
 			</Item>
 			{onDelete && (
 				<>
