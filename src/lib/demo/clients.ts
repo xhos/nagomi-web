@@ -76,6 +76,7 @@ import {
 	DeleteRuleResponseSchema,
 	ListRulesResponseSchema,
 	RuleService,
+	SuggestRulesResponseSchema,
 	UpdateRuleResponseSchema,
 } from "@/gen/nagomi/v1/rule_services_pb";
 import {
@@ -146,6 +147,7 @@ import {
 	reconciliationToPb,
 	signedCents,
 } from "./reconcile";
+import { applyRules, suggestRules } from "./rules";
 
 const { DIRECTION_INCOMING: IN, DIRECTION_OUTGOING: OUT } =
 	TransactionDirection;
@@ -692,6 +694,7 @@ export const ruleClient = fake(RuleService, {
 			updatedAt: now(),
 		});
 		db.rules.push(r);
+		if (req.applyToExisting) applyRules(db.transactions, db.rules);
 		return create(CreateRuleResponseSchema, { rule: r });
 	},
 	async updateRule(r) {
@@ -709,11 +712,28 @@ export const ruleClient = fake(RuleService, {
 				rule.priorityOrder = r.priorityOrder;
 		}
 		rule.updatedAt = now();
+		if (r.applyToExisting) applyRules(db.transactions, db.rules);
 		return create(UpdateRuleResponseSchema, {});
 	},
 	async deleteRule(req) {
 		db.rules = db.rules.filter((r) => r.ruleId !== req.ruleId);
 		return create(DeleteRuleResponseSchema, { affectedRows: BigInt(1) });
+	},
+	async suggestRules(req) {
+		const owned = db.transactions.filter(
+			(t) => account(t.accountId)?.type !== AccountType.ACCOUNT_FRIEND,
+		);
+		const uncategorized = owned.filter(
+			(t) => t.categoryId === undefined && !linkedTransfer(t.id),
+		);
+		return create(SuggestRulesResponseSchema, {
+			suggestions: suggestRules(
+				uncategorized,
+				owned.filter((t) => t.categoryId !== undefined),
+				req.limit,
+			),
+			uncategorizedCount: BigInt(uncategorized.length),
+		});
 	},
 });
 

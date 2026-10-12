@@ -3,6 +3,7 @@ import {
 	CreateRuleRequestSchema,
 	DeleteRuleRequestSchema,
 	ListRulesRequestSchema,
+	SuggestRulesRequestSchema,
 	UpdateRuleRequestSchema,
 } from "@/gen/nagomi/v1/rule_services_pb";
 import { ruleClient } from "@/lib/grpc-client";
@@ -68,6 +69,11 @@ export const rulesApi = {
 		});
 
 		await ruleClient.updateRule(request);
+	},
+
+	async suggestions(userId: string) {
+		const request = create(SuggestRulesRequestSchema, { userId });
+		return ruleClient.suggestRules(request);
 	},
 
 	async delete(userId: string, ruleId: string) {

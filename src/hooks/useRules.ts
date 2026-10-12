@@ -62,6 +62,32 @@ export function useRules() {
 	};
 }
 
+// the most common uncategorized descriptions, as rule patterns; keyed under
+// transactions so anything that recategorizes refreshes it
+export function useRuleSuggestions() {
+	const userId = useUserId();
+	return useQuery({
+		queryKey: ["transactions", "rule-suggestions", userId],
+		queryFn: async () => {
+			if (!userId) throw new Error("User not authenticated");
+			return rulesApi.suggestions(userId);
+		},
+		enabled: !!userId,
+		staleTime: 60 * 1000,
+	});
+}
+
+// applying a rule to existing transactions recategorizes them
+function invalidateRuleUsers(
+	queryClient: ReturnType<typeof useQueryClient>,
+	appliedToExisting?: boolean,
+) {
+	queryClient.invalidateQueries({ queryKey: ["rules"] });
+	if (!appliedToExisting) return;
+	queryClient.invalidateQueries({ queryKey: ["transactions"] });
+	queryClient.invalidateQueries({ queryKey: ["transaction-summary"] });
+}
+
 export function useCreateRule() {
 	const userId = useUserId();
 	const queryClient = useQueryClient();
@@ -71,9 +97,8 @@ export function useCreateRule() {
 			if (!userId) throw new Error("User not authenticated");
 			return rulesApi.create(userId, data);
 		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["rules"] });
-		},
+		onSuccess: (_, data) =>
+			invalidateRuleUsers(queryClient, data.applyToExisting),
 	});
 
 	return {

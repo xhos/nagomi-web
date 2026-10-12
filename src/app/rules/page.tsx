@@ -1,7 +1,15 @@
 "use client";
 
 import { format } from "date-fns";
-import { Ellipsis, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import {
+	Ellipsis,
+	Lightbulb,
+	Pencil,
+	Plus,
+	Search,
+	Trash2,
+} from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
 	AlertDialog,
@@ -140,6 +148,12 @@ export default function RulesPage() {
 									onChange={(e) => setQuery(e.target.value)}
 								/>
 							</div>
+							<Button variant="outline" asChild>
+								<Link href="/rules/suggested">
+									<Lightbulb />
+									Suggestions
+								</Link>
+							</Button>
 							<Button onClick={() => setCreatingOpen(true)}>
 								<Plus />
 								New
