@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { CategoryDialog } from "@/app/categories/category-dialog";
 import { Button } from "@/components/ui/button";
 import { CategoryPicker } from "@/components/ui/category-picker";
 import {
@@ -16,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
 import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useAccounts } from "@/hooks/useAccounts";
-import { useCategories, useCreateCategory } from "@/hooks/useCategories";
+import { useCategories } from "@/hooks/useCategories";
 import { useCurrencies } from "@/hooks/useCurrencies";
 import { cn } from "@/lib/utils";
 
@@ -47,22 +46,8 @@ export function TransactionDialog({
 	const { accounts } = useAccounts();
 	const { categories } = useCategories();
 	const { currencies } = useCurrencies();
-	const { createCategoryAsync } = useCreateCategory();
 	const [isLoading, setIsLoading] = React.useState(false);
 	const [error, setError] = React.useState<string | null>(null);
-	const [createCategoryOpen, setCreateCategoryOpen] = React.useState(false);
-	const [pendingCategorySlug, setPendingCategorySlug] = React.useState<
-		string | null
-	>(null);
-
-	React.useEffect(() => {
-		if (!pendingCategorySlug) return;
-		const match = categories.find((c) => c.slug === pendingCategorySlug);
-		if (match) {
-			setFormData((prev) => ({ ...prev, categoryId: match.id.toString() }));
-			setPendingCategorySlug(null);
-		}
-	}, [categories, pendingCategorySlug]);
 
 	const [formData, setFormData] = React.useState({
 		accountId: "",
@@ -176,215 +161,194 @@ export function TransactionDialog({
 	) => setFormData((prev) => ({ ...prev, [key]: value }));
 
 	return (
-		<>
-			<CategoryDialog
-				open={createCategoryOpen}
-				onOpenChange={setCreateCategoryOpen}
-				onSave={async (slug, color) => {
-					await createCategoryAsync({ slug, color });
-					setPendingCategorySlug(slug);
-				}}
-			/>
-			<Dialog open={open} onOpenChange={onOpenChange}>
-				<DialogContent className="sm:max-w-[520px]">
-					<form onSubmit={handleSubmit} className="space-y-4">
-						<DialogHeader>
-							<DialogTitle>{title}</DialogTitle>
-						</DialogHeader>
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent className="sm:max-w-[520px]">
+				<form onSubmit={handleSubmit} className="space-y-4">
+					<DialogHeader>
+						<DialogTitle>{title}</DialogTitle>
+					</DialogHeader>
 
-						<div className="flex gap-2">
-							{(
-								[
-									[TransactionDirection.DIRECTION_OUTGOING, "Expense"],
-									[TransactionDirection.DIRECTION_INCOMING, "Income"],
-								] as const
-							).map(([dir, label]) => (
-								<button
-									key={dir}
-									type="button"
-									onClick={() => set("direction", dir)}
-									className={cn(
-										"h-8 rounded-md border px-3 text-sm transition-colors",
-										formData.direction === dir
-											? "border-foreground bg-foreground text-background"
-											: "hover:bg-muted",
-									)}
-								>
-									{label}
-								</button>
-							))}
-						</div>
+					<div className="flex gap-2">
+						{(
+							[
+								[TransactionDirection.DIRECTION_OUTGOING, "Expense"],
+								[TransactionDirection.DIRECTION_INCOMING, "Income"],
+							] as const
+						).map(([dir, label]) => (
+							<button
+								key={dir}
+								type="button"
+								onClick={() => set("direction", dir)}
+								className={cn(
+									"h-8 rounded-md border px-3 text-sm transition-colors",
+									formData.direction === dir
+										? "border-foreground bg-foreground text-background"
+										: "hover:bg-muted",
+								)}
+							>
+								{label}
+							</button>
+						))}
+					</div>
 
-						<div className="grid gap-4 sm:grid-cols-2">
-							<Field label="Account" htmlFor="tx-account">
+					<div className="grid gap-4 sm:grid-cols-2">
+						<Field label="Account" htmlFor="tx-account">
+							<NativeSelect
+								id="tx-account"
+								value={formData.accountId}
+								onChange={(e) => {
+									const a = accounts.find(
+										(x) => x.id.toString() === e.target.value,
+									);
+									setFormData((prev) => ({
+										...prev,
+										accountId: e.target.value,
+										currency: a?.mainCurrency || prev.currency,
+									}));
+								}}
+								disabled={isLoading}
+								required
+							>
+								<option value="">Choose an account</option>
+								{accounts.map((a) => (
+									<option key={a.id.toString()} value={a.id.toString()}>
+										{a.friendlyName || a.name} · {a.bank}
+									</option>
+								))}
+							</NativeSelect>
+						</Field>
+						<Field label="Amount" htmlFor="tx-amount">
+							<div className="flex gap-2">
 								<NativeSelect
-									id="tx-account"
-									value={formData.accountId}
-									onChange={(e) => {
-										const a = accounts.find(
-											(x) => x.id.toString() === e.target.value,
-										);
-										setFormData((prev) => ({
-											...prev,
-											accountId: e.target.value,
-											currency: a?.mainCurrency || prev.currency,
-										}));
-									}}
+									aria-label="Currency"
+									className="w-24"
+									value={formData.currency}
+									onChange={(e) => set("currency", e.target.value)}
 									disabled={isLoading}
-									required
 								>
-									<option value="">Choose an account</option>
-									{accounts.map((a) => (
-										<option key={a.id.toString()} value={a.id.toString()}>
-											{a.friendlyName || a.name} · {a.bank}
+									{currencies.map(({ code }) => (
+										<option key={code} value={code}>
+											{code}
 										</option>
 									))}
 								</NativeSelect>
-							</Field>
-							<Field label="Amount" htmlFor="tx-amount">
-								<div className="flex gap-2">
-									<NativeSelect
-										aria-label="Currency"
-										className="w-24"
-										value={formData.currency}
-										onChange={(e) => set("currency", e.target.value)}
-										disabled={isLoading}
-									>
-										{currencies.map(({ code }) => (
-											<option key={code} value={code}>
-												{code}
-											</option>
-										))}
-									</NativeSelect>
-									<Input
-										id="tx-amount"
-										type="number"
-										step="0.01"
-										value={formData.amount}
-										onChange={(e) => set("amount", e.target.value)}
-										placeholder="0.00"
-										disabled={isLoading}
-										required
-										autoFocus
-									/>
-								</div>
-							</Field>
-						</div>
+								<Input
+									id="tx-amount"
+									type="number"
+									step="0.01"
+									value={formData.amount}
+									onChange={(e) => set("amount", e.target.value)}
+									placeholder="0.00"
+									disabled={isLoading}
+									required
+									autoFocus
+								/>
+							</div>
+						</Field>
+					</div>
 
-						<Field label="Description" htmlFor="tx-desc">
+					<Field label="Description" htmlFor="tx-desc">
+						<Input
+							id="tx-desc"
+							value={formData.description}
+							onChange={(e) => set("description", e.target.value)}
+							placeholder="What was this for"
+							disabled={isLoading}
+						/>
+					</Field>
+
+					<div className="grid gap-4 sm:grid-cols-2">
+						<Field label="Date" htmlFor="tx-date">
 							<Input
-								id="tx-desc"
-								value={formData.description}
-								onChange={(e) => set("description", e.target.value)}
-								placeholder="What was this for"
+								id="tx-date"
+								type="date"
+								value={formData.date}
+								onChange={(e) => set("date", e.target.value)}
 								disabled={isLoading}
 							/>
 						</Field>
-
-						<div className="grid gap-4 sm:grid-cols-2">
-							<Field label="Date" htmlFor="tx-date">
-								<Input
-									id="tx-date"
-									type="date"
-									value={formData.date}
-									onChange={(e) => set("date", e.target.value)}
-									disabled={isLoading}
-								/>
-							</Field>
-							<Field label="Time" htmlFor="tx-time">
-								<Input
-									id="tx-time"
-									type="time"
-									value={formData.time}
-									onChange={(e) => set("time", e.target.value)}
-									disabled={isLoading}
-								/>
-							</Field>
-						</div>
-
-						<div className="grid gap-4 border-t pt-4 sm:grid-cols-2">
-							<Field label="Merchant" htmlFor="tx-merchant">
-								<Input
-									id="tx-merchant"
-									value={formData.merchant}
-									onChange={(e) => set("merchant", e.target.value)}
-									placeholder="Optional"
-									disabled={isLoading}
-								/>
-							</Field>
-							<Field label="Category">
-								<CategoryPicker
-									value={
-										formData.categoryId
-											? BigInt(formData.categoryId)
-											: undefined
-									}
-									onChange={(c) => set("categoryId", c?.id.toString() ?? "")}
-								>
-									<Button
-										type="button"
-										variant="outline"
-										className="w-full justify-start font-normal"
-										disabled={isLoading}
-									>
-										{(() => {
-											const c = categories.find(
-												(x) => x.id.toString() === formData.categoryId,
-											);
-											return c ? (
-												<>
-													<span
-														className="size-2 rounded-full"
-														style={{ backgroundColor: c.color }}
-													/>
-													{c.slug}
-												</>
-											) : (
-												<span className="text-muted-foreground">None</span>
-											);
-										})()}
-									</Button>
-								</CategoryPicker>
-								<Button
-									type="button"
-									variant="link"
-									size="sm"
-									className="h-auto p-0"
-									onClick={() => setCreateCategoryOpen(true)}
-								>
-									New category
-								</Button>
-							</Field>
-						</div>
-
-						<Field label="Notes" htmlFor="tx-notes">
+						<Field label="Time" htmlFor="tx-time">
 							<Input
-								id="tx-notes"
-								value={formData.userNotes}
-								onChange={(e) => set("userNotes", e.target.value)}
+								id="tx-time"
+								type="time"
+								value={formData.time}
+								onChange={(e) => set("time", e.target.value)}
+								disabled={isLoading}
+							/>
+						</Field>
+					</div>
+
+					<div className="grid gap-4 border-t pt-4 sm:grid-cols-2">
+						<Field label="Merchant" htmlFor="tx-merchant">
+							<Input
+								id="tx-merchant"
+								value={formData.merchant}
+								onChange={(e) => set("merchant", e.target.value)}
 								placeholder="Optional"
 								disabled={isLoading}
 							/>
 						</Field>
-
-						<FormError>{error}</FormError>
-
-						<DialogFooter>
-							<Button
-								type="button"
-								variant="outline"
-								onClick={() => onOpenChange(false)}
-								disabled={isLoading}
+						<Field label="Category">
+							<CategoryPicker
+								value={
+									formData.categoryId ? BigInt(formData.categoryId) : undefined
+								}
+								onChange={(c) => set("categoryId", c?.id.toString() ?? "")}
 							>
-								Cancel
-							</Button>
-							<Button type="submit" disabled={isLoading}>
-								{isLoading ? "Saving…" : "Save"}
-							</Button>
-						</DialogFooter>
-					</form>
-				</DialogContent>
-			</Dialog>
-		</>
+								<Button
+									type="button"
+									variant="outline"
+									className="w-full justify-start font-normal"
+									disabled={isLoading}
+								>
+									{(() => {
+										const c = categories.find(
+											(x) => x.id.toString() === formData.categoryId,
+										);
+										return c ? (
+											<>
+												<span
+													className="size-2 rounded-full"
+													style={{ backgroundColor: c.color }}
+												/>
+												{c.slug}
+											</>
+										) : (
+											<span className="text-muted-foreground">None</span>
+										);
+									})()}
+								</Button>
+							</CategoryPicker>
+						</Field>
+					</div>
+
+					<Field label="Notes" htmlFor="tx-notes">
+						<Input
+							id="tx-notes"
+							value={formData.userNotes}
+							onChange={(e) => set("userNotes", e.target.value)}
+							placeholder="Optional"
+							disabled={isLoading}
+						/>
+					</Field>
+
+					<FormError>{error}</FormError>
+
+					<DialogFooter>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => onOpenChange(false)}
+							disabled={isLoading}
+						>
+							Cancel
+						</Button>
+						<Button type="submit" disabled={isLoading}>
+							{isLoading ? "Saving…" : "Save"}
+						</Button>
+					</DialogFooter>
+				</form>
+			</DialogContent>
+		</Dialog>
 	);
 }

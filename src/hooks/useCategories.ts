@@ -72,7 +72,12 @@ export function useCreateCategory() {
 		mutationFn: async (data: CreateCategoryInput) => {
 			return categoriesApi.create(data);
 		},
-		onSuccess: () => {
+		// show it in every picker at once, before the refetch lands
+		onSuccess: (created) => {
+			if (created)
+				queryClient.setQueryData<Category[]>(["categories", userId], (old) =>
+					old ? [...old, created] : old,
+				);
 			queryClient.invalidateQueries({ queryKey: ["categories", userId] });
 		},
 	});

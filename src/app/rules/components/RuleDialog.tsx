@@ -2,7 +2,6 @@
 
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CategoryDialog } from "@/app/categories/category-dialog";
 import { Button } from "@/components/ui/button";
 import { CategoryPicker } from "@/components/ui/category-picker";
 import {
@@ -16,7 +15,6 @@ import { Field, FormError } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
 import type { Category } from "@/gen/nagomi/v1/category_pb";
 import type { Rule } from "@/gen/nagomi/v1/rule_pb";
-import { useCreateCategory } from "@/hooks/useCategories";
 import {
 	createRuleBuilder,
 	type FieldName,
@@ -75,7 +73,6 @@ export function RuleDialog({
 	isLoading,
 	error: externalError,
 }: RuleDialogProps) {
-	const { createCategoryAsync } = useCreateCategory();
 	const [ruleName, setRuleName] = useState("");
 	const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 	const [merchantValue, setMerchantValue] = useState("");
@@ -86,19 +83,6 @@ export function RuleDialog({
 	const [priorityOrder, setPriorityOrder] = useState(1);
 	const [applyToExisting, setApplyToExisting] = useState(false);
 	const [validationError, setValidationError] = useState<string | null>(null);
-	const [createCategoryOpen, setCreateCategoryOpen] = useState(false);
-	const [pendingCategorySlug, setPendingCategorySlug] = useState<string | null>(
-		null,
-	);
-
-	useEffect(() => {
-		if (!pendingCategorySlug) return;
-		const match = categories.find((c) => c.slug === pendingCategorySlug);
-		if (match) {
-			setSelectedCategoryId(match.id.toString());
-			setPendingCategorySlug(null);
-		}
-	}, [categories, pendingCategorySlug]);
 
 	useEffect(() => {
 		if (!isOpen) return;
@@ -318,164 +302,143 @@ export function RuleDialog({
 		);
 
 	return (
-		<>
-			<CategoryDialog
-				open={createCategoryOpen}
-				onOpenChange={setCreateCategoryOpen}
-				onSave={async (slug, color) => {
-					await createCategoryAsync({ slug, color });
-					setPendingCategorySlug(slug);
-				}}
-			/>
-			<Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
-				<DialogContent className="flex max-h-[90vh] flex-col sm:max-w-2xl">
-					<DialogHeader>
-						<DialogTitle>{title}</DialogTitle>
-					</DialogHeader>
+		<Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+			<DialogContent className="flex max-h-[90vh] flex-col sm:max-w-2xl">
+				<DialogHeader>
+					<DialogTitle>{title}</DialogTitle>
+				</DialogHeader>
 
-					<div className="-mx-1 flex-1 space-y-5 overflow-y-auto px-1">
-						<Field label="Name" htmlFor="rule-name">
-							<Input
-								id="rule-name"
-								value={ruleName}
-								onChange={(e) => setRuleName(e.target.value)}
-								placeholder="Groceries"
-								autoFocus
+				<div className="-mx-1 flex-1 space-y-5 overflow-y-auto px-1">
+					<Field label="Name" htmlFor="rule-name">
+						<Input
+							id="rule-name"
+							value={ruleName}
+							onChange={(e) => setRuleName(e.target.value)}
+							placeholder="Groceries"
+							autoFocus
+						/>
+					</Field>
+
+					<div className="space-y-3 border-t pt-4">
+						<div className="flex flex-wrap items-center justify-between gap-2">
+							<span className="text-sm font-medium">When</span>
+							<span className="flex gap-2">
+								<button
+									type="button"
+									className={chip(logic === "AND")}
+									onClick={() => setLogic("AND")}
+								>
+									All conditions match
+								</button>
+								<button
+									type="button"
+									className={chip(logic === "OR")}
+									onClick={() => setLogic("OR")}
+								>
+									Any condition matches
+								</button>
+							</span>
+						</div>
+						{uiConditions.map((condition, index) => (
+							<ConditionBuilder
+								key={index}
+								condition={condition}
+								showRemove={uiConditions.length > 1}
+								onUpdate={(u) => updateCondition(index, u)}
+								onRemove={() => removeCondition(index)}
 							/>
-						</Field>
-
-						<div className="space-y-3 border-t pt-4">
-							<div className="flex flex-wrap items-center justify-between gap-2">
-								<span className="text-sm font-medium">When</span>
-								<span className="flex gap-2">
-									<button
-										type="button"
-										className={chip(logic === "AND")}
-										onClick={() => setLogic("AND")}
-									>
-										All conditions match
-									</button>
-									<button
-										type="button"
-										className={chip(logic === "OR")}
-										onClick={() => setLogic("OR")}
-									>
-										Any condition matches
-									</button>
-								</span>
-							</div>
-							{uiConditions.map((condition, index) => (
-								<ConditionBuilder
-									key={index}
-									condition={condition}
-									showRemove={uiConditions.length > 1}
-									onUpdate={(u) => updateCondition(index, u)}
-									onRemove={() => removeCondition(index)}
-								/>
-							))}
-							<Button
-								type="button"
-								variant="ghost"
-								size="sm"
-								onClick={addCondition}
-							>
-								<Plus /> Add condition
-							</Button>
-						</div>
-
-						<div className="space-y-3 border-t pt-4">
-							<span className="text-sm font-medium">Then</span>
-							<div className="grid gap-4 sm:grid-cols-2">
-								<Field label="Set category">
-									<CategoryPicker
-										value={selectedCategory?.id}
-										onChange={(c) =>
-											setSelectedCategoryId(c?.id.toString() ?? "")
-										}
-									>
-										<Button
-											variant="outline"
-											className="w-full justify-start font-normal"
-										>
-											{selectedCategory ? (
-												<>
-													<span
-														className="size-2 rounded-full"
-														style={{ backgroundColor: selectedCategory.color }}
-													/>
-													{selectedCategory.slug}
-												</>
-											) : (
-												<span className="text-muted-foreground">
-													Choose a category
-												</span>
-											)}
-										</Button>
-									</CategoryPicker>
-									<Button
-										type="button"
-										variant="link"
-										size="sm"
-										className="h-auto p-0"
-										onClick={() => setCreateCategoryOpen(true)}
-									>
-										New category
-									</Button>
-								</Field>
-								<Field label="Set merchant" htmlFor="rule-merchant">
-									<Input
-										id="rule-merchant"
-										value={merchantValue}
-										onChange={(e) => setMerchantValue(e.target.value)}
-										placeholder="Optional"
-									/>
-								</Field>
-							</div>
-						</div>
-
-						<div className="flex flex-wrap items-end gap-6 border-t pt-4">
-							<Field
-								label="Priority"
-								htmlFor="rule-priority"
-								hint="Lower runs first."
-							>
-								<Input
-									id="rule-priority"
-									type="number"
-									min={1}
-									value={priorityOrder}
-									onChange={(e) =>
-										setPriorityOrder(Number(e.target.value) || 1)
-									}
-									className="w-24"
-								/>
-							</Field>
-							{!rule && (
-								<label className="flex items-center gap-2 pb-6 text-sm">
-									<input
-										type="checkbox"
-										checked={applyToExisting}
-										onChange={(e) => setApplyToExisting(e.target.checked)}
-										className="size-3.5 accent-[var(--accent)]"
-									/>
-									Apply to existing transactions
-								</label>
-							)}
-						</div>
-
-						<FormError>{validationError || externalError}</FormError>
+						))}
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							onClick={addCondition}
+						>
+							<Plus /> Add condition
+						</Button>
 					</div>
 
-					<DialogFooter>
-						<Button variant="outline" onClick={onClose} disabled={isLoading}>
-							Cancel
-						</Button>
-						<Button onClick={handleSubmit} disabled={isLoading || !canSubmit}>
-							{isLoading ? "Saving…" : submitText}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
-		</>
+					<div className="space-y-3 border-t pt-4">
+						<span className="text-sm font-medium">Then</span>
+						<div className="grid gap-4 sm:grid-cols-2">
+							<Field label="Set category">
+								<CategoryPicker
+									value={selectedCategory?.id}
+									onChange={(c) =>
+										setSelectedCategoryId(c?.id.toString() ?? "")
+									}
+								>
+									<Button
+										variant="outline"
+										className="w-full justify-start font-normal"
+									>
+										{selectedCategory ? (
+											<>
+												<span
+													className="size-2 rounded-full"
+													style={{ backgroundColor: selectedCategory.color }}
+												/>
+												{selectedCategory.slug}
+											</>
+										) : (
+											<span className="text-muted-foreground">
+												Choose a category
+											</span>
+										)}
+									</Button>
+								</CategoryPicker>
+							</Field>
+							<Field label="Set merchant" htmlFor="rule-merchant">
+								<Input
+									id="rule-merchant"
+									value={merchantValue}
+									onChange={(e) => setMerchantValue(e.target.value)}
+									placeholder="Optional"
+								/>
+							</Field>
+						</div>
+					</div>
+
+					<div className="flex flex-wrap items-end gap-6 border-t pt-4">
+						<Field
+							label="Priority"
+							htmlFor="rule-priority"
+							hint="Lower runs first."
+						>
+							<Input
+								id="rule-priority"
+								type="number"
+								min={1}
+								value={priorityOrder}
+								onChange={(e) => setPriorityOrder(Number(e.target.value) || 1)}
+								className="w-24"
+							/>
+						</Field>
+						{!rule && (
+							<label className="flex items-center gap-2 pb-6 text-sm">
+								<input
+									type="checkbox"
+									checked={applyToExisting}
+									onChange={(e) => setApplyToExisting(e.target.checked)}
+									className="size-3.5 accent-[var(--accent)]"
+								/>
+								Apply to existing transactions
+							</label>
+						)}
+					</div>
+
+					<FormError>{validationError || externalError}</FormError>
+				</div>
+
+				<DialogFooter>
+					<Button variant="outline" onClick={onClose} disabled={isLoading}>
+						Cancel
+					</Button>
+					<Button onClick={handleSubmit} disabled={isLoading || !canSubmit}>
+						{isLoading ? "Saving…" : submitText}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 }

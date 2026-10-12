@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { SlugOption, useSlugKeys } from "@/components/ui/category-picker";
 import { ColorSwatch } from "@/components/ui/color-swatch";
 import {
 	Dialog,
@@ -15,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import type { Category } from "@/gen/nagomi/v1/category_pb";
 import { useCategories } from "@/hooks/useCategories";
 import { generateRandomCategoryColor } from "@/lib/color-utils";
-import { cn } from "@/lib/utils";
+import { isValidSlug, searchSlugs } from "@/lib/utils/category";
 
 interface CategoryDialogProps {
 	open: boolean;
@@ -23,14 +24,6 @@ interface CategoryDialogProps {
 	category?: Category | null;
 	initialSlug?: string;
 	onSave: (slug: string, color: string) => Promise<void>;
-}
-
-function longestCommonPrefix(strings: string[]): string {
-	if (!strings.length) return "";
-	return strings.reduce((prefix, s) => {
-		while (!s.startsWith(prefix)) prefix = prefix.slice(0, -1);
-		return prefix;
-	});
 }
 
 export function CategoryDialog({
@@ -41,19 +34,41 @@ export function CategoryDialog({
 	onSave,
 }: CategoryDialogProps) {
 	const { categories } = useCategories();
-	const existingSlugs = categories.map((c) => c.slug);
 
 	const [slug, setSlug] = React.useState("");
-	const [typedSlug, setTypedSlug] = React.useState("");
-	const [suggestions, setSuggestions] = React.useState<string[]>([]);
-	const [suggestionIndex, setSuggestionIndex] = React.useState(-1);
 	const [showSuggestions, setShowSuggestions] = React.useState(false);
 
 	const [color, setColor] = React.useState(generateRandomCategoryColor);
 	const [isLoading, setIsLoading] = React.useState(false);
 	const [error, setError] = React.useState<string | null>(null);
 
-	const suggestionsRef = React.useRef<HTMLDivElement>(null);
+	// the same search as every category picker, minus the slug being edited
+	const others = categories
+		.map((c) => c.slug)
+		.filter((s) => s !== category?.slug);
+	const suggestions = slug
+		? searchSlugs(others, slug)
+				.filter((s) => s !== slug)
+				.slice(0, 8)
+		: [];
+	const showList = showSuggestions && suggestions.length > 0;
+
+	const accept = (value: string) => {
+		setSlug(value);
+		setShowSuggestions(false);
+	};
+
+	const keys = useSlugKeys({
+		slugs: others,
+		query: slug,
+		setQuery: (q) => {
+			setSlug(q);
+			setShowSuggestions(true);
+		},
+		count: showList ? suggestions.length : 0,
+		none: -1,
+		onAccept: (i) => accept(suggestions[i]),
+	});
 
 	React.useEffect(() => {
 		if (open) {
@@ -64,100 +79,23 @@ export function CategoryDialog({
 				setSlug(initialSlug ?? "");
 				setColor(generateRandomCategoryColor());
 			}
-			setTypedSlug(initialSlug ?? "");
-			setSuggestions([]);
-			setSuggestionIndex(-1);
 			setShowSuggestions(false);
 			setError(null);
 		}
 	}, [category, initialSlug, open]);
 
-	const computeSuggestions = (value: string) =>
-		existingSlugs.filter((s) => s.startsWith(value) && s !== value).slice(0, 8);
-
-	const handleSlugChange = (value: string) => {
-		const normalized = value.toLowerCase();
-		setSlug(normalized);
-		setTypedSlug(normalized);
-		setSuggestionIndex(-1);
-		if (normalized) {
-			const matches = computeSuggestions(normalized);
-			setSuggestions(matches);
-			setShowSuggestions(matches.length > 0);
-		} else {
-			setSuggestions([]);
-			setShowSuggestions(false);
-		}
-	};
-
-	const acceptSuggestion = (value: string) => {
-		setSlug(value);
-		setTypedSlug(value);
-		setSuggestions([]);
-		setSuggestionIndex(-1);
-		setShowSuggestions(false);
-	};
-
-	const dismissSuggestions = () => {
-		setSlug(typedSlug);
-		setSuggestionIndex(-1);
-		setShowSuggestions(false);
-	};
-
-	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-		if (!showSuggestions) return;
-
-		if (e.key === "Tab") {
-			e.preventDefault();
-			if (suggestionIndex >= 0) {
-				acceptSuggestion(suggestions[suggestionIndex]);
-			} else {
-				const prefix = longestCommonPrefix(suggestions);
-				if (prefix.length > typedSlug.length) {
-					setSlug(prefix);
-					setTypedSlug(prefix);
-					setSuggestionIndex(-1);
-					const newMatches = computeSuggestions(prefix);
-					setSuggestions(newMatches);
-					setShowSuggestions(newMatches.length > 0);
-				}
-			}
-		} else if (e.key === "ArrowDown") {
-			e.preventDefault();
-			const newIndex = Math.min(suggestionIndex + 1, suggestions.length - 1);
-			setSuggestionIndex(newIndex);
-			setSlug(suggestions[newIndex]);
-		} else if (e.key === "ArrowUp") {
-			e.preventDefault();
-			if (suggestionIndex <= 0) {
-				setSuggestionIndex(-1);
-				setSlug(typedSlug);
-			} else {
-				const newIndex = suggestionIndex - 1;
-				setSuggestionIndex(newIndex);
-				setSlug(suggestions[newIndex]);
-			}
-		} else if (e.key === "Escape") {
-			e.preventDefault();
-			dismissSuggestions();
-		} else if (e.key === "Enter" && suggestionIndex >= 0) {
-			e.preventDefault();
-			acceptSuggestion(suggestions[suggestionIndex]);
-		}
-	};
+	const colorBySlug = new Map(categories.map((c) => [c.slug, c.color]));
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setError(null);
 
-		const slugPattern = /^[^.]+(\.[^.]+)*$/;
-		if (!slugPattern.test(slug)) {
-			setError("Use dot notation, like food.groceries.");
-			return;
-		}
-
-		if (slug.length < 1 || slug.length > 100) {
-			setError("Keep the slug between 1 and 100 characters.");
+		if (!isValidSlug(slug)) {
+			setError(
+				slug.length > 100
+					? "Keep the slug between 1 and 100 characters."
+					: "Use dot notation, like food.groceries.",
+			);
 			return;
 		}
 
@@ -202,37 +140,36 @@ export function CategoryDialog({
 								<Input
 									id="slug"
 									value={slug}
-									onChange={(e) => handleSlugChange(e.target.value)}
-									onKeyDown={handleKeyDown}
-									onBlur={() => setTimeout(dismissSuggestions, 100)}
+									onChange={(e) => keys.type(e.target.value.toLowerCase())}
+									onKeyDown={(e) => {
+										if (e.key === "Escape" && showList) {
+											e.preventDefault();
+											setShowSuggestions(false);
+										} else keys.onKeyDown(e);
+									}}
+									onBlur={() =>
+										setTimeout(() => setShowSuggestions(false), 100)
+									}
 									placeholder="food.groceries"
 									disabled={isLoading}
 									autoComplete="off"
 									autoFocus
 								/>
-								{showSuggestions && (
-									<div
-										ref={suggestionsRef}
-										className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-md border bg-popover p-1 shadow-md"
-									>
+								{showList && (
+									<div className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-md border bg-popover p-1 shadow-md">
 										{suggestions.map((s, i) => (
-											<button
+											<SlugOption
 												key={s}
-												type="button"
+												slug={s}
+												color={colorBySlug.get(s)}
+												query={slug}
+												active={i === keys.active}
+												onMouseMove={() => keys.setActive(i)}
 												onMouseDown={(e) => {
 													e.preventDefault();
-													acceptSuggestion(s);
+													accept(s);
 												}}
-												className={cn(
-													"w-full rounded-md px-2 py-1.5 text-left text-sm",
-													i === suggestionIndex ? "bg-muted" : "hover:bg-muted",
-												)}
-											>
-												<span>{s.slice(0, typedSlug.length)}</span>
-												<span className="text-muted-foreground">
-													{s.slice(typedSlug.length)}
-												</span>
-											</button>
+											/>
 										))}
 									</div>
 								)}
