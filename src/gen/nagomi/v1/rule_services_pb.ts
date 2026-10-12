@@ -7,15 +7,15 @@ import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2
 import type { Rule } from "./rule_pb";
 import { file_nagomi_v1_rule } from "./rule_pb";
 import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
-import type { FieldMask } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_field_mask, file_google_protobuf_struct } from "@bufbuild/protobuf/wkt";
+import type { FieldMask, Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_field_mask, file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { JsonObject, Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file nagomi/v1/rule_services.proto.
  */
 export const file_nagomi_v1_rule_services: GenFile = /*@__PURE__*/
-  fileDesc("Ch1uYWdvbWkvdjEvcnVsZV9zZXJ2aWNlcy5wcm90bxIJbmFnb21pLnYxIi0KEExpc3RSdWxlc1JlcXVlc3QSGQoHdXNlcl9pZBgBIAEoCUIIukgFcgOwAQEiMwoRTGlzdFJ1bGVzUmVzcG9uc2USHgoFcnVsZXMYASADKAsyDy5uYWdvbWkudjEuUnVsZSJGCg5HZXRSdWxlUmVxdWVzdBIZCgdydWxlX2lkGAEgASgJQgi6SAVyA7ABARIZCgd1c2VyX2lkGAIgASgJQgi6SAVyA7ABASIwCg9HZXRSdWxlUmVzcG9uc2USHQoEcnVsZRgBIAEoCzIPLm5hZ29taS52MS5SdWxlIugCChFDcmVhdGVSdWxlUmVxdWVzdBIZCgd1c2VyX2lkGAEgASgJQgi6SAVyA7ABARIdCglydWxlX25hbWUYAiABKAlCCrpIB3IFEAEY/wESGAoLY2F0ZWdvcnlfaWQYAyABKANIAIgBARIrCgpjb25kaXRpb25zGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIeChFhcHBseV90b19leGlzdGluZxgFIAEoCEgBiAEBEhUKCG1lcmNoYW50GAYgASgJSAKIAQE6aLpIZRpjCg9hY3Rpb25fcmVxdWlyZWQSI2NhdGVnb3J5X2lkIG9yIG1lcmNoYW50IGlzIHJlcXVpcmVkGitoYXModGhpcy5jYXRlZ29yeV9pZCkgfHwgaGFzKHRoaXMubWVyY2hhbnQpQg4KDF9jYXRlZ29yeV9pZEIUChJfYXBwbHlfdG9fZXhpc3RpbmdCCwoJX21lcmNoYW50IjMKEkNyZWF0ZVJ1bGVSZXNwb25zZRIdCgRydWxlGAEgASgLMg8ubmFnb21pLnYxLlJ1bGUiuwMKEVVwZGF0ZVJ1bGVSZXF1ZXN0EhkKB3J1bGVfaWQYASABKAlCCLpIBXIDsAEBEhkKB3VzZXJfaWQYAiABKAlCCLpIBXIDsAEBEi8KC3VwZGF0ZV9tYXNrGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFzaxIWCglydWxlX25hbWUYBCABKAlIAIgBARIYCgtjYXRlZ29yeV9pZBgFIAEoA0gBiAEBEjAKCmNvbmRpdGlvbnMYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0SAKIAQESFgoJaXNfYWN0aXZlGAcgASgISAOIAQESGwoOcHJpb3JpdHlfb3JkZXIYCCABKAVIBIgBARIVCghtZXJjaGFudBgJIAEoCUgFiAEBEh4KEWFwcGx5X3RvX2V4aXN0aW5nGAogASgISAaIAQFCDAoKX3J1bGVfbmFtZUIOCgxfY2F0ZWdvcnlfaWRCDQoLX2NvbmRpdGlvbnNCDAoKX2lzX2FjdGl2ZUIRCg9fcHJpb3JpdHlfb3JkZXJCCwoJX21lcmNoYW50QhQKEl9hcHBseV90b19leGlzdGluZyIUChJVcGRhdGVSdWxlUmVzcG9uc2UiSQoRRGVsZXRlUnVsZVJlcXVlc3QSGQoHcnVsZV9pZBgBIAEoCUIIukgFcgOwAQESGQoHdXNlcl9pZBgCIAEoCUIIukgFcgOwAQEiKwoSRGVsZXRlUnVsZVJlc3BvbnNlEhUKDWFmZmVjdGVkX3Jvd3MYASABKAMy+AIKC1J1bGVTZXJ2aWNlEkYKCUxpc3RSdWxlcxIbLm5hZ29taS52MS5MaXN0UnVsZXNSZXF1ZXN0GhwubmFnb21pLnYxLkxpc3RSdWxlc1Jlc3BvbnNlEkAKB0dldFJ1bGUSGS5uYWdvbWkudjEuR2V0UnVsZVJlcXVlc3QaGi5uYWdvbWkudjEuR2V0UnVsZVJlc3BvbnNlEkkKCkNyZWF0ZVJ1bGUSHC5uYWdvbWkudjEuQ3JlYXRlUnVsZVJlcXVlc3QaHS5uYWdvbWkudjEuQ3JlYXRlUnVsZVJlc3BvbnNlEkkKClVwZGF0ZVJ1bGUSHC5uYWdvbWkudjEuVXBkYXRlUnVsZVJlcXVlc3QaHS5uYWdvbWkudjEuVXBkYXRlUnVsZVJlc3BvbnNlEkkKCkRlbGV0ZVJ1bGUSHC5uYWdvbWkudjEuRGVsZXRlUnVsZVJlcXVlc3QaHS5uYWdvbWkudjEuRGVsZXRlUnVsZVJlc3BvbnNlYgZwcm90bzM", [file_nagomi_v1_rule, file_buf_validate_validate, file_google_protobuf_field_mask, file_google_protobuf_struct]);
+  fileDesc("Ch1uYWdvbWkvdjEvcnVsZV9zZXJ2aWNlcy5wcm90bxIJbmFnb21pLnYxIi0KEExpc3RSdWxlc1JlcXVlc3QSGQoHdXNlcl9pZBgBIAEoCUIIukgFcgOwAQEiMwoRTGlzdFJ1bGVzUmVzcG9uc2USHgoFcnVsZXMYASADKAsyDy5uYWdvbWkudjEuUnVsZSJGCg5HZXRSdWxlUmVxdWVzdBIZCgdydWxlX2lkGAEgASgJQgi6SAVyA7ABARIZCgd1c2VyX2lkGAIgASgJQgi6SAVyA7ABASIwCg9HZXRSdWxlUmVzcG9uc2USHQoEcnVsZRgBIAEoCzIPLm5hZ29taS52MS5SdWxlIugCChFDcmVhdGVSdWxlUmVxdWVzdBIZCgd1c2VyX2lkGAEgASgJQgi6SAVyA7ABARIdCglydWxlX25hbWUYAiABKAlCCrpIB3IFEAEY/wESGAoLY2F0ZWdvcnlfaWQYAyABKANIAIgBARIrCgpjb25kaXRpb25zGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIeChFhcHBseV90b19leGlzdGluZxgFIAEoCEgBiAEBEhUKCG1lcmNoYW50GAYgASgJSAKIAQE6aLpIZRpjCg9hY3Rpb25fcmVxdWlyZWQSI2NhdGVnb3J5X2lkIG9yIG1lcmNoYW50IGlzIHJlcXVpcmVkGitoYXModGhpcy5jYXRlZ29yeV9pZCkgfHwgaGFzKHRoaXMubWVyY2hhbnQpQg4KDF9jYXRlZ29yeV9pZEIUChJfYXBwbHlfdG9fZXhpc3RpbmdCCwoJX21lcmNoYW50IjMKEkNyZWF0ZVJ1bGVSZXNwb25zZRIdCgRydWxlGAEgASgLMg8ubmFnb21pLnYxLlJ1bGUiuwMKEVVwZGF0ZVJ1bGVSZXF1ZXN0EhkKB3J1bGVfaWQYASABKAlCCLpIBXIDsAEBEhkKB3VzZXJfaWQYAiABKAlCCLpIBXIDsAEBEi8KC3VwZGF0ZV9tYXNrGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFzaxIWCglydWxlX25hbWUYBCABKAlIAIgBARIYCgtjYXRlZ29yeV9pZBgFIAEoA0gBiAEBEjAKCmNvbmRpdGlvbnMYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0SAKIAQESFgoJaXNfYWN0aXZlGAcgASgISAOIAQESGwoOcHJpb3JpdHlfb3JkZXIYCCABKAVIBIgBARIVCghtZXJjaGFudBgJIAEoCUgFiAEBEh4KEWFwcGx5X3RvX2V4aXN0aW5nGAogASgISAaIAQFCDAoKX3J1bGVfbmFtZUIOCgxfY2F0ZWdvcnlfaWRCDQoLX2NvbmRpdGlvbnNCDAoKX2lzX2FjdGl2ZUIRCg9fcHJpb3JpdHlfb3JkZXJCCwoJX21lcmNoYW50QhQKEl9hcHBseV90b19leGlzdGluZyIUChJVcGRhdGVSdWxlUmVzcG9uc2UiSQoRRGVsZXRlUnVsZVJlcXVlc3QSGQoHcnVsZV9pZBgBIAEoCUIIukgFcgOwAQESGQoHdXNlcl9pZBgCIAEoCUIIukgFcgOwAQEiKwoSRGVsZXRlUnVsZVJlc3BvbnNlEhUKDWFmZmVjdGVkX3Jvd3MYASABKAMiWgoTU3VnZ2VzdFJ1bGVzUmVxdWVzdBIZCgd1c2VyX2lkGAEgASgJQgi6SAVyA7ABARIeCgVsaW1pdBgCIAEoBUIKukgHGgUYyAEgAEgAiAEBQggKBl9saW1pdCKnAQoOUnVsZVN1Z2dlc3Rpb24SDwoHcGF0dGVybhgBIAEoCRIZChF0cmFuc2FjdGlvbl9jb3VudBgCIAEoAxIQCghleGFtcGxlcxgDIAMoCRIYCgtjYXRlZ29yeV9pZBgEIAEoA0gAiAEBEi0KCWxhc3Rfc2VlbhgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCDgoMX2NhdGVnb3J5X2lkImMKFFN1Z2dlc3RSdWxlc1Jlc3BvbnNlEi4KC3N1Z2dlc3Rpb25zGAEgAygLMhkubmFnb21pLnYxLlJ1bGVTdWdnZXN0aW9uEhsKE3VuY2F0ZWdvcml6ZWRfY291bnQYAiABKAMyyQMKC1J1bGVTZXJ2aWNlEkYKCUxpc3RSdWxlcxIbLm5hZ29taS52MS5MaXN0UnVsZXNSZXF1ZXN0GhwubmFnb21pLnYxLkxpc3RSdWxlc1Jlc3BvbnNlEkAKB0dldFJ1bGUSGS5uYWdvbWkudjEuR2V0UnVsZVJlcXVlc3QaGi5uYWdvbWkudjEuR2V0UnVsZVJlc3BvbnNlEkkKCkNyZWF0ZVJ1bGUSHC5uYWdvbWkudjEuQ3JlYXRlUnVsZVJlcXVlc3QaHS5uYWdvbWkudjEuQ3JlYXRlUnVsZVJlc3BvbnNlEkkKClVwZGF0ZVJ1bGUSHC5uYWdvbWkudjEuVXBkYXRlUnVsZVJlcXVlc3QaHS5uYWdvbWkudjEuVXBkYXRlUnVsZVJlc3BvbnNlEkkKCkRlbGV0ZVJ1bGUSHC5uYWdvbWkudjEuRGVsZXRlUnVsZVJlcXVlc3QaHS5uYWdvbWkudjEuRGVsZXRlUnVsZVJlc3BvbnNlEk8KDFN1Z2dlc3RSdWxlcxIeLm5hZ29taS52MS5TdWdnZXN0UnVsZXNSZXF1ZXN0Gh8ubmFnb21pLnYxLlN1Z2dlc3RSdWxlc1Jlc3BvbnNlYgZwcm90bzM", [file_nagomi_v1_rule, file_buf_validate_validate, file_google_protobuf_field_mask, file_google_protobuf_struct, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message nagomi.v1.ListRulesRequest
@@ -264,6 +264,95 @@ export const DeleteRuleResponseSchema: GenMessage<DeleteRuleResponse> = /*@__PUR
   messageDesc(file_nagomi_v1_rule_services, 9);
 
 /**
+ * @generated from message nagomi.v1.SuggestRulesRequest
+ */
+export type SuggestRulesRequest = Message<"nagomi.v1.SuggestRulesRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: optional int32 limit = 2;
+   */
+  limit?: number;
+};
+
+/**
+ * Describes the message nagomi.v1.SuggestRulesRequest.
+ * Use `create(SuggestRulesRequestSchema)` to create a new message.
+ */
+export const SuggestRulesRequestSchema: GenMessage<SuggestRulesRequest> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_rule_services, 10);
+
+/**
+ * a description pattern shared by many uncategorized transactions
+ *
+ * @generated from message nagomi.v1.RuleSuggestion
+ */
+export type RuleSuggestion = Message<"nagomi.v1.RuleSuggestion"> & {
+  /**
+   * matched case-insensitively as "description starts with pattern"
+   *
+   * @generated from field: string pattern = 1;
+   */
+  pattern: string;
+
+  /**
+   * @generated from field: int64 transaction_count = 2;
+   */
+  transactionCount: bigint;
+
+  /**
+   * a few distinct descriptions the pattern matches, most common first
+   *
+   * @generated from field: repeated string examples = 3;
+   */
+  examples: string[];
+
+  /**
+   * the category most already-categorized matches of the pattern have
+   *
+   * @generated from field: optional int64 category_id = 4;
+   */
+  categoryId?: bigint;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_seen = 5;
+   */
+  lastSeen?: Timestamp;
+};
+
+/**
+ * Describes the message nagomi.v1.RuleSuggestion.
+ * Use `create(RuleSuggestionSchema)` to create a new message.
+ */
+export const RuleSuggestionSchema: GenMessage<RuleSuggestion> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_rule_services, 11);
+
+/**
+ * @generated from message nagomi.v1.SuggestRulesResponse
+ */
+export type SuggestRulesResponse = Message<"nagomi.v1.SuggestRulesResponse"> & {
+  /**
+   * @generated from field: repeated nagomi.v1.RuleSuggestion suggestions = 1;
+   */
+  suggestions: RuleSuggestion[];
+
+  /**
+   * @generated from field: int64 uncategorized_count = 2;
+   */
+  uncategorizedCount: bigint;
+};
+
+/**
+ * Describes the message nagomi.v1.SuggestRulesResponse.
+ * Use `create(SuggestRulesResponseSchema)` to create a new message.
+ */
+export const SuggestRulesResponseSchema: GenMessage<SuggestRulesResponse> = /*@__PURE__*/
+  messageDesc(file_nagomi_v1_rule_services, 12);
+
+/**
  * @generated from service nagomi.v1.RuleService
  */
 export const RuleService: GenService<{
@@ -306,6 +395,14 @@ export const RuleService: GenService<{
     methodKind: "unary";
     input: typeof DeleteRuleRequestSchema;
     output: typeof DeleteRuleResponseSchema;
+  },
+  /**
+   * @generated from rpc nagomi.v1.RuleService.SuggestRules
+   */
+  suggestRules: {
+    methodKind: "unary";
+    input: typeof SuggestRulesRequestSchema;
+    output: typeof SuggestRulesResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_nagomi_v1_rule_services, 0);
