@@ -20,7 +20,6 @@ export interface UpdateCategoryInput {
 
 export interface UpdateCategoryColorInput {
 	id: bigint;
-	slug: string;
 	color: string;
 }
 
@@ -53,7 +52,6 @@ export const categoriesApi = {
 	async updateColor(data: UpdateCategoryColorInput) {
 		const request = create(UpdateCategoryRequestSchema, {
 			id: data.id,
-			slug: data.slug,
 			color: data.color,
 			updateMask: { paths: ["color"] },
 		});

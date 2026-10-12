@@ -129,11 +129,7 @@ export default function CategoriesPage() {
 
 	const changeColor = async (category: Category, color: string) => {
 		try {
-			await updateCategoryColorAsync({
-				id: category.id,
-				slug: category.slug,
-				color,
-			});
+			await updateCategoryColorAsync({ id: category.id, color });
 		} catch {
 			toast.error("Couldn't update color");
 		}

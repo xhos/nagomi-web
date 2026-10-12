@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	type QueryClient,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { Category } from "@/gen/nagomi/v1/category_pb";
 import {
@@ -8,6 +13,17 @@ import {
 	type UpdateCategoryInput,
 } from "@/lib/api/categories";
 import { useUserId } from "./useSession";
+
+// transactions and rules embed or cascade from categories, so they go stale too
+function invalidateCategoryUsers(queryClient: QueryClient) {
+	for (const key of [
+		"categories",
+		"transactions",
+		"transaction-summary",
+		"rules",
+	])
+		queryClient.invalidateQueries({ queryKey: [key] });
+}
 
 export function useCategories() {
 	const userId = useUserId();
@@ -70,16 +86,13 @@ export function useCreateCategory() {
 }
 
 export function useUpdateCategory() {
-	const userId = useUserId();
 	const queryClient = useQueryClient();
 
 	const mutation = useMutation({
 		mutationFn: async (data: UpdateCategoryInput) => {
 			return categoriesApi.update(data);
 		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["categories", userId] });
-		},
+		onSuccess: () => invalidateCategoryUsers(queryClient),
 	});
 
 	return {
@@ -91,16 +104,13 @@ export function useUpdateCategory() {
 }
 
 export function useUpdateCategoryColor() {
-	const userId = useUserId();
 	const queryClient = useQueryClient();
 
 	const mutation = useMutation({
 		mutationFn: async (data: UpdateCategoryColorInput) => {
 			return categoriesApi.updateColor(data);
 		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["categories", userId] });
-		},
+		onSuccess: () => invalidateCategoryUsers(queryClient),
 	});
 
 	return {
@@ -112,16 +122,13 @@ export function useUpdateCategoryColor() {
 }
 
 export function useDeleteCategory() {
-	const userId = useUserId();
 	const queryClient = useQueryClient();
 
 	const mutation = useMutation({
 		mutationFn: async (id: bigint) => {
 			return categoriesApi.delete(id);
 		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["categories", userId] });
-		},
+		onSuccess: () => invalidateCategoryUsers(queryClient),
 	});
 
 	return {

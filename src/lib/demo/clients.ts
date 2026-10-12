@@ -119,9 +119,11 @@ import {
 	UnlinkTransferResponseSchema,
 	UpdateTransactionResponseSchema,
 } from "@/gen/nagomi/v1/transaction_services_pb";
+import { generateRandomCategoryColor } from "@/lib/color-utils";
 import { planCoverage, utcDay } from "./coverage";
 import {
 	addTransfer,
+	categoryBySlug,
 	cents,
 	DEMO_HOLD,
 	DEMO_TIPPED_CENTS,
@@ -184,6 +186,23 @@ const tsDay = (t?: { seconds: bigint }) => {
 const secs = (t?: { seconds: bigint }) => Number(t?.seconds ?? BigInt(0));
 const account = (id: bigint) => db.accounts.find((a) => a.id === id);
 const category = (id?: bigint) => db.categories.find((c) => c.id === id);
+// a category and its children, like core's slug-prefix cascade
+const categoryTree = (slug: string) =>
+	db.categories.filter((c) => c.slug === slug || c.slug.startsWith(`${slug}.`));
+const ensureParentCategories = (slug: string) => {
+	const parts = slug.split(".");
+	for (let i = 1; i < parts.length; i++) {
+		const parent = parts.slice(0, i).join(".");
+		if (!categoryBySlug(parent))
+			db.categories.push(
+				create(CategorySchema, {
+					id: nextId(),
+					slug: parent,
+					color: generateRandomCategoryColor(),
+				}),
+			);
+	}
+};
 const byDateDesc = (a: Transaction, b: Transaction) =>
 	secs(b.txDate) - secs(a.txDate) || Number(b.id - a.id);
 
@@ -600,6 +619,9 @@ export const categoryClient = fake(CategoryService, {
 		});
 	},
 	async createCategory(req) {
+		if (categoryBySlug(req.slug))
+			throw new ConnectError("duplicate key", Code.AlreadyExists);
+		ensureParentCategories(req.slug);
 		const c = create(CategorySchema, {
 			id: nextId(),
 			slug: req.slug,
@@ -610,18 +632,42 @@ export const categoryClient = fake(CategoryService, {
 	},
 	async updateCategory(r) {
 		const c = category(r.id);
-		if (!c) throw new Error("category not found");
-		for (const p of r.updateMask?.paths ?? []) {
-			if (p === "slug" && r.slug) c.slug = r.slug;
-			if (p === "color" && r.color) c.color = r.color;
+		if (!c) throw new ConnectError("category not found", Code.NotFound);
+		const paths = r.updateMask?.paths ?? [];
+		const old = c.slug;
+		const slug = r.slug;
+		if (paths.includes("slug") && slug && slug !== old) {
+			if (slug.startsWith(`${old}.`))
+				throw new ConnectError(
+					`can't move ${old} under itself`,
+					Code.InvalidArgument,
+				);
+			const tree = categoryTree(old);
+			const renamed = (s: string) => slug + s.slice(old.length);
+			if (
+				tree.some((t) => {
+					const clash = categoryBySlug(renamed(t.slug));
+					return clash && !tree.includes(clash);
+				})
+			)
+				throw new ConnectError("duplicate key", Code.AlreadyExists);
+			for (const t of tree) t.slug = renamed(t.slug);
+			ensureParentCategories(slug);
 		}
+		if (paths.includes("color") && r.color) c.color = r.color;
 		return create(UpdateCategoryResponseSchema, {});
 	},
 	async deleteCategory(req) {
-		db.categories = db.categories.filter((c) => c.id !== req.id);
+		const c = category(req.id);
+		if (!c) throw new ConnectError("category not found", Code.NotFound);
+		const ids = new Set(categoryTree(c.slug).map((t) => t.id));
+		db.categories = db.categories.filter((t) => !ids.has(t.id));
+		db.rules = db.rules.filter((r) => !r.categoryId || !ids.has(r.categoryId));
 		for (const t of db.transactions)
-			if (t.categoryId === req.id) t.categoryId = undefined;
-		return create(DeleteCategoryResponseSchema, { affectedRows: BigInt(1) });
+			if (t.categoryId && ids.has(t.categoryId)) t.categoryId = undefined;
+		return create(DeleteCategoryResponseSchema, {
+			affectedRows: BigInt(ids.size),
+		});
 	},
 });
 
