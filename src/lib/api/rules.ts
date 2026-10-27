@@ -15,6 +15,7 @@ export interface CreateRuleInput {
 	merchant?: string;
 	conditions: TransactionRule;
 	applyToExisting: boolean;
+	priorityOrder?: number;
 }
 
 export interface UpdateRuleInput {
@@ -44,6 +45,7 @@ export const rulesApi = {
 			merchant: data.merchant,
 			conditions: toJsonObject(data.conditions),
 			applyToExisting: data.applyToExisting,
+			priorityOrder: data.priorityOrder,
 		});
 
 		const response = await ruleClient.createRule(request);

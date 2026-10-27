@@ -688,7 +688,7 @@ export const ruleClient = fake(RuleService, {
 			merchant: req.merchant,
 			conditions: req.conditions,
 			isActive: true,
-			priorityOrder: db.rules.length + 1,
+			priorityOrder: req.priorityOrder ?? db.rules.length + 1,
 			ruleSource: "user_created",
 			createdAt: now(),
 			updatedAt: now(),
