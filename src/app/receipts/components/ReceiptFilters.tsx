@@ -1,10 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { chip } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
 import { ReceiptStatus } from "@/gen/nagomi/v1/receipt_pb";
 import type { ReceiptFilters } from "@/hooks/useReceipts";
-import { cn } from "@/lib/utils";
 
 export function countActiveReceiptFilters(f: ReceiptFilters) {
 	return [
@@ -22,11 +22,6 @@ const STATUSES: [string, ReceiptStatus][] = [
 	["Failed", ReceiptStatus.FAILED],
 ];
 
-const chip = (on: boolean) =>
-	cn(
-		"h-7 rounded-md border px-2.5 text-sm transition-colors",
-		on ? "border-foreground bg-foreground text-background" : "hover:bg-muted",
-	);
 const toCents = (v: string) => {
 	const n = Number(v);
 	return v === "" || !Number.isFinite(n) || n < 0

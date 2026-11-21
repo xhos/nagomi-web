@@ -390,7 +390,19 @@ export const transactionClient = fake(TransactionService, {
 		const max = r.amountMax ? cents(r.amountMax) : undefined;
 		const mq = r.merchantQuery?.toLowerCase();
 		const dq = r.descriptionQuery?.toLowerCase();
-		const slugs = new Set(r.categories);
+		const slugs = [...r.categories];
+		// like core: a picked category takes its subcategories, and uncategorized is one more choice
+		const inCategories = (t: (typeof db.transactions)[number]) => {
+			if (!slugs.length && r.uncategorized !== true) return true;
+			const slug = category(t.categoryId)?.slug;
+			if (slug && slugs.some((p) => slug === p || slug.startsWith(`${p}.`)))
+				return true;
+			return (
+				r.uncategorized === true &&
+				t.categoryId === undefined &&
+				!linkedTransfer(t.id)
+			);
+		};
 		let xs = db.transactions.filter((t) => {
 			const amt = cents(t.txAmount);
 			const d = secs(t.txDate);
@@ -402,12 +414,10 @@ export const transactionClient = fake(TransactionService, {
 				(min === undefined || amt >= min) &&
 				(max === undefined || amt <= max) &&
 				(!r.direction || t.direction === r.direction) &&
-				(!slugs.size || slugs.has(category(t.categoryId)?.slug ?? "")) &&
 				(!mq || (t.merchant ?? "").toLowerCase().includes(mq)) &&
 				(!dq || (t.description ?? "").toLowerCase().includes(dq)) &&
 				(!r.currency || t.txAmount?.currencyCode === r.currency) &&
-				(r.uncategorized !== true ||
-					(t.categoryId === undefined && !linkedTransfer(t.id)))
+				inCategories(t)
 			);
 		});
 		xs.sort(byDateDesc);

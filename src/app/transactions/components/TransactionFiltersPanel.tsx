@@ -4,23 +4,34 @@ import {
 	endOfMonth,
 	format,
 	isSameDay,
+	isSameYear,
 	startOfMonth,
 	subDays,
 	subMonths,
 } from "date-fns";
-import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { chip, type MultiOption, MultiSelect } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
+import type { Account } from "@/gen/nagomi/v1/account_pb";
+import { AccountType, TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
+import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
+import { useUncategorizedCount } from "@/hooks/useTransactionsQuery";
 import { cn } from "@/lib/utils";
-import { getCategoryDisplayName } from "@/lib/utils/category";
+import { ACCOUNT_TYPES } from "@/lib/utils/account";
+import {
+	getCategoryDisplayName,
+	getCategoryLevel,
+	searchSlugs,
+} from "@/lib/utils/category";
 
 export interface TransactionFilters {
 	startDate?: Date;
@@ -30,32 +41,116 @@ export interface TransactionFilters {
 	direction?: TransactionDirection;
 	categories?: string[];
 	uncategorized?: boolean;
+	accountIds?: string[];
 }
 
+// what the Filters button counts: accounts are left out, their chips already show them
 export function countActiveFilters(f: TransactionFilters) {
 	return [
 		f.startDate || f.endDate,
 		f.amountMin !== undefined || f.amountMax !== undefined,
 		f.direction !== undefined,
-		f.categories?.length,
-		f.uncategorized,
+		f.categories?.length || f.uncategorized,
 	].filter(Boolean).length;
 }
 
-interface TransactionFiltersPanelProps {
-	filters: TransactionFilters;
-	onFiltersChange: (filters: TransactionFilters) => void;
+export const hasAnyFilter = (f: TransactionFilters) =>
+	countActiveFilters(f) > 0 || !!f.accountIds?.length;
+
+function datePresets(today = new Date()): [string, Date, Date][] {
+	return [
+		["This month", startOfMonth(today), endOfMonth(today)],
+		[
+			"Last month",
+			startOfMonth(subMonths(today, 1)),
+			endOfMonth(subMonths(today, 1)),
+		],
+		["Last 30 days", subDays(today, 30), today],
+	];
 }
 
-const fieldLabel = "text-sm text-muted-foreground";
-const chip = (on: boolean) =>
-	cn(
-		"h-7 rounded-md border px-2.5 text-sm transition-colors",
-		on
-			? "border-foreground bg-foreground text-background"
-			: "border-border hover:bg-muted",
-	);
+const sameRange = (f: TransactionFilters, a: Date, b: Date) =>
+	!!f.startDate &&
+	!!f.endDate &&
+	isSameDay(f.startDate, a) &&
+	isSameDay(f.endDate, b);
 
+const day = (d: Date) =>
+	format(d, isSameYear(d, new Date()) ? "MMM d" : "MMM d, yyyy");
+
+export function dateLabel(f: TransactionFilters): string | null {
+	if (!f.startDate && !f.endDate) return null;
+	const preset = datePresets().find(([, a, b]) => sameRange(f, a, b));
+	if (preset) return preset[0];
+	if (f.startDate && f.endDate)
+		return `${day(f.startDate)} – ${day(f.endDate)}`;
+	return f.startDate
+		? `From ${day(f.startDate)}`
+		: `Until ${day(f.endDate as Date)}`;
+}
+
+export function categoryLabel(f: TransactionFilters): string | null {
+	const names = [
+		...(f.uncategorized ? ["Uncategorized"] : []),
+		...(f.categories ?? []).map(getCategoryDisplayName),
+	];
+	if (names.length === 0) return null;
+	if (names.length <= 2) return names.join(", ");
+	return `${names[0]} +${names.length - 1}`;
+}
+
+export function amountLabel(f: TransactionFilters): string | null {
+	const { amountMin: min, amountMax: max } = f;
+	if (min !== undefined && max !== undefined) return `${min} – ${max}`;
+	if (min !== undefined) return `Over ${min}`;
+	if (max !== undefined) return `Under ${max}`;
+	return null;
+}
+
+export function directionLabel(f: TransactionFilters): string | null {
+	if (f.direction === TransactionDirection.DIRECTION_INCOMING)
+		return "Money in";
+	if (f.direction === TransactionDirection.DIRECTION_OUTGOING)
+		return "Money out";
+	return null;
+}
+
+const typeRank = (t: AccountType) => {
+	const i = ACCOUNT_TYPES.findIndex(([type]) => type === t);
+	return i < 0 ? ACCOUNT_TYPES.length : i;
+};
+
+export const accountName = (a: Account) => a.friendlyName || a.name;
+
+// everyday accounts first, by type then name; friends and closed accounts after
+export function sortAccounts(accounts: Account[]) {
+	const everyday = (a: Account) =>
+		a.type !== AccountType.ACCOUNT_FRIEND && !a.closedAt;
+	return [...accounts].sort(
+		(a, b) =>
+			Number(everyday(b)) - Number(everyday(a)) ||
+			typeRank(a.type) - typeRank(b.type) ||
+			accountName(a).localeCompare(accountName(b)),
+	);
+}
+
+// every account as a MultiSelect row, noting the ones that get no quick chip
+export const accountOptionsOf = (accounts: Account[]): MultiOption[] =>
+	sortAccounts(accounts).map((a) => ({
+		value: a.id.toString(),
+		label: accountName(a),
+		color: a.color || undefined,
+		note: a.closedAt
+			? "closed"
+			: a.type === AccountType.ACCOUNT_FRIEND
+				? "friend"
+				: undefined,
+	}));
+
+export const isQuickAccount = (a: Account) =>
+	a.type !== AccountType.ACCOUNT_FRIEND && !a.closedAt;
+
+const fieldLabel = "text-sm text-muted-foreground";
 function DateButton({
 	value,
 	placeholder,
@@ -90,11 +185,49 @@ function DateButton({
 	);
 }
 
+// the trigger for a MultiSelect: the current choice, or what choosing nothing means
+function SelectButton({
+	summary,
+	empty,
+	...props
+}: React.ComponentProps<"button"> & { summary: string | null; empty: string }) {
+	return (
+		<Button
+			variant="outline"
+			size="sm"
+			className="w-56 justify-between font-normal"
+			{...props}
+		>
+			<span className={cn("truncate", !summary && "text-muted-foreground")}>
+				{summary ?? empty}
+			</span>
+			<ChevronDown className="text-muted-foreground" />
+		</Button>
+	);
+}
+
+const UNCATEGORIZED = "\u0000uncategorized";
+
+const searchCategories = (options: MultiOption[], q: string) => {
+	const bySlug = new Map(options.map((o) => [o.value, o]));
+	return searchSlugs(
+		options.map((o) => o.value),
+		q,
+	).flatMap((s) => bySlug.get(s) ?? []);
+};
+
+interface TransactionFiltersPanelProps {
+	filters: TransactionFilters;
+	onFiltersChange: (filters: TransactionFilters) => void;
+}
+
 export function TransactionFiltersPanel({
 	filters,
 	onFiltersChange,
 }: TransactionFiltersPanelProps) {
 	const { categories } = useCategories();
+	const { accounts } = useAccounts();
+	const { data: uncategorizedCount } = useUncategorizedCount();
 	const [fromOpen, setFromOpen] = useState(false);
 	const [toOpen, setToOpen] = useState(false);
 	const set = <K extends keyof TransactionFilters>(
@@ -102,29 +235,56 @@ export function TransactionFiltersPanel({
 		value: TransactionFilters[K],
 	) => onFiltersChange({ ...filters, [key]: value });
 
-	const toggleCategory = (slug: string) => {
-		const cur = filters.categories ?? [];
-		set(
-			"categories",
-			cur.includes(slug) ? cur.filter((s) => s !== slug) : [...cur, slug],
-		);
-	};
+	const picked = filters.categories ?? [];
+	const categoryOptions = useMemo<MultiOption[]>(() => {
+		const colorOf = new Map(categories.map((c) => [c.slug, c.color]));
+		const under = (slug: string) =>
+			picked.some((p) => slug.startsWith(`${p}.`));
+		return [
+			{
+				value: UNCATEGORIZED,
+				label: "Uncategorized",
+				pinned: true,
+				note:
+					uncategorizedCount !== undefined
+						? uncategorizedCount.toString()
+						: undefined,
+			},
+			// a parent shows even when only its children are categories ("food" over
+			// "food.coffee"), so the tree reads right and the whole branch can be picked
+			...[
+				...new Set(
+					categories.flatMap((c) =>
+						c.slug
+							.split(".")
+							.map((_, i, parts) => parts.slice(0, i + 1).join(".")),
+					),
+				),
+			]
+				.sort((a, b) => a.localeCompare(b))
+				.map((slug) => ({
+					value: slug,
+					label: getCategoryDisplayName(slug),
+					path: slug.split(".").join(" / "),
+					color: colorOf.get(slug),
+					depth: getCategoryLevel(slug),
+					implied: under(slug),
+				})),
+		];
+	}, [categories, picked, uncategorizedCount]);
 
-	const today = new Date();
-	const presets: [string, Date, Date][] = [
-		["This month", startOfMonth(today), endOfMonth(today)],
-		[
-			"Last month",
-			startOfMonth(subMonths(today, 1)),
-			endOfMonth(subMonths(today, 1)),
-		],
-		["Last 30 days", subDays(today, 30), today],
-	];
-	const presetActive = (a: Date, b: Date) =>
-		!!filters.startDate &&
-		!!filters.endDate &&
-		isSameDay(filters.startDate, a) &&
-		isSameDay(filters.endDate, b);
+	const accountOptions = useMemo(() => accountOptionsOf(accounts), [accounts]);
+
+	const accountSummary = (() => {
+		const ids = filters.accountIds ?? [];
+		if (ids.length === 0) return null;
+		const names = ids.map(
+			(id) => accountOptions.find((o) => o.value === id)?.label ?? id,
+		);
+		return names.length <= 2
+			? names.join(", ")
+			: `${names[0]} +${names.length - 1}`;
+	})();
 
 	const directions: [string, TransactionDirection | undefined][] = [
 		["All", undefined],
@@ -136,40 +296,84 @@ export function TransactionFiltersPanel({
 		<div className="mb-6 grid gap-x-8 gap-y-3 border-b pb-6 sm:grid-cols-[auto_1fr] sm:items-center">
 			<span className={fieldLabel}>Date</span>
 			<div className="flex flex-wrap items-center gap-2">
-				{presets.map(([label, a, b]) => (
+				{datePresets().map(([label, a, b]) => (
 					<button
 						key={label}
 						type="button"
-						className={chip(presetActive(a, b))}
+						className={chip(sameRange(filters, a, b), "h-8")}
 						onClick={() =>
-							onFiltersChange({ ...filters, startDate: a, endDate: b })
+							sameRange(filters, a, b)
+								? onFiltersChange({
+										...filters,
+										startDate: undefined,
+										endDate: undefined,
+									})
+								: onFiltersChange({ ...filters, startDate: a, endDate: b })
 						}
 					>
 						{label}
 					</button>
 				))}
-				<span className="w-2" />
-				<DateButton
-					value={filters.startDate}
-					placeholder="From"
-					open={fromOpen}
-					onOpenChange={setFromOpen}
-					onChange={(d) => {
-						set("startDate", d);
-						if (d) {
-							setFromOpen(false);
-							setToOpen(true);
-						}
-					}}
-				/>
-				<span className="text-muted-foreground">–</span>
-				<DateButton
-					value={filters.endDate}
-					placeholder="To"
-					open={toOpen}
-					onOpenChange={setToOpen}
-					onChange={(d) => set("endDate", d)}
-				/>
+				<span className="flex items-center gap-2 sm:ml-2">
+					<DateButton
+						value={filters.startDate}
+						placeholder="From"
+						open={fromOpen}
+						onOpenChange={setFromOpen}
+						onChange={(d) => {
+							set("startDate", d);
+							if (d) {
+								setFromOpen(false);
+								setToOpen(true);
+							}
+						}}
+					/>
+					<span className="text-muted-foreground">–</span>
+					<DateButton
+						value={filters.endDate}
+						placeholder="To"
+						open={toOpen}
+						onOpenChange={setToOpen}
+						onChange={(d) => {
+							set("endDate", d);
+							if (d) setToOpen(false);
+						}}
+					/>
+				</span>
+			</div>
+
+			<span className={fieldLabel}>Category</span>
+			<div>
+				<MultiSelect
+					options={categoryOptions}
+					selected={[
+						...(filters.uncategorized ? [UNCATEGORIZED] : []),
+						...picked,
+					]}
+					onChange={(values) =>
+						onFiltersChange({
+							...filters,
+							uncategorized: values.includes(UNCATEGORIZED) || undefined,
+							categories: values.filter((v) => v !== UNCATEGORIZED),
+						})
+					}
+					search={searchCategories}
+					placeholder="Search categories"
+				>
+					<SelectButton summary={categoryLabel(filters)} empty="Any category" />
+				</MultiSelect>
+			</div>
+
+			<span className={fieldLabel}>Account</span>
+			<div>
+				<MultiSelect
+					options={accountOptions}
+					selected={filters.accountIds ?? []}
+					onChange={(ids) => set("accountIds", ids)}
+					placeholder="Search accounts"
+				>
+					<SelectButton summary={accountSummary} empty="All accounts" />
+				</MultiSelect>
 			</div>
 
 			<span className={fieldLabel}>Amount</span>
@@ -177,7 +381,7 @@ export function TransactionFiltersPanel({
 				<Input
 					type="number"
 					placeholder="Min"
-					className="h-8 w-32"
+					className="h-8 w-[6.5rem]"
 					value={filters.amountMin ?? ""}
 					onChange={(e) =>
 						set(
@@ -190,7 +394,7 @@ export function TransactionFiltersPanel({
 				<Input
 					type="number"
 					placeholder="Max"
-					className="h-8 w-32"
+					className="h-8 w-[6.5rem]"
 					value={filters.amountMax ?? ""}
 					onChange={(e) =>
 						set(
@@ -207,50 +411,13 @@ export function TransactionFiltersPanel({
 					<button
 						key={label}
 						type="button"
-						className={chip(filters.direction === value)}
+						className={chip(filters.direction === value, "h-8")}
 						onClick={() => set("direction", value)}
 					>
 						{label}
 					</button>
 				))}
 			</div>
-
-			{categories.length > 0 && (
-				<>
-					<span className={cn(fieldLabel, "sm:self-start sm:pt-1")}>
-						Category
-					</span>
-					<div className="flex flex-wrap gap-2">
-						<button
-							type="button"
-							className={chip(!!filters.uncategorized)}
-							onClick={() =>
-								set("uncategorized", filters.uncategorized ? undefined : true)
-							}
-						>
-							Uncategorized
-						</button>
-						{categories.map((c) => (
-							<button
-								key={c.id.toString()}
-								type="button"
-								className={chip(!!filters.categories?.includes(c.slug))}
-								onClick={() => toggleCategory(c.slug)}
-							>
-								{getCategoryDisplayName(c.slug)}
-							</button>
-						))}
-					</div>
-				</>
-			)}
-
-			{countActiveFilters(filters) > 0 && (
-				<div className="sm:col-start-2">
-					<Button variant="ghost" size="sm" onClick={() => onFiltersChange({})}>
-						Clear filters
-					</Button>
-				</div>
-			)}
 		</div>
 	);
 }

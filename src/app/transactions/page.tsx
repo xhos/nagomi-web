@@ -15,10 +15,7 @@ import type { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
 import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useCategories } from "@/hooks/useCategories";
 import { useCreateRule } from "@/hooks/useRules";
-import {
-	useTransactionsQuery,
-	useUncategorizedCount,
-} from "@/hooks/useTransactionsQuery";
+import { useTransactionsQuery } from "@/hooks/useTransactionsQuery";
 import { cn } from "@/lib/utils";
 import { SplitTransactionDialog } from "./components/SplitTransactionDialog";
 import {
@@ -27,6 +24,7 @@ import {
 	TransactionFiltersPanel,
 } from "./components/TransactionFiltersPanel";
 import { TransactionList } from "./components/TransactionList";
+import { TransactionQuickFilters } from "./components/TransactionQuickFilters";
 import { TransferDialog } from "./components/TransferDialog";
 import { TransactionDialog } from "./components/transaction-dialog";
 
@@ -74,8 +72,6 @@ export default function TransactionsPage() {
 		updateError,
 		deleteError,
 	} = useTransactionsQuery({});
-
-	const { data: uncategorized = 0 } = useUncategorizedCount();
 
 	const mutationError = createError || updateError || deleteError;
 	const activeFilters = countActiveFilters(filters);
@@ -125,25 +121,6 @@ export default function TransactionsPage() {
 					title="transactions"
 					actions={
 						<>
-							{uncategorized > 0 && (
-								<Button
-									variant="outline"
-									aria-pressed={!!filters.uncategorized}
-									onClick={() =>
-										setFilters((f) => ({
-											...f,
-											uncategorized: f.uncategorized ? undefined : true,
-										}))
-									}
-									className={cn(
-										filters.uncategorized &&
-											"border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background dark:border-foreground dark:bg-foreground dark:hover:bg-foreground/90",
-									)}
-								>
-									<span className="tabular-nums">{uncategorized}</span>{" "}
-									uncategorized
-								</Button>
-							)}
 							<div className="relative">
 								<Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
@@ -174,6 +151,13 @@ export default function TransactionsPage() {
 							</Button>
 						</>
 					}
+				/>
+
+				<TransactionQuickFilters
+					filters={filters}
+					onFiltersChange={setFilters}
+					panelOpen={filtersOpen}
+					onOpenPanel={() => setFiltersOpen(true)}
 				/>
 
 				{filtersOpen && (

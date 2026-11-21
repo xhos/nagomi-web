@@ -47,6 +47,7 @@ export function useTransactionsQuery({
 				direction: filters?.direction,
 				categories: filters?.categories,
 				uncategorized: filters?.uncategorized || undefined,
+				accountIds: filters?.accountIds?.map(BigInt),
 				amountMin: filters?.amountMin,
 				amountMax: filters?.amountMax,
 			});

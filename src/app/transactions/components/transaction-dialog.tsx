@@ -10,14 +10,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FormError, NativeSelect } from "@/components/ui/forms";
+import { chip, Field, FormError, NativeSelect } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
 import { TransactionDirection } from "@/gen/nagomi/v1/enums_pb";
 import type { Transaction } from "@/gen/nagomi/v1/transaction_pb";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useCurrencies } from "@/hooks/useCurrencies";
-import { cn } from "@/lib/utils";
 
 interface TransactionDialogProps {
 	open: boolean;
@@ -179,12 +178,7 @@ export function TransactionDialog({
 								key={dir}
 								type="button"
 								onClick={() => set("direction", dir)}
-								className={cn(
-									"h-8 rounded-md border px-3 text-sm transition-colors",
-									formData.direction === dir
-										? "border-foreground bg-foreground text-background"
-										: "hover:bg-muted",
-								)}
+								className={chip(formData.direction === dir, "h-8")}
 							>
 								{label}
 							</button>

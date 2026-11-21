@@ -11,7 +11,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FormError } from "@/components/ui/forms";
+import { chip, Field, FormError } from "@/components/ui/forms";
 import { Input } from "@/components/ui/input";
 import type { Category } from "@/gen/nagomi/v1/category_pb";
 import type { Rule } from "@/gen/nagomi/v1/rule_pb";
@@ -25,7 +25,6 @@ import {
 	type TransactionRule,
 	validateRule,
 } from "@/lib/rules";
-import { cn } from "@/lib/utils";
 import { ConditionBuilder, type UICondition } from "./ConditionBuilder";
 
 interface RuleDialogPrefill {
@@ -295,11 +294,6 @@ export function RuleDialog({
 	const selectedCategory = categories.find(
 		(c) => c.id.toString() === selectedCategoryId,
 	);
-	const chip = (on: boolean) =>
-		cn(
-			"h-7 rounded-md border px-2.5 text-sm transition-colors",
-			on ? "border-foreground bg-foreground text-background" : "hover:bg-muted",
-		);
 
 	return (
 		<Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>

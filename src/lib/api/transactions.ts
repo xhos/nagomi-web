@@ -23,6 +23,7 @@ export interface ListTransactionsInput {
 	categoryId?: bigint;
 	includeUncategorized?: boolean;
 	uncategorized?: boolean;
+	accountIds?: bigint[];
 	direction?: TransactionDirection;
 	merchantQuery?: string;
 	descriptionQuery?: string;
@@ -97,6 +98,7 @@ export const transactionsApi = {
 				: undefined,
 			categories: data.categories,
 			uncategorized: data.uncategorized,
+			accountIds: data.accountIds,
 			direction: data.direction,
 			merchantQuery: data.merchantQuery,
 			descriptionQuery: data.descriptionQuery,
