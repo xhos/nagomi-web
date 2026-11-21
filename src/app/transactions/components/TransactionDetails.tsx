@@ -47,27 +47,27 @@ export function TransactionDetails({
 		<div className="mt-3 border-t pt-3 text-sm">
 			<div className="grid gap-x-8 sm:grid-cols-2">
 				<div>
-					<Row label="Description">{tx.description || "—"}</Row>
-					<Row label="Merchant">
-						{tx.merchant || "—"}
-						{tx.merchant && (
+					{tx.description && <Row label="Description">{tx.description}</Row>}
+					{tx.merchant && (
+						<Row label="Merchant">
+							{tx.merchant}
 							<span className="ml-2 text-muted-foreground">
 								{tx.merchantManuallySet ? "set by you" : "detected"}
 							</span>
-						)}
-					</Row>
-					<Row label="Category">
-						{tx.category ? tx.category.slug.split(".").join(" / ") : "—"}
-						{tx.category && (
+						</Row>
+					)}
+					{tx.category && (
+						<Row label="Category">
+							{tx.category.slug.split(".").join(" / ")}
 							<span className="ml-2 text-muted-foreground">
 								{tx.categoryManuallySet ? "set by you" : "by rule"}
 							</span>
-						)}
-					</Row>
+						</Row>
+					)}
 					<Row label="Account">
 						{getAccountDisplayName(tx.accountId, tx.accountName)}
 					</Row>
-					<Row label="Date">{stamp(tx.txDate) ?? "—"}</Row>
+					{stamp(tx.txDate) && <Row label="Date">{stamp(tx.txDate)}</Row>}
 					{tx.userNotes && <Row label="Notes">{tx.userNotes}</Row>}
 				</div>
 				<div>
@@ -163,9 +163,11 @@ export function TransactionDetails({
 							))}
 						</Row>
 					)}
-					<Row label="Updated">
-						{stamp(tx.updatedAt) ?? stamp(tx.createdAt) ?? "—"}
-					</Row>
+					{(stamp(tx.updatedAt) ?? stamp(tx.createdAt)) && (
+						<Row label="Updated">
+							{stamp(tx.updatedAt) ?? stamp(tx.createdAt)}
+						</Row>
+					)}
 				</div>
 			</div>
 
