@@ -137,7 +137,7 @@ export default function TransactionsPage() {
 									}
 									className={cn(
 										filters.uncategorized &&
-											"bg-foreground text-background hover:bg-foreground/90 hover:text-background",
+											"border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background dark:border-foreground dark:bg-foreground dark:hover:bg-foreground/90",
 									)}
 								>
 									<span className="tabular-nums">{uncategorized}</span>{" "}
