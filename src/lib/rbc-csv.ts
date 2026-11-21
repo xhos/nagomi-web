@@ -10,6 +10,8 @@ export interface RbcRow {
 	currency: "CAD" | "USD";
 	// signed: negative is money out
 	cents: number;
+	// what a foreign purchase cost before conversion, from "4.70 USD @ 1.468000000000"
+	foreign?: { cents: number; currency: string; rate: number };
 }
 
 function parseCsv(text: string): string[][] {
@@ -60,6 +62,19 @@ function parseCents(s: string): number | null {
 	return Math.round(Number(t) * 100);
 }
 
+// RBC puts a foreign purchase's original amount and rate in Description 2
+const FOREIGN = /^([\d,]*\.?\d+)\s+([A-Z]{3})\s*@\s*(\d*\.?\d+)$/i;
+
+function parseForeign(s: string): RbcRow["foreign"] {
+	const m = FOREIGN.exec(s.trim());
+	if (!m) return undefined;
+	return {
+		cents: Math.round(Number(m[1].replace(/,/g, "")) * 100),
+		currency: m[2].toUpperCase(),
+		rate: Number(m[3]),
+	};
+}
+
 export interface RbcParse {
 	rows: RbcRow[];
 	// data rows that weren't a dated, non-zero amount on a named account
@@ -95,16 +110,18 @@ export function parseRbcCsv(text: string): RbcParse | null {
 			skipped++;
 			continue;
 		}
+		const foreign = parseForeign(r[d2] ?? "");
 		rows.push({
 			accountType: (r[type] ?? "").trim(),
 			accountNumber,
 			day,
-			description: [r[d1], r[d2]]
+			description: [r[d1], foreign ? "" : r[d2]]
 				.map((x) => (x ?? "").trim())
 				.filter(Boolean)
 				.join(" "),
 			currency: inCad !== null ? "CAD" : "USD",
 			cents,
+			...(foreign && { foreign }),
 		});
 	}
 	return { rows, skipped };

@@ -230,6 +230,14 @@ export function ImportCsvDialog({
 									? TransactionDirection.DIRECTION_INCOMING
 									: TransactionDirection.DIRECTION_OUTGOING,
 							description: r.description,
+							...(r.foreign && {
+								foreignAmount: {
+									currencyCode: r.foreign.currency,
+									units: String(Math.trunc(r.foreign.cents / 100)),
+									nanos: (r.foreign.cents % 100) * 10_000_000,
+								},
+								exchangeRate: r.foreign.rate,
+							}),
 							// TODO: no csv source in core; email stays provisional so a later statement confirms these instead of duplicating them
 							source: TransactionSource.EMAIL,
 						};

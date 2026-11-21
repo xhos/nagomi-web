@@ -45,6 +45,12 @@ export interface CreateTransactionInput {
 	userNotes?: string;
 	categoryId?: bigint;
 	source?: TransactionSource;
+	foreignAmount?: {
+		currencyCode: string;
+		units: string;
+		nanos: number;
+	};
+	exchangeRate?: number;
 }
 
 export interface UpdateTransactionInput {
@@ -191,6 +197,12 @@ export const transactionsApi = {
 				userNotes: tx.userNotes,
 				categoryId: tx.categoryId,
 				source: tx.source,
+				foreignAmount: tx.foreignAmount && {
+					currencyCode: tx.foreignAmount.currencyCode,
+					units: BigInt(tx.foreignAmount.units),
+					nanos: tx.foreignAmount.nanos,
+				},
+				exchangeRate: tx.exchangeRate,
 			})),
 		});
 		const response = await transactionClient.createTransaction(request);

@@ -25,6 +25,26 @@ test("reads rows, signed amounts and joined descriptions", () => {
 	assert.equal(parsed.rows[2].currency, "USD");
 });
 
+test("pulls a foreign purchase's amount and rate out of the description", () => {
+	const parsed = parseRbcCsv(
+		`${HEADER}Visa,4514093224914917,11/19/2026,,"BACKBLAZE INC BACKBLAZE.COMCA","4.70 USD @ 1.468000000000",-6.90,,\n` +
+			`Visa,4514093224914917,11/19/2026,,"SELECTA","1,234.50 GBP @ .5",-1.00,,\n`,
+	);
+	assert.ok(parsed);
+	assert.equal(parsed.rows[0].description, "BACKBLAZE INC BACKBLAZE.COMCA");
+	assert.deepEqual(parsed.rows[0].foreign, {
+		cents: 470,
+		currency: "USD",
+		rate: 1.468,
+	});
+	assert.deepEqual(parsed.rows[1].foreign, {
+		cents: 123450,
+		currency: "GBP",
+		rate: 0.5,
+	});
+	assert.equal(parsed.rows[1].description, "SELECTA");
+});
+
 test("rejects other csv files and counts unreadable rows", () => {
 	assert.equal(parseRbcCsv("a,b\n1,2\n"), null);
 	const parsed = parseRbcCsv(`${HEADER}Chequing,1,13/45/2026,,"X",,1.00,,\n`);
